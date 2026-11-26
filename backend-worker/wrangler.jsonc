@@ -1,8 +1,8 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "yuku-api-worker",
+  "name": "yuku-pro",
   "main": "src/index.ts",
-  "compatibility_date": "2026-11-27",
+  "compatibility_date": "2026-11-26",
   "compatibility_flags": [
     "nodejs_compat"
   ],
