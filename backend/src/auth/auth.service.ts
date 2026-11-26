@@ -5,11 +5,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac, randomBytes, timingSafeEqual, scrypt as scryptCallback } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual, scrypt as scryptCallback, pbkdf2 as pbkdf2Callback } from 'crypto';
 import { promisify } from 'util';
 import { PrismaService } from '../prisma/prisma.service';
 
 const scrypt = promisify(scryptCallback);
+const pbkdf2 = promisify(pbkdf2Callback);
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 8;
 
 export type AuthTokenPayload = {
@@ -56,8 +57,8 @@ export class AuthService {
     }
 
     const salt = randomBytes(16);
-    const derived = (await scrypt(password, salt, 64)) as Buffer;
-    const passwordHash = `scrypt:${salt.toString('hex')}:${derived.toString('hex')}`;
+    const derived = (await pbkdf2(password, salt, 310000, 32, 'sha256')) as Buffer;
+    const passwordHash = `pbkdf2$310000${salt.toString('hex')}${derived.toString('hex')}`;
 
     try {
       const user = await this.prisma.user.create({
@@ -139,6 +140,209 @@ export class AuthService {
   }
 
   private async verifyPassword(password: string, storedHash: string) {
+    if (storedHash.startsWith('pbkdf2
+    if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
+
+    const [, saltHex, hashHex] = parts;
+    if (!/^[a-f0-9]{32}$/i.test(saltHex) || !/^[a-f0-9]{128}$/i.test(hashHex)) {
+      return false;
+    }
+
+    const expected = Buffer.from(hashHex, 'hex');
+    const actual = (await scrypt(password, Buffer.from(saltHex, 'hex'), 64)) as Buffer;
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  }
+
+  verifyAccessToken(token: string): AuthTokenPayload {
+    const secret = this.config.get<string>('JWT_ACCESS_SECRET');
+    if (!secret || secret.length < 32) {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) throw new UnauthorizedException('Token tidak valid');
+
+    const [headerPart, payloadPart, signaturePart] = parts;
+    let header: { alg?: string; typ?: string };
+    let payload: AuthTokenPayload;
+    try {
+      header = JSON.parse(Buffer.from(headerPart, 'base64url').toString('utf8'));
+      payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+    } catch {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const unsigned = headerPart + '.' + payloadPart;
+    const expected = createHmac('sha256', secret).update(unsigned).digest();
+    let actual: Buffer;
+    try {
+      actual = Buffer.from(signaturePart, 'base64url');
+    } catch {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      !payload ||
+      typeof payload.sub !== 'string' ||
+      typeof payload.email !== 'string' ||
+      !['ADMIN', 'CUSTOMER', 'PROVIDER'].includes(payload.role) ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= now ||
+      typeof payload.iat !== 'number' ||
+      payload.iat > now + 60
+    ) {
+      throw new UnauthorizedException('Token tidak valid atau sudah kedaluwarsa');
+    }
+    return payload;
+  }
+
+  private createSession(userId: string, email: string, role: AuthTokenPayload['role']) {
+    const accessToken = this.createAccessToken({ sub: userId, email, role });
+    return {
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+    };
+  }
+
+  private createAccessToken(
+    user: Pick<AuthTokenPayload, 'sub' | 'email' | 'role'>,
+  ) {
+    const secret = this.config.get<string>('JWT_ACCESS_SECRET');
+    if (!secret || secret.length < 32 || secret === 'replace_with_a_long_random_secret_before_use') {
+      throw new InternalServerErrorException('JWT_ACCESS_SECRET belum dikonfigurasi dengan aman');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const header = this.base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload: AuthTokenPayload = {
+      ...user,
+      iat: now,
+      exp: now + ACCESS_TOKEN_TTL_SECONDS,
+    };
+    const body = this.base64Url(JSON.stringify(payload));
+    const unsigned = header + '.' + body;
+    const signature = createHmac('sha256', secret).update(unsigned).digest('base64url');
+    return unsigned + '.' + signature;
+  }
+
+  private base64Url(value: string) {
+    return Buffer.from(value).toString('base64url');
+  }
+}
+)) {
+      const parts = storedHash.split('
+    if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
+
+    const [, saltHex, hashHex] = parts;
+    if (!/^[a-f0-9]{32}$/i.test(saltHex) || !/^[a-f0-9]{128}$/i.test(hashHex)) {
+      return false;
+    }
+
+    const expected = Buffer.from(hashHex, 'hex');
+    const actual = (await scrypt(password, Buffer.from(saltHex, 'hex'), 64)) as Buffer;
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  }
+
+  verifyAccessToken(token: string): AuthTokenPayload {
+    const secret = this.config.get<string>('JWT_ACCESS_SECRET');
+    if (!secret || secret.length < 32) {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) throw new UnauthorizedException('Token tidak valid');
+
+    const [headerPart, payloadPart, signaturePart] = parts;
+    let header: { alg?: string; typ?: string };
+    let payload: AuthTokenPayload;
+    try {
+      header = JSON.parse(Buffer.from(headerPart, 'base64url').toString('utf8'));
+      payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+    } catch {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const unsigned = headerPart + '.' + payloadPart;
+    const expected = createHmac('sha256', secret).update(unsigned).digest();
+    let actual: Buffer;
+    try {
+      actual = Buffer.from(signaturePart, 'base64url');
+    } catch {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      !payload ||
+      typeof payload.sub !== 'string' ||
+      typeof payload.email !== 'string' ||
+      !['ADMIN', 'CUSTOMER', 'PROVIDER'].includes(payload.role) ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= now ||
+      typeof payload.iat !== 'number' ||
+      payload.iat > now + 60
+    ) {
+      throw new UnauthorizedException('Token tidak valid atau sudah kedaluwarsa');
+    }
+    return payload;
+  }
+
+  private createSession(userId: string, email: string, role: AuthTokenPayload['role']) {
+    const accessToken = this.createAccessToken({ sub: userId, email, role });
+    return {
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+    };
+  }
+
+  private createAccessToken(
+    user: Pick<AuthTokenPayload, 'sub' | 'email' | 'role'>,
+  ) {
+    const secret = this.config.get<string>('JWT_ACCESS_SECRET');
+    if (!secret || secret.length < 32 || secret === 'replace_with_a_long_random_secret_before_use') {
+      throw new InternalServerErrorException('JWT_ACCESS_SECRET belum dikonfigurasi dengan aman');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const header = this.base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload: AuthTokenPayload = {
+      ...user,
+      iat: now,
+      exp: now + ACCESS_TOKEN_TTL_SECONDS,
+    };
+    const body = this.base64Url(JSON.stringify(payload));
+    const unsigned = header + '.' + body;
+    const signature = createHmac('sha256', secret).update(unsigned).digest('base64url');
+    return unsigned + '.' + signature;
+  }
+
+  private base64Url(value: string) {
+    return Buffer.from(value).toString('base64url');
+  }
+}
+);
+      if (parts.length !== 4 || parts[1] !== '310000' || !/^[a-f0-9]{32}$/i.test(parts[2]) || !/^[a-f0-9]{64}$/i.test(parts[3])) return false;
+      const expected = Buffer.from(parts[3], 'hex');
+      const actual = (await pbkdf2(password, Buffer.from(parts[2], 'hex'), 310000, 32, 'sha256')) as Buffer;
+      return actual.length === expected.length && timingSafeEqual(actual, expected);
+    }
     const parts = storedHash.split(':');
     if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
 
