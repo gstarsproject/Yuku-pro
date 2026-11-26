@@ -15,6 +15,7 @@ on:
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: mobile/yuku_app
@@ -23,14 +24,20 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - run: flutter pub get
-      - run: flutter analyze --no-fatal-infos
-      - run: flutter test
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Analyze Flutter code
+        run: flutter analyze --no-fatal-infos
+      - name: Run Flutter tests
+        run: flutter test
       - name: Generate Android platform files
         run: flutter create --platforms=android --project-name yuku .
-      - run: flutter build apk --debug
-      - uses: actions/upload-artifact@v4
+      - name: Build Android debug APK
+        run: flutter build apk --debug --verbose
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
         with:
           name: yuku-android-debug-apk
           path: mobile/yuku_app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+          retention-days: 7
