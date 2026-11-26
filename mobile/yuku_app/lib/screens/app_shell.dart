@@ -7,7 +7,8 @@ import 'inbox_screen.dart';
 
 class AppShell extends StatefulWidget {
   final Future<void> Function()? onLogout;
-  const AppShell({super.key, this.onLogout});
+  final Map<String, dynamic>? user;
+  const AppShell({super.key, this.onLogout, this.user});
   @override
   State<AppShell> createState() => _AppShellState();
 }
@@ -20,7 +21,7 @@ class _AppShellState extends State<AppShell> {
     const ExploreScreen(),
     const CreatePostScreen(),
     const InboxScreen(),
-    ProfileScreen(onLogout: widget.onLogout),
+    ProfileScreen(onLogout: widget.onLogout, user: widget.user),
   ];
 
   @override
