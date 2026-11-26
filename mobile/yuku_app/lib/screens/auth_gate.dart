@@ -26,6 +26,6 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     if (_checking) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     if (_user == null) return AuthScreen(onAuthenticated: _authenticated);
-    return AppShell(onLogout: _logout);
+    return AppShell(onLogout: _logout, user: _user);
   }
 }
