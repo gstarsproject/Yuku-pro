@@ -2,7 +2,7 @@ name: Cloudflare Worker CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/mavo-user-auth]
     paths:
       - "backend-worker/**"
       - ".github/workflows/worker-ci.yml"
@@ -24,4 +24,23 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npm run typecheck
-      - run: npx wrangler deploy --dry-run
+      - run: npx wrangler deploy --dry-run --config wrangler.preview.jsonc
+
+  deploy-preview:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/mavo-user-auth' && secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != ''
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Deploy isolated MAVO preview Worker
+        run: npx wrangler deploy --config wrangler.preview.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
