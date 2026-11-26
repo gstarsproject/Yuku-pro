@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedFeed = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -104,13 +111,13 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
             sliver: SliverToBoxAdapter(
               child: Row(children: [
-                _FeedTab(label: 'For You', selected: true),
+                _FeedTab(label: 'For You', selected: _selectedFeed == 0, onTap: () => setState(() => _selectedFeed = 0)),
                 const SizedBox(width: 18),
-                const _FeedTab(label: 'Following'),
+                _FeedTab(label: 'Following', selected: _selectedFeed == 1, onTap: () => setState(() => _selectedFeed = 1)),
                 const SizedBox(width: 18),
-                const _FeedTab(label: 'Live'),
+                _FeedTab(label: 'Live', selected: _selectedFeed == 2, onTap: () => setState(() => _selectedFeed = 2)),
                 const SizedBox(width: 18),
-                const _FeedTab(label: 'Explore'),
+                _FeedTab(label: 'Explore', selected: _selectedFeed == 3, onTap: () => setState(() => _selectedFeed = 3)),
               ]),
             ),
           ),
@@ -178,18 +185,31 @@ class _StoryItem extends StatelessWidget {
 class _FeedTab extends StatelessWidget {
   final String label;
   final bool selected;
-  const _FeedTab({required this.label, this.selected = false});
+  final VoidCallback onTap;
+  const _FeedTab({required this.label, required this.selected, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
-    Text(label, style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w800 : FontWeight.w600, color: selected ? MavoColors.violet : MavoColors.muted)),
-    const SizedBox(height: 6),
-    Container(height: 3, width: selected ? 28 : 0, decoration: BoxDecoration(color: MavoColors.violet, borderRadius: BorderRadius.circular(3))),
-  ]);
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(8),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(label, style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w800 : FontWeight.w600, color: selected ? MavoColors.violet : MavoColors.muted)),
+      const SizedBox(height: 6),
+      Container(height: 3, width: selected ? 28 : 0, decoration: BoxDecoration(color: MavoColors.violet, borderRadius: BorderRadius.circular(3))),
+    ]),
+  );
 }
 
-class _CommunityPost extends StatelessWidget {
+class _CommunityPost extends StatefulWidget {
   const _CommunityPost();
+
+  @override
+  State<_CommunityPost> createState() => _CommunityPostState();
+}
+
+class _CommunityPostState extends State<_CommunityPost> {
+  bool _liked = false;
+  int _likes = 128;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -234,16 +254,34 @@ class _CommunityPost extends StatelessWidget {
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(12, 5, 12, 12),
-        child: Row(children: const [
-          Icon(Icons.favorite_border_rounded, color: MavoColors.coral, size: 21),
-          SizedBox(width: 5),
-          Text('Like', style: TextStyle(color: MavoColors.muted, fontSize: 11)),
-          SizedBox(width: 18),
-          Icon(Icons.mode_comment_outlined, color: MavoColors.muted, size: 20),
-          SizedBox(width: 5),
-          Text('Comment', style: TextStyle(color: MavoColors.muted, fontSize: 11)),
-          Spacer(),
-          Icon(Icons.share_outlined, color: MavoColors.muted, size: 20),
+        child: Row(children: [
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: () => setState(() {
+              _liked = !_liked;
+              _likes += _liked ? 1 : -1;
+            }),
+            icon: Icon(_liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                color: _liked ? MavoColors.coral : MavoColors.muted, size: 21),
+          ),
+          Text('$_likes', style: const TextStyle(color: MavoColors.muted, fontSize: 11)),
+          const SizedBox(width: 14),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Komentar akan tersedia setelah fitur komunitas aktif.')),
+            ),
+            icon: const Icon(Icons.mode_comment_outlined, color: MavoColors.muted, size: 20),
+          ),
+          const Text('Comment', style: TextStyle(color: MavoColors.muted, fontSize: 11)),
+          const Spacer(),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Fitur berbagi akan segera tersedia.')),
+            ),
+            icon: const Icon(Icons.share_outlined, color: MavoColors.muted, size: 20),
+          ),
         ]),
       ),
     ]),
