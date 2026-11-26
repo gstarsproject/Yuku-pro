@@ -67,6 +67,57 @@ export class AuthService {
     return actual.length === expected.length && timingSafeEqual(actual, expected);
   }
 
+  verifyAccessToken(token: string): AdminTokenPayload {
+    const secret = this.config.get<string>('JWT_ACCESS_SECRET');
+    if (!secret || secret.length < 32) {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) throw new UnauthorizedException('Token tidak valid');
+
+    const [headerPart, payloadPart, signaturePart] = parts;
+    let header: { alg?: string; typ?: string };
+    let payload: AdminTokenPayload;
+    try {
+      header = JSON.parse(Buffer.from(headerPart, 'base64url').toString('utf8'));
+      payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+    } catch {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const unsigned = headerPart + '.' + payloadPart;
+    const expected = createHmac('sha256', secret).update(unsigned).digest();
+    let actual: Buffer;
+    try {
+      actual = Buffer.from(signaturePart, 'base64url');
+    } catch {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
+      throw new UnauthorizedException('Token tidak valid');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      !payload ||
+      typeof payload.sub !== 'string' ||
+      typeof payload.email !== 'string' ||
+      payload.role !== 'ADMIN' ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= now ||
+      typeof payload.iat !== 'number' ||
+      payload.iat > now + 60
+    ) {
+      throw new UnauthorizedException('Token tidak valid atau sudah kedaluwarsa');
+    }
+    return payload;
+  }
+
   private createAccessToken(
     user: Pick<AdminTokenPayload, 'sub' | 'email' | 'role'>,
   ) {
