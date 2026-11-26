@@ -52,7 +52,7 @@ class _InboxScreenState extends State<InboxScreen> {
           ),
           const SizedBox(height: 18),
           SizedBox(
-            height: 94,
+            height: 100,
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               scrollDirection: Axis.horizontal,
@@ -145,7 +145,7 @@ class _StoryAvatar extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: add ? MavoColors.violet.withOpacity(.25) : color, width: 2)),
-          child: CircleAvatar(radius: 25, backgroundColor: color.withOpacity(.13), child: add ? const Icon(Icons.add_rounded, color: MavoColors.violet) : Text(name.substring(0, 1), style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 18))),
+          child: CircleAvatar(radius: 25, backgroundColor: color.withValues(alpha: .13), child: add ? const Icon(Icons.add_rounded, color: MavoColors.violet) : Text(name.substring(0, 1), style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 18))),
         ),
         if (online) Positioned(right: 1, bottom: 2, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: const Color(0xFF36C98F), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)))),
       ]),
@@ -163,7 +163,7 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Stack(children: [
-    CircleAvatar(radius: 26, backgroundColor: color.withOpacity(.15), child: group ? Icon(Icons.groups_rounded, color: color) : Text(name.substring(0, 1), style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 19))),
+    CircleAvatar(radius: 26, backgroundColor: color.withValues(alpha: .15), child: group ? Icon(Icons.groups_rounded, color: color) : Text(name.substring(0, 1), style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 19))),
     if (online) Positioned(right: 0, bottom: 0, child: Container(width: 13, height: 13, decoration: BoxDecoration(color: const Color(0xFF36C98F), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)))),
   ]);
 }
