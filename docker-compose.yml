@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: yuku-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: yuku
+      POSTGRES_USER: yuku
+      POSTGRES_PASSWORD: yuku_local_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - yuku_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yuku -d yuku"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  yuku_pgdata:

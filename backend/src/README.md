@@ -1,0 +1,1 @@
+Modules currently scaffolded: health and categories. Add auth, providers, services, bookings, payments, chat, reviews, verification, disputes, and admin as separate NestJS modules. The Prisma schema is in `backend/prisma/schema.prisma`.

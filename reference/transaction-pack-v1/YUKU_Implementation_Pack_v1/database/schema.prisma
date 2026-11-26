@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole { CUSTOMER PROVIDER ADMIN }
+enum BookingMode { INSTANT REQUEST }
+enum BookingStatus {
+  PENDING_PROVIDER
+  PENDING_PAYMENT
+  PAID
+  CONFIRMED
+  IN_SERVICE
+  COMPLETION_SUBMITTED
+  COMPLETED
+  CANCELLED
+  REJECTED
+  EXPIRED
+  DISPUTED
+  REFUNDED
+}
+enum PaymentStatus { PENDING PAID FAILED EXPIRED REFUND_PENDING REFUNDED }
+enum PayoutStatus { PENDING_REVIEW APPROVED PROCESSING PAID REJECTED FAILED }
+enum LedgerType {
+  CUSTOMER_PAYMENT
+  PLATFORM_COMMISSION
+  PROVIDER_EARNING
+  REFUND
+  PAYOUT_HOLD
+  PAYOUT_RELEASE
+  PAYOUT_PAID
+  ADJUSTMENT
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String?     @unique
+  phone        String?     @unique
+  passwordHash String?
+  role         UserRole
+  fullName     String
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  provider     Provider?
+  customerBookings Booking[] @relation("CustomerBookings")
+  providerBookings Booking[] @relation("ProviderBookings")
+}
+
+model Provider {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  displayName    String
+  verificationStatus String @default("PENDING")
+  payoutBankName String?
+  payoutAccountName String?
+  payoutAccountNumberEncrypted String?
+  bookings       Booking[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ServiceCategory {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  commissionBps   Int      // 1000 = 10.00%; configure per category
+  isActive        Boolean  @default(true)
+  services        Service[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Service {
+  id            String @id @default(cuid())
+  categoryId    String
+  category      ServiceCategory @relation(fields: [categoryId], references: [id])
+  providerId    String
+  provider      Provider @relation(fields: [providerId], references: [id])
+  title         String
+  description   String
+  price         Decimal @db.Decimal(14,2)
+  durationMins  Int
+  isActive      Boolean @default(true)
+  bookings      Booking[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ProviderAvailability {
+  id          String @id @default(cuid())
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id])
+  startAt     DateTime
+  endAt       DateTime
+  isBlocked   Boolean @default(false)
+  createdAt   DateTime @default(now())
+  @@index([providerId, startAt, endAt])
+}
+
+model Booking {
+  id                  String @id @default(cuid())
+  bookingCode         String @unique
+  customerId          String
+  customer            User @relation("CustomerBookings", fields: [customerId], references: [id])
+  providerId          String
+  provider            Provider @relation(fields: [providerId], references: [id])
+  serviceId           String
+  service             Service @relation(fields: [serviceId], references: [id])
+  mode                BookingMode
+  status              BookingStatus
+  scheduledStartAt    DateTime
+  scheduledEndAt      DateTime
+  locationText        String?
+  customerNote        String?
+  servicePrice        Decimal @db.Decimal(14,2)
+  commissionBps       Int
+  commissionAmount    Decimal @db.Decimal(14,2)
+  providerNetAmount   Decimal @db.Decimal(14,2)
+  currency            String @default("IDR")
+  payment             Payment?
+  ledgerEntries       LedgerEntry[]
+  payoutItems         PayoutItem[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  @@index([providerId, scheduledStartAt, scheduledEndAt])
+  @@index([customerId, createdAt])
+}
+
+model Payment {
+  id                String @id @default(cuid())
+  bookingId         String @unique
+  booking           Booking @relation(fields: [bookingId], references: [id])
+  providerName      String
+  providerReference String? @unique
+  amount            Decimal @db.Decimal(14,2)
+  currency          String @default("IDR")
+  status            PaymentStatus @default(PENDING)
+  checkoutUrl       String?
+  paidAt            DateTime?
+  rawWebhookRef     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model WebhookEvent {
+  id          String @id @default(cuid())
+  provider    String
+  eventId     String
+  eventType   String
+  processedAt DateTime?
+  payloadHash String
+  createdAt   DateTime @default(now())
+  @@unique([provider, eventId])
+}
+
+model LedgerEntry {
+  id          String @id @default(cuid())
+  bookingId   String?
+  booking     Booking? @relation(fields: [bookingId], references: [id])
+  providerId  String?
+  type        LedgerType
+  amount      Decimal @db.Decimal(14,2)
+  currency    String @default("IDR")
+  reference   String @unique
+  description String
+  createdAt   DateTime @default(now())
+  @@index([providerId, createdAt])
+}
+
+model Payout {
+  id             String @id @default(cuid())
+  providerId     String
+  amount         Decimal @db.Decimal(14,2)
+  currency       String @default("IDR")
+  status         PayoutStatus @default(PENDING_REVIEW)
+  bankName       String
+  accountName    String
+  accountNumberMasked String
+  externalReference String? @unique
+  failureReason  String?
+  items          PayoutItem[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PayoutItem {
+  id        String @id @default(cuid())
+  payoutId  String
+  payout    Payout @relation(fields: [payoutId], references: [id])
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  amount    Decimal @db.Decimal(14,2)
+  @@unique([payoutId, bookingId])
+}
+
+model IdempotencyKey {
+  id          String @id @default(cuid())
+  scope       String
+  key         String
+  responseJson Json?
+  createdAt   DateTime @default(now())
+  @@unique([scope, key])
+}

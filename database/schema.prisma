@@ -1,0 +1,273 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+}
+enum UserStatus {
+  ACTIVE
+  PENDING_SUSPENDED
+  SUSPENDED
+  DELETED
+}
+enum ProviderVerificationStatus {
+  NOT_STARTED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+enum ServiceMode {
+  ONLINE
+  OFFLINE
+  BOTH
+}
+enum PriceUnit {
+  HOUR
+  SESSION
+  DAY
+  FIXED
+}
+enum BookingStatus {
+  PENDING_PROVIDER
+  ACCEPTED
+  REJECTED
+  AWAITING_PAYMENT
+  PAID
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+  REFUNDED
+}
+enum PaymentStatus {
+  CREATED
+  PENDING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+enum LedgerEntryType {
+  CREDIT
+  DEBIT
+  REVERSAL
+}
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+model User {
+  id             String     @id @default(uuid()) @db.Uuid
+  email          String?    @unique
+  phone          String?    @unique
+  passwordHash   String
+  role           UserRole   @default(CUSTOMER)
+  status         UserStatus @default(ACTIVE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  profile        Profile?
+  provider       ProviderProfile?
+  customerBookings Booking[] @relation("CustomerBookings")
+  providerBookings Booking[] @relation("ProviderBookings")
+  reviews        Review[]   @relation("ReviewAuthor")
+  documents      VerificationDocument[]
+  messages       Message[]
+}
+
+model Profile {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  displayName String
+  avatarUrl   String?
+  bio         String?  @db.VarChar(1000)
+  city        String?
+  province    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProviderProfile {
+  id                 String @id @default(uuid()) @db.Uuid
+  userId             String @unique @db.Uuid
+  verificationStatus ProviderVerificationStatus @default(NOT_STARTED)
+  headline           String?
+  languages          String[] @default([])
+  experienceYears    Int?
+  averageRating      Decimal? @db.Decimal(3,2)
+  reviewCount        Int @default(0)
+  completedBookings  Int @default(0)
+  user               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services           Service[]
+  availabilities     Availability[]
+}
+
+model Category {
+  id        String @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String @unique
+  pillar    String
+  parentId  String? @db.Uuid
+  isActive  Boolean @default(true)
+  parent    Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  services  Service[]
+}
+
+model Service {
+  id             String @id @default(uuid()) @db.Uuid
+  providerId     String @db.Uuid
+  categoryId     String @db.Uuid
+  title          String
+  description    String @db.VarChar(5000)
+  mode           ServiceMode
+  priceAmount    Int
+  currency       String @default("IDR")
+  priceUnit      PriceUnit
+  durationMinutes Int?
+  city           String?
+  province       String?
+  isPublished    Boolean @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  provider       ProviderProfile @relation(fields: [providerId], references: [id])
+  category       Category @relation(fields: [categoryId], references: [id])
+  bookings       Booking[]
+  @@index([categoryId, isPublished])
+  @@index([city, province])
+}
+
+model Availability {
+  id          String @id @default(uuid()) @db.Uuid
+  providerId  String @db.Uuid
+  startsAt    DateTime
+  endsAt      DateTime
+  isBlocked   Boolean @default(false)
+  provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  @@index([providerId, startsAt, endsAt])
+}
+
+model Booking {
+  id               String @id @default(uuid()) @db.Uuid
+  customerId       String @db.Uuid
+  providerId       String @db.Uuid
+  serviceId        String @db.Uuid
+  status           BookingStatus @default(PENDING_PROVIDER)
+  startsAt         DateTime
+  endsAt           DateTime
+  durationMinutes  Int
+  attendeeCount    Int @default(1)
+  serviceMode      ServiceMode
+  currency         String @default("IDR")
+  serviceAmount    Int
+  platformFee      Int @default(0)
+  travelFee        Int @default(0)
+  totalAmount      Int
+  customerNote     String? @db.VarChar(2000)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  customer         User @relation("CustomerBookings", fields: [customerId], references: [id])
+  provider         User @relation("ProviderBookings", fields: [providerId], references: [id])
+  service          Service @relation(fields: [serviceId], references: [id])
+  payment          Payment?
+  review           Review?
+  dispute          Dispute?
+  @@index([customerId, createdAt])
+  @@index([providerId, startsAt])
+  @@index([status, startsAt])
+}
+
+model Payment {
+  id                String @id @default(uuid()) @db.Uuid
+  bookingId         String @unique @db.Uuid
+  gateway           String
+  gatewayReference  String? @unique
+  amount            Int
+  currency          String @default("IDR")
+  status            PaymentStatus @default(CREATED)
+  paidAt            DateTime?
+  createdAt         DateTime @default(now())
+  booking           Booking @relation(fields: [bookingId], references: [id])
+}
+
+model LedgerEntry {
+  id          String @id @default(uuid()) @db.Uuid
+  accountRef  String
+  bookingId   String? @db.Uuid
+  entryType   LedgerEntryType
+  amount      Int
+  currency    String @default("IDR")
+  description String
+  createdAt   DateTime @default(now())
+  @@index([accountRef, createdAt])
+  @@index([bookingId])
+}
+
+model Review {
+  id          String @id @default(uuid()) @db.Uuid
+  bookingId   String @unique @db.Uuid
+  authorId    String @db.Uuid
+  rating      Int
+  comment     String? @db.VarChar(2000)
+  createdAt   DateTime @default(now())
+  booking     Booking @relation(fields: [bookingId], references: [id])
+  author      User @relation("ReviewAuthor", fields: [authorId], references: [id])
+}
+
+model VerificationDocument {
+  id           String @id @default(uuid()) @db.Uuid
+  userId       String @db.Uuid
+  documentType String
+  storageKey   String
+  status       DocumentStatus @default(PENDING)
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+  user         User @relation(fields: [userId], references: [id])
+}
+
+model Conversation {
+  id         String @id @default(uuid()) @db.Uuid
+  bookingId  String? @db.Uuid
+  createdAt  DateTime @default(now())
+  messages   Message[]
+}
+
+model Message {
+  id             String @id @default(uuid()) @db.Uuid
+  conversationId String @db.Uuid
+  senderId       String @db.Uuid
+  body           String @db.VarChar(5000)
+  createdAt      DateTime @default(now())
+  conversation  Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User @relation(fields: [senderId], references: [id])
+  @@index([conversationId, createdAt])
+}
+
+model Dispute {
+  id          String @id @default(uuid()) @db.Uuid
+  bookingId   String @unique @db.Uuid
+  openedById  String @db.Uuid
+  reason      String
+  status      DisputeStatus @default(OPEN)
+  resolution  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  booking     Booking @relation(fields: [bookingId], references: [id])
+}
