@@ -12,7 +12,7 @@
     "pg": "^8.16.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20261127.0",
+    "@cloudflare/workers-types": "^5.20261125.1",
     "@types/pg": "^8.15.5",
     "typescript": "^5.7.2",
     "wrangler": "^4.53.0"
