@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
+import 'create_post_screen.dart';
 import '../theme/yuku_theme.dart';
 
 class AppShell extends StatefulWidget {
@@ -15,7 +16,7 @@ class _AppShellState extends State<AppShell> {
   final pages = const [
     HomeScreen(),
     ExploreScreen(),
-    _PlaceholderScreen(title: 'Booking', subtitle: 'Booking pengalaman dan layananmu akan muncul di sini.'),
+    const CreatePostScreen(),
     _PlaceholderScreen(title: 'Inbox', subtitle: 'Pesan dan percakapan MAVO akan muncul di sini.'),
     _PlaceholderScreen(title: 'Profil', subtitle: 'Kelola profil dan aktivitas MAVO kamu di sini.'),
   ];
@@ -29,7 +30,7 @@ class _AppShellState extends State<AppShell> {
       destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
         NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore_rounded), label: 'Explore'),
-        NavigationDestination(icon: Icon(Icons.add_circle_outline_rounded), selectedIcon: Icon(Icons.add_circle_rounded), label: 'Booking'),
+        NavigationDestination(icon: Icon(Icons.add_circle_outline_rounded), selectedIcon: Icon(Icons.add_circle_rounded), label: 'Create'),
         NavigationDestination(icon: Icon(Icons.chat_bubble_outline_rounded), selectedIcon: Icon(Icons.chat_bubble_rounded), label: 'Inbox'),
         NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Profile'),
       ],
