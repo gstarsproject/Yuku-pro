@@ -38,4 +38,21 @@ void main() {
     expect(find.text('Bagikan cerita'), findsOneWidget);
   });
 
+  testWidgets('Creator profile follow button updates preview state', (tester) async {
+    await tester.pumpWidget(const YukuApp());
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Lihat profil kreator'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('MAVO Community'), findsOneWidget);
+    expect(find.text('1280'), findsOneWidget);
+
+    await tester.tap(find.text('Ikuti'));
+    await tester.pump();
+
+    expect(find.text('Mengikuti'), findsOneWidget);
+    expect(find.text('1281'), findsOneWidget);
+  });
+
 }
