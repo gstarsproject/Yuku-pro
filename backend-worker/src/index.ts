@@ -6,10 +6,107 @@ async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
   const c = new Client({ connectionString: env.HYPERDRIVE.connectionString });
   try { await c.connect(); return await fn(c); } finally { await c.end().catch(() => undefined); }
 }
+
+const TOKEN_TTL_SECONDS = 28800;
+const encoder = new TextEncoder();
+const toHex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+async function sha256(value: string) {
+  return toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value))));
+}
+async function makePasswordHash(password: string) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 310000, hash: "SHA-256" }, key, 256));
+  return "pbkdf2$310000$" + toHex(salt) + "$" + toHex(bits);
+}
+async function checkPassword(password: string, stored: string) {
+  const parts = stored.split("$");
+  if (parts.length !== 4 || parts[0] !== "pbkdf2" || parts[1] !== "310000" ||
+      !/^[a-f0-9]{32}$/i.test(parts[2]) || !/^[a-f0-9]{64}$/i.test(parts[3])) return false;
+  const salt = new Uint8Array(parts[2].match(/../g)!.map(v => parseInt(v, 16)));
+  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 310000, hash: "SHA-256" }, key, 256));
+  return toHex(bits) === parts[3].toLowerCase();
+}
+async function createUserSession(c: Client, user: {id:string;email:string;role:string;displayName:string|null}) {
+  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+  const tokenHash = await sha256(token);
+  await c.query('INSERT INTO "UserSession" ("id","userId","tokenHash","expiresAt") VALUES ($1,$2,$3,NOW() + INTERVAL \'8 hours\')',
+    [crypto.randomUUID(), user.id, tokenHash]);
+  return { accessToken: token, tokenType: "Bearer", expiresIn: TOKEN_TTL_SECONDS, user };
+}
+async function readRequestBody(request: Request) {
+  const size = Number(request.headers.get("content-length") || 0);
+  if (size > 8192) throw new Error("Payload too large");
+  return await request.json() as Record<string, unknown>;
+}
+async function getSessionUser(c: Client, request: Request) {
+  const header = request.headers.get("authorization") || "";
+  if (!header.startsWith("Bearer ")) return null;
+  const token = header.slice(7).trim();
+  if (!/^[a-f0-9]{64}$/i.test(token)) return null;
+  const tokenHash = await sha256(token);
+  const result = await c.query(
+    'SELECT u."id",u."email",u."phone",u."role",p."displayName",p."avatarUrl",p."bio",p."city",p."province",u."createdAt" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."status"=\'ACTIVE\' AND u."role"<>\'ADMIN\' LIMIT 1',
+    [tokenHash]);
+  return result.rows[0] || null;
+}
+
 export default {
  async fetch(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url), path = url.pathname;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+
+  if (path === "/api/v1/auth/register" && request.method === "POST") {
+   try {
+    const body = await readRequestBody(request);
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 10 || password.length > 128 || displayName.length < 2 || displayName.length > 40)
+      return json({success:false,message:"Email, password (10–128 karakter), atau nama tidak valid"},400);
+    const passwordHash = await makePasswordHash(password);
+    return await db(env, async c => {
+      await c.query("BEGIN");
+      try {
+       const id = crypto.randomUUID();
+       await c.query('INSERT INTO "User" ("id","email","passwordHash","role","status","updatedAt") VALUES ($1,$2,$3,\\'CUSTOMER\\',\\'ACTIVE\\',NOW())',[id,email,passwordHash]);
+       await c.query('INSERT INTO "Profile" ("id","userId","displayName","updatedAt") VALUES ($1,$2,$3,NOW())',[crypto.randomUUID(),id,displayName]);
+       const session = await createUserSession(c,{id,email,role:"CUSTOMER",displayName});
+       await c.query("COMMIT");
+       return json({success:true,data:session},201);
+      } catch(e) {
+       await c.query("ROLLBACK");
+       if ((e as {code?:string})?.code === "23505") return json({success:false,message:"Email sudah terdaftar"},409);
+       throw e;
+      }
+    });
+   } catch(e) { console.error("Registration failed",e); return json({success:false,message:"Pendaftaran gagal. Periksa data dan coba lagi."},400); }
+  }
+  if (path === "/api/v1/auth/user/login" && request.method === "POST") {
+   try {
+    const body = await readRequestBody(request);
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!email || !password || password.length > 128) return json({success:false,message:"Email atau password tidak valid"},400);
+    return await db(env, async c => {
+      const result = await c.query('SELECT u."id",u."email",u."passwordHash",u."role",u."status",p."displayName" FROM "User" u LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE u."email"=$1 LIMIT 1',[email]);
+      const user = result.rows[0];
+      if (!user || user.role === "ADMIN" || user.status !== "ACTIVE" || !(await checkPassword(password,user.passwordHash)))
+        return json({success:false,message:"Email atau password tidak valid"},401);
+      return json({success:true,data:await createUserSession(c,{id:user.id,email:user.email,role:user.role,displayName:user.displayName})});
+    });
+   } catch(e) { console.error("User login failed",e); return json({success:false,message:"Login gagal. Coba lagi."},400); }
+  }
+  if (path === "/api/v1/auth/me" && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      return user ? json({success:true,data:user}) : json({success:false,message:"Sesi tidak valid atau kedaluwarsa"},401);
+    });
+   } catch(e) { console.error("Session lookup failed",e); return json({success:false,message:"Tidak dapat memeriksa sesi"},503); }
+  }
+
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "yuku-api-worker", status: "ok" });
   if (path === "/health/db" || path === "/api/health/db") {
