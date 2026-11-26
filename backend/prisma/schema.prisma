@@ -89,6 +89,8 @@ model User {
   reviews        Review[]   @relation("ReviewAuthor")
   documents      VerificationDocument[]
   messages       Message[]
+  following      Follow[] @relation("UserFollowing")
+  followers      Follow[] @relation("UserFollowers")
 }
 
 model Profile {
@@ -317,4 +319,18 @@ model PaymentWebhookEvent {
   processedAt    DateTime?
   createdAt      DateTime @default(now())
   @@index([gatewayOrderId, createdAt])
+}
+
+
+model Follow {
+  id          String   @id @default(uuid()) @db.Uuid
+  followerId  String   @db.Uuid
+  followingId String   @db.Uuid
+  createdAt   DateTime @default(now())
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId, createdAt])
+  @@index([followingId, createdAt])
 }
