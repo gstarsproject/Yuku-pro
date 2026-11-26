@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 import 'stories_screen.dart';
+import 'creator_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -240,7 +241,14 @@ class _CommunityPostState extends State<_CommunityPost> {
             Text('MAVO Community', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: MavoColors.midnight)),
             Text('Discover something new · 2h', style: TextStyle(fontSize: 10, color: MavoColors.muted)),
           ])),
-          const Icon(Icons.more_horiz_rounded, color: MavoColors.muted),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const CreatorProfileScreen(creatorName: 'MAVO Community', bio: 'Official MAVO community · Connect, share, and explore together.'),
+            )),
+            icon: const Icon(Icons.person_outline_rounded, color: MavoColors.violet),
+            tooltip: 'Lihat profil kreator',
+          ),
         ]),
       ),
       Container(
