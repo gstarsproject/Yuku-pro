@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuku_app/main.dart';
+import 'package:flutter/material.dart';
+import 'package:yuku_app/screens/app_shell.dart';
+import 'package:yuku_app/screens/auth_screen.dart';
 
 void main() {
   testWidgets('MAVO home shell renders', (tester) async {
-    await tester.pumpWidget(const YukuApp());
+    await tester.pumpWidget(const AppShell());
     await tester.pump();
 
     expect(find.text('MAVO'), findsOneWidget);
@@ -56,3 +58,19 @@ void main() {
   });
 
 }
+
+  testWidgets('MAVO authentication screen shows sign in form', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: AuthScreen(onAuthenticated: (_) {})));
+    expect(find.text('Selamat datang kembali'), findsOneWidget);
+    expect(find.text('Masuk'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+  });
+
+  testWidgets('MAVO authentication screen switches to registration', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: AuthScreen(onAuthenticated: (_) {})));
+    await tester.tap(find.text('Belum punya akun? Daftar sekarang'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bergabung dengan MAVO'), findsOneWidget);
+    expect(find.text('Nama lengkap'), findsOneWidget);
+    expect(find.text('Buat Akun'), findsOneWidget);
+  });
