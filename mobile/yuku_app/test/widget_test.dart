@@ -27,4 +27,15 @@ void main() {
     expect(find.text('Mode pratinjau — pesan hanya tersimpan di layar ini.'), findsOneWidget);
     expect(find.text('Hai! Senang bisa terhubung di MAVO 😊'), findsOneWidget);
   });
+  testWidgets('Home story opens the MAVO story viewer', (tester) async {
+    await tester.pumpWidget(const YukuApp());
+    await tester.pump();
+
+    await tester.tap(find.text('Discover'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DISCOVER'), findsOneWidget);
+    expect(find.text('Bagikan cerita'), findsOneWidget);
+  });
+
 }
