@@ -58,7 +58,7 @@ export class AuthService {
 
     const salt = randomBytes(16);
     const derived = (await pbkdf2(password, salt, 310000, 32, 'sha256')) as Buffer;
-    const passwordHash = `pbkdf2$310000${salt.toString('hex')}${derived.toString('hex')}`;
+    const passwordHash = 'pbkdf2$310000$' + salt.toString('hex') + '$' + derived.toString('hex');
 
     try {
       const user = await this.prisma.user.create({
