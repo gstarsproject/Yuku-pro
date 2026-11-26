@@ -98,6 +98,18 @@ export default {
     });
    } catch(e) { console.error("User login failed",e); return json({success:false,message:"Login gagal. Coba lagi."},400); }
   }
+
+  if (path === "/api/v1/auth/logout" && request.method === "POST") {
+   try {
+    const header = request.headers.get("authorization") || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+    if (/^[a-f0-9]{64}$/i.test(token)) {
+      const tokenHash = await sha256(token);
+      await db(env, c => c.query('DELETE FROM "UserSession" WHERE "tokenHash"=$1',[tokenHash]));
+    }
+    return json({success:true,message:"Sesi telah diakhiri"});
+   } catch(e) { console.error("Logout failed",e); return json({success:false,message:"Tidak dapat mengakhiri sesi"},503); }
+  }
   if (path === "/api/v1/auth/me" && request.method === "GET") {
    try {
     return await db(env, async c => {
