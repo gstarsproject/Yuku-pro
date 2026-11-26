@@ -13,7 +13,7 @@ class YukuApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'YUKU',
+      title: 'MAVO',
       debugShowCheckedModeBanner: false,
       theme: YukuTheme.light,
       home: const AppShell(),
