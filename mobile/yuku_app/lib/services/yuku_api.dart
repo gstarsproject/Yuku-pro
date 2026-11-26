@@ -45,7 +45,19 @@ class YukuApi {
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
 
-  static Future<void> logout() => _storage.delete(key: _tokenKey);
+  static Future<void> logout() async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token != null && token.isNotEmpty) {
+      try {
+        await http.post(Uri.parse('$baseUrl/api/v1/auth/logout'),
+          headers: {'Authorization': 'Bearer $token'},
+        ).timeout(const Duration(seconds: 8));
+      } catch (_) {
+        // Local credentials are still cleared if the device is offline.
+      }
+    }
+    await _storage.delete(key: _tokenKey);
+  }
 
   static Future<Map<String, dynamic>> health() async {
     final response = await http.get(Uri.parse('$baseUrl/health')).timeout(const Duration(seconds: 12));
