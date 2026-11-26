@@ -41,7 +41,10 @@ export class AuthService {
       throw new UnauthorizedException('Email atau password tidak valid');
     }
 
-    return this.createSession(user.id, user.email ?? email, 'ADMIN');
+    return {
+      ...this.createSession(user.id, user.email ?? email, 'ADMIN'),
+      user: { id: user.id, email: user.email, role: user.role },
+    };
   }
 
   async registerCustomer(emailInput: string, password: string, displayNameInput: string) {
