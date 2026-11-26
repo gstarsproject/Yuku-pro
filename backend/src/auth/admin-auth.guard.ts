@@ -5,12 +5,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService, AuthTokenPayload } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-type AdminRequest = Request & {
-  user?: { sub: string; email: string; role: 'ADMIN'; iat: number; exp: number };
-};
+type AdminRequest = Request & { user?: AuthTokenPayload };
 
 @Injectable()
 export class AdminAuthGuard implements CanActivate {
@@ -31,6 +29,10 @@ export class AdminAuthGuard implements CanActivate {
     if (!token) throw new UnauthorizedException('Token tidak valid');
 
     const payload = this.authService.verifyAccessToken(token);
+    if (payload.role !== 'ADMIN') {
+      throw new UnauthorizedException('Akses khusus admin');
+    }
+
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || user.role !== 'ADMIN' || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Akun admin tidak aktif');
