@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
+import 'stories_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -161,24 +162,38 @@ class _StoryItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: 67,
-    child: Column(children: [
-      Container(
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: color, width: 2.2),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(35),
+      onTap: () {
+        if (isAdd) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Upload story akan aktif setelah integrasi media.')),
+          );
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => StoriesScreen(initialStory: label),
+          ));
+        }
+      },
+      child: Column(children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 2.2),
+          ),
+          child: CircleAvatar(
+            radius: 25,
+            backgroundColor: color.withValues(alpha: .13),
+            child: isAdd
+                ? Icon(Icons.add_rounded, color: color, size: 27)
+                : Icon(Icons.person_rounded, color: color, size: 27),
+          ),
         ),
-        child: CircleAvatar(
-          radius: 25,
-          backgroundColor: color.withValues(alpha: .13),
-          child: isAdd
-              ? Icon(Icons.add_rounded, color: color, size: 27)
-              : Icon(Icons.person_rounded, color: color, size: 27),
-        ),
-      ),
-      const SizedBox(height: 5),
-      Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: MavoColors.ink)),
-    ]),
+        const SizedBox(height: 5),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: MavoColors.ink)),
+      ]),
+    ),
   );
 }
 
