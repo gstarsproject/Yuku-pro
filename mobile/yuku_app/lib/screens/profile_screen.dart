@@ -3,7 +3,8 @@ import '../theme/yuku_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Future<void> Function()? onLogout;
-  const ProfileScreen({super.key, this.onLogout});
+  final Map<String, dynamic>? user;
+  const ProfileScreen({super.key, this.onLogout, this.user});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -13,6 +14,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _tab = 0;
   String _name = 'Nama Pengguna';
   String _bio = 'Mulai ceritakan perjalananmu bersama MAVO.';
+
+  @override
+  void initState() {
+    super.initState();
+    final displayName = widget.user?['displayName'] as String?;
+    if (displayName != null && displayName.trim().isNotEmpty) _name = displayName;
+    _bio = (widget.user?['bio'] as String?) ?? _bio;
+  }
 
   Future<void> _editProfile() async {
     final nameController = TextEditingController(text: _name);
