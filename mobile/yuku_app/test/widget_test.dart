@@ -51,7 +51,7 @@ void main() {
     await tester.tap(find.text('Ikuti'));
     await tester.pump();
 
-    expect(find.text('Mengikuti'), findsOneWidget);
+    expect(find.text('Mengikuti'), findsNWidgets(2));
     expect(find.text('1281'), findsOneWidget);
   });
 
