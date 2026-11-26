@@ -15,11 +15,11 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int index = 0;
 
-  final pages = const [
-    HomeScreen(),
-    ExploreScreen(),
+  List<Widget> get pages => [
+    const HomeScreen(),
+    const ExploreScreen(),
     const CreatePostScreen(),
-    InboxScreen(),
+    const InboxScreen(),
     ProfileScreen(onLogout: widget.onLogout),
   ];
 
