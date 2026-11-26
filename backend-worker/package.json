@@ -1,0 +1,20 @@
+{
+  "name": "yuku-cloudflare-worker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20261127.0",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.53.0"
+  }
+}
