@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final Future<void> Function()? onLogout;
+  const ProfileScreen({super.key, this.onLogout});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -46,7 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     appBar: AppBar(
       title: const Text('Profil', style: TextStyle(fontWeight: FontWeight.w900)),
       actions: [
-        IconButton(onPressed: () {}, icon: const Icon(Icons.menu_rounded)),
+        IconButton(tooltip: 'Keluar', onPressed: widget.onLogout, icon: const Icon(Icons.logout_rounded)),
       ],
     ),
     body: ListView(
