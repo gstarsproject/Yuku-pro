@@ -17,9 +17,9 @@ class _AppShellState extends State<AppShell> {
   final pages = const [
     HomeScreen(),
     ExploreScreen(),
-    CreatePostScreen(),
+    const CreatePostScreen(),
     _PlaceholderScreen(title: 'Inbox', subtitle: 'Pesan dan percakapan MAVO akan muncul di sini.'),
-    ProfileScreen(),
+    const ProfileScreen(),
   ];
 
   @override
