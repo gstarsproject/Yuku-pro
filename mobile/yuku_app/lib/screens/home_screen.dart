@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -31,6 +32,31 @@ class HomeScreen extends StatelessWidget {
                   prefixIcon: Icon(Icons.search),
                   suffixIcon: Icon(Icons.tune),
                 ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            sliver: SliverToBoxAdapter(
+              child: FutureBuilder<Map<String, dynamic>>(
+                future: YukuApi.health(),
+                builder: (context, snapshot) {
+                  final connected = snapshot.hasData && snapshot.data?['status'] == 'ok';
+                  final failed = snapshot.hasError;
+                  final color = connected ? const Color(0xFF168653) : (failed ? Colors.redAccent : YukuColors.muted);
+                  final label = connected ? 'Server YUKU terhubung' : (failed ? 'Server belum terhubung' : 'Menghubungkan ke server...');
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(13)),
+                    child: Row(children: [
+                      Icon(Icons.circle, size: 9, color: color),
+                      const SizedBox(width: 9),
+                      Expanded(child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600))),
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                    ]),
+                  );
+                },
               ),
             ),
           ),
