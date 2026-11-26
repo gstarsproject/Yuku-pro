@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/app_shell.dart';
+import 'screens/auth_gate.dart';
 import 'theme/yuku_theme.dart';
 
 void main() {
@@ -9,14 +9,11 @@ void main() {
 
 class YukuApp extends StatelessWidget {
   const YukuApp({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MAVO',
-      debugShowCheckedModeBanner: false,
-      theme: YukuTheme.light,
-      home: const AppShell(),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'MAVO',
+    debugShowCheckedModeBanner: false,
+    theme: YukuTheme.light,
+    home: const AuthGate(),
+  );
 }
