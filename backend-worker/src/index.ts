@@ -1,6 +1,6 @@
 import { Client } from "pg";
 interface Env { HYPERDRIVE: Hyperdrive; }
-const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
+const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
 async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
   const c = new Client({ connectionString: env.HYPERDRIVE.connectionString });
