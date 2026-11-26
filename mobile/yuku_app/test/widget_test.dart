@@ -57,7 +57,6 @@ void main() {
     expect(find.text('1281'), findsOneWidget);
   });
 
-}
 
   testWidgets('MAVO authentication screen shows sign in form', (tester) async {
     await tester.pumpWidget(MaterialApp(home: AuthScreen(onAuthenticated: (_) {})));
@@ -74,3 +73,4 @@ void main() {
     expect(find.text('Nama lengkap'), findsOneWidget);
     expect(find.text('Buat Akun'), findsOneWidget);
   });
+}
