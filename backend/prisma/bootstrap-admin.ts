@@ -12,7 +12,7 @@ async function main() {
   if (!email || !password) {
     throw new Error('Set ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD in the backend host environment.');
   }
-  if (password.length < 12) {
+  if (password.length < 12 || password.startsWith('replace_with_')) {
     throw new Error('ADMIN_BOOTSTRAP_PASSWORD must be at least 12 characters.');
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
