@@ -17,5 +17,6 @@
     "traces": {
       "enabled": true
     }
-  }
+  },
+  "previews": {}
 }
