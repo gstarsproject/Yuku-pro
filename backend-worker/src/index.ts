@@ -70,7 +70,7 @@ export default {
       await c.query("BEGIN");
       try {
        const id = crypto.randomUUID();
-       await c.query('INSERT INTO "User" ("id","email","passwordHash","role","status","updatedAt") VALUES ($1,$2,$3,\\'CUSTOMER\\',\\'ACTIVE\\',NOW())',[id,email,passwordHash]);
+       await c.query('INSERT INTO "User" ("id","email","passwordHash","role","status","updatedAt") VALUES ($1,$2,$3,$4,$5,NOW())',[id,email,passwordHash,"CUSTOMER","ACTIVE"]);
        await c.query('INSERT INTO "Profile" ("id","userId","displayName","updatedAt") VALUES ($1,$2,$3,NOW())',[crypto.randomUUID(),id,displayName]);
        const session = await createUserSession(c,{id,email,role:"CUSTOMER",displayName});
        await c.query("COMMIT");
