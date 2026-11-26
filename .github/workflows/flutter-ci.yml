@@ -15,7 +15,7 @@ on:
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: mobile/yuku_app
@@ -32,12 +32,12 @@ jobs:
         run: flutter test
       - name: Generate Android platform files
         run: flutter create --platforms=android --project-name yuku .
-      - name: Build Android debug APK
-        run: flutter build apk --debug --verbose
-      - name: Upload Android debug APK
+      - name: Build optimized Android release APKs
+        run: flutter build apk --release --split-per-abi
+      - name: Upload Samsung-compatible arm64 APK
         uses: actions/upload-artifact@v4
         with:
-          name: yuku-android-debug-apk
-          path: mobile/yuku_app/build/app/outputs/flutter-apk/app-debug.apk
+          name: yuku-android-arm64-release
+          path: mobile/yuku_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: 7
