@@ -14,7 +14,7 @@ void main() {
   });
 
   testWidgets('Inbox opens a conversation preview', (tester) async {
-    await tester.pumpWidget(const YukuApp());
+    await tester.pumpWidget(const MaterialApp(home: AppShell()));
     await tester.pump();
 
     await tester.tap(find.text('Inbox'));
@@ -30,7 +30,7 @@ void main() {
     expect(find.text('Hai! Senang bisa terhubung di MAVO 😊'), findsOneWidget);
   });
   testWidgets('Home story opens the MAVO story viewer', (tester) async {
-    await tester.pumpWidget(const YukuApp());
+    await tester.pumpWidget(const MaterialApp(home: AppShell()));
     await tester.pump();
 
     await tester.tap(find.text('Discover'));
@@ -41,7 +41,7 @@ void main() {
   });
 
   testWidgets('Creator profile follow button updates preview state', (tester) async {
-    await tester.pumpWidget(const YukuApp());
+    await tester.pumpWidget(const MaterialApp(home: AppShell()));
     await tester.pump();
 
     await tester.tap(find.byTooltip('Lihat profil kreator'));
