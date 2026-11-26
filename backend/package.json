@@ -10,7 +10,8 @@
     "start:prod": "node dist/main",
     "lint": "echo Configure ESLint rules before enabling CI lint checks",
     "test": "jest",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "admin:bootstrap": "ts-node prisma/bootstrap-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
