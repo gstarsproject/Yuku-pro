@@ -26,7 +26,11 @@ async function checkPassword(password: string, stored: string) {
   const salt = new Uint8Array(parts[2].match(/../g)!.map(v => parseInt(v, 16)));
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 310000, hash: "SHA-256" }, key, 256));
-  return toHex(bits) === parts[3].toLowerCase();
+  const actual = toHex(bits), expected = parts[3].toLowerCase();
+  if (actual.length !== expected.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < actual.length; i++) mismatch |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
+  return mismatch === 0;
 }
 async function createUserSession(c: Client, user: {id:string;email:string;role:string;displayName:string|null}) {
   const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
