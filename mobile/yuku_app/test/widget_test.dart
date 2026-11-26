@@ -5,7 +5,7 @@ import 'package:yuku_app/screens/auth_screen.dart';
 
 void main() {
   testWidgets('MAVO home shell renders', (tester) async {
-    await tester.pumpWidget(const AppShell());
+    await tester.pumpWidget(const MaterialApp(home: AppShell()));
     await tester.pump();
 
     expect(find.text('MAVO'), findsOneWidget);
