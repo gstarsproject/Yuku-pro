@@ -18,7 +18,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) => SafeArea(child: Column(children: [
     Padding(padding: const EdgeInsets.fromLTRB(20,20,20,12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Explore', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800,color:YukuColors.navy)),
-      const SizedBox(height:4), const Text('Temukan provider dan layanan yang cocok.',style:TextStyle(color:YukuColors.muted)),
+      const SizedBox(height:4), const Text('Temukan kreator, layanan, dan pengalaman.',style:TextStyle(color:YukuColors.muted)),
       const SizedBox(height:16),
       TextField(controller:search,textInputAction:TextInputAction.search,onSubmitted:(_)=>reload(),decoration:InputDecoration(hintText:'Cari layanan...',prefixIcon:const Icon(Icons.search),suffixIcon:IconButton(onPressed:reload,icon:const Icon(Icons.arrow_forward)))),
       const SizedBox(height:12),
@@ -43,7 +43,7 @@ class _ServiceCard extends StatelessWidget {
   final price=item['priceAmount']??0;
   final verified=item['verificationStatus']=='VERIFIED';
   return Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(17)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-   Row(children:[CircleAvatar(backgroundColor:const Color(0xFFEAF1FF),child:Text((item['providerName']??'Y').toString().substring(0,1).toUpperCase(),style:const TextStyle(color:YukuColors.navy,fontWeight:FontWeight.bold))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(item['providerName']??'Provider YUKU',style:const TextStyle(fontWeight:FontWeight.bold)),Text(item['categoryName']??'Layanan',style:const TextStyle(fontSize:12,color:YukuColors.muted))])),if(verified)const Icon(Icons.verified,color:YukuColors.blue,size:19)]),
+   Row(children:[CircleAvatar(backgroundColor:const Color(0xFFEAF1FF),child:Text((item['providerName']??'Y').toString().substring(0,1).toUpperCase(),style:const TextStyle(color:YukuColors.navy,fontWeight:FontWeight.bold))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(item['providerName']??'MAVO Provider',style:const TextStyle(fontWeight:FontWeight.bold)),Text(item['categoryName']??'Layanan',style:const TextStyle(fontSize:12,color:YukuColors.muted))])),if(verified)const Icon(Icons.verified,color:YukuColors.blue,size:19)]),
    const SizedBox(height:14),Text(item['title']??'Layanan',style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold)),const SizedBox(height:5),Text(item['description']??'',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:YukuColors.muted)),const SizedBox(height:12),
    Row(children:[Expanded(child:Text('${item['city']??'Online'} · ${item['priceUnit']??''}',style:const TextStyle(fontSize:12,color:YukuColors.muted))),Text('Rp ${price.toString()}',style:const TextStyle(color:YukuColors.blue,fontWeight:FontWeight.w800))]),
   ]));
