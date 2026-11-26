@@ -18,5 +18,15 @@
       "enabled": true
     }
   },
-  "previews": {}
+  "previews": {
+    "hyperdrive": [
+      {
+        "binding": "HYPERDRIVE",
+        "id": "618629c1266146b5b4f898761552d004"
+      }
+    ],
+    "vars": {
+      "APP_ENV": "preview"
+    }
+  }
 }
