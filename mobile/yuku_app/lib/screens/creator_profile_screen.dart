@@ -86,7 +86,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
           )),
         ]),
         const SizedBox(height: 24),
-        const Divider(color: MavoColors.border),
+        const Divider(color: MavoColors.violetSoft),
         const SizedBox(height: 14),
         const Text('Postingan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: MavoColors.midnight)),
         const SizedBox(height: 12),
