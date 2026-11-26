@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
 import 'create_post_screen.dart';
+import 'profile_screen.dart';
 import '../theme/yuku_theme.dart';
 
 class AppShell extends StatefulWidget {
@@ -16,9 +17,9 @@ class _AppShellState extends State<AppShell> {
   final pages = const [
     HomeScreen(),
     ExploreScreen(),
-    const CreatePostScreen(),
+    CreatePostScreen(),
     _PlaceholderScreen(title: 'Inbox', subtitle: 'Pesan dan percakapan MAVO akan muncul di sini.'),
-    _PlaceholderScreen(title: 'Profil', subtitle: 'Kelola profil dan aktivitas MAVO kamu di sini.'),
+    ProfileScreen(),
   ];
 
   @override
