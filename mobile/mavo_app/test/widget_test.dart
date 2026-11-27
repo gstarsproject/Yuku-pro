@@ -56,9 +56,18 @@ void main() {
   });
 
   testWidgets('MAVO authentication screen switches to registration', (tester) async {
+    await tester.view.setPhysicalSize(const Size(800, 1000));
+    await tester.view.setDevicePixelRatio(1);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(MaterialApp(home: AuthScreen(onAuthenticated: (_) {})));
-    await tester.tap(find.text('Daftar'));
+    final registerLink = find.text('Daftar');
+    await tester.ensureVisible(registerLink);
     await tester.pumpAndSettle();
+    await tester.tap(registerLink);
+    await tester.pumpAndSettle();
+
     expect(find.text('Buat akun MAVO'), findsOneWidget);
     expect(find.text('Nama lengkap'), findsOneWidget);
     expect(find.text('Daftar sekarang'), findsOneWidget);
