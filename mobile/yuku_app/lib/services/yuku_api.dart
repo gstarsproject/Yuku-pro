@@ -186,6 +186,31 @@ class YukuApi {
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
 
+  static Future<List<Map<String, dynamic>>> stories() async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.get(
+      Uri.parse('$baseUrl/api/v1/stories'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 25));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> createStory({
+    required String content,
+    required String audience,
+  }) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/stories'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'content': content.trim(), 'audience': audience}),
+    ).timeout(const Duration(seconds: 25));
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
   static Future<List<Map<String, dynamic>>> posts() async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
