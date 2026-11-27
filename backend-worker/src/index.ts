@@ -168,7 +168,7 @@ export default {
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
       const query = (url.searchParams.get("q") || "").trim();
       if (query.length < 2 || query.length > 60) return json({success:true,count:0,data:[]});
-      const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\\'ACTIVE\\' AND u."role"<>\\'ADMIN\\' AND u."id"<>$1 AND p."displayName" ILIKE $2 ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query.replace(/[\\%_]/g,"\\  if (path === "/api/v1/conversations" && ["GET","POST"].includes(request.method)) {") + '%']);
+      const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\\'ACTIVE\\' AND u."role"<>\\'ADMIN\\' AND u."id"<>$1 AND p."displayName" ILIKE $2 ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query + '%']);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
    } catch(e) { console.error("User search failed",e); return json({success:false,message:"Pencarian pengguna gagal."},503); }
