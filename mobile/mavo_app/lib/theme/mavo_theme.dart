@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 
 class MavoColors {
-  static const midnight = Color(0xFF17152C);
-  static const violet = Color(0xFF7557FF);
-  static const coral = Color(0xFFFF5C7A);
-  static const aqua = Color(0xFF27C7D9);
-  static const gold = Color(0xFFD6B66C);
-  static const background = Color(0xFFF5F6FA);
-  static const ink = Color(0xFF211D36);
-  static const muted = Color(0xFF777487);
+  // MAVO's core identity: confident blue, clean white, restrained orange.
+  static const midnight = Color(0xFF172B4D);
+  static const violet = Color(0xFF2563D9); // Legacy name; now the primary MAVO blue.
+  static const coral = Color(0xFFF28A36); // Legacy name; now the orange accent.
+  static const aqua = Color(0xFF238A9B);
+  static const gold = Color(0xFFE6A23C);
+  static const background = Color(0xFFF5F8FC);
+  static const ink = Color(0xFF1B2A41);
+  static const muted = Color(0xFF718096);
   static const surface = Colors.white;
-  static const violetSoft = Color(0xFFF0ECFF);
-  static const coralSoft = Color(0xFFFFEEF2);
+  static const violetSoft = Color(0xFFEAF2FF); // Soft blue surface.
+  static const coralSoft = Color(0xFFFFF3E8); // Soft orange surface.
 }
 
 class MAVOColors {
