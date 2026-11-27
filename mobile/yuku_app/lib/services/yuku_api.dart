@@ -130,6 +130,15 @@ class YukuApi {
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
 
+  static Future<List<Map<String, dynamic>>> userRelations(String userId, {required String type}) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final uri = Uri.parse('$baseUrl/api/v1/users/$userId/relations').replace(queryParameters: {'type': type});
+    final response = await _client.get(uri, headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
   static Future<Map<String, dynamic>> setFollow(String userId, {required bool follow}) async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
