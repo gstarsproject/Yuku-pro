@@ -124,6 +124,33 @@ export default {
    } catch(e) { console.error("Session lookup failed",e); return json({success:false,message:"Tidak dapat memeriksa sesi"},503); }
   }
 
+  if (path === "/api/v1/posts" && request.method === "POST") {
+   try {
+    const body = await readRequestBody(request);
+    const content = typeof body.content === "string" ? body.content.trim() : "";
+    const audience = typeof body.audience === "string" ? body.audience : "PUBLIC";
+    if (!content || content.length > 2000) return json({success:false,message:"Isi postingan wajib diisi (maksimal 2.000 karakter)."},400);
+    if (!["PUBLIC","FOLLOWERS","PRIVATE"].includes(audience)) return json({success:false,message:"Pilihan privasi tidak valid."},400);
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const id = crypto.randomUUID();
+      const result = await c.query('INSERT INTO "Post" ("id","authorId","content","audience","createdAt","updatedAt") VALUES ($1,$2,$3,$4,NOW(),NOW()) RETURNING "id","authorId","content","audience","createdAt"',[id,user.id,content,audience]);
+      return json({success:true,data:{...result.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
+    });
+   } catch(e) { console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
+  }
+  if (path === "/api/v1/posts" && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit")||30),1),50);
+      const result = await c.query('SELECT p."id",p."authorId",p."content",p."audience",p."createdAt",pr."displayName" AS "authorName",pr."avatarUrl" AS "authorAvatar" FROM "Post" p JOIN "User" u ON u."id"=p."authorId" LEFT JOIN "Profile" pr ON pr."userId"=p."authorId" WHERE u."status"=\'ACTIVE\' AND (p."audience"=\'PUBLIC\' OR p."authorId"=$1 OR (p."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$1 AND f."followingId"=p."authorId"))) ORDER BY p."createdAt" DESC LIMIT $2',[user.id,limit]);
+      return json({success:true,count:result.rowCount,data:result.rows});
+    });
+   } catch(e) { console.error("Load posts failed",e); return json({success:false,message:"Feed gagal dimuat."},503); }
+  }
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "yuku-api-worker", status: "ok" });
   if (path === "/health/db" || path === "/api/health/db") {
