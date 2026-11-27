@@ -9,7 +9,7 @@ type Overview = {
   openDisputes: number;
 };
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://mavo-api-preview.gstars-business.workers.dev/api/v1').replace(/\/$/, '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://feature-mavo-user-auth-mavo-preview.gstars-business.workers.dev/api/v1').replace(/\/$/, '');
 
 export default function DashboardPage() {
   const [token, setToken] = useState('');
