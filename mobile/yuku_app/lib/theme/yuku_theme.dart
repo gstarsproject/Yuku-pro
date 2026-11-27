@@ -14,7 +14,7 @@ class MavoColors {
   static const coralSoft = Color(0xFFFFEEF2);
 }
 
-class YukuColors {
+class MAVOColors {
   // Compatibility aliases while the remaining screens are migrated to MAVO.
   static const navy = MavoColors.midnight;
   static const blue = MavoColors.violet;
@@ -24,7 +24,7 @@ class YukuColors {
   static const muted = MavoColors.muted;
 }
 
-class YukuTheme {
+class MAVOTheme {
   static ThemeData get light => ThemeData(
     useMaterial3: true,
     scaffoldBackgroundColor: MavoColors.background,
