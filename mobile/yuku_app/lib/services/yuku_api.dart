@@ -20,7 +20,7 @@ class YukuApi {
   static http.Client _createClient() {
     final nativeClient = HttpClient()
       ..connectionTimeout = const Duration(seconds: 15)
-      ..findProxy = (uri) => 'DIRECT'
+      ..findProxy = (uri) { return 'DIRECT'; }
       ..connectionFactory = (uri, proxyHost, proxyPort) async {
         if (uri.host != _apiHost) {
           return Socket.startConnect(uri.host, uri.port);
@@ -63,7 +63,7 @@ class YukuApi {
   }) async {
     final dnsClient = HttpClient()
       ..connectionTimeout = const Duration(seconds: 8)
-      ..findProxy = (uri) => 'DIRECT'
+      ..findProxy = (uri) { return 'DIRECT'; }
       ..connectionFactory = (uri, proxyHost, proxyPort) {
         return Socket.startConnect(InternetAddress(resolverIp), uri.port);
       };
