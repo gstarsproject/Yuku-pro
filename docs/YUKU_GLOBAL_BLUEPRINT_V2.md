@@ -1,7 +1,7 @@
-# YUKU Global Blueprint V2
+# MAVO Global Blueprint V2
 ## Global Service & Experience Marketplace
 
-**Positioning:** YUKU is a global-ready marketplace connecting customers with people, experiences, and professional services.
+**Positioning:** MAVO is a global-ready marketplace connecting customers with people, experiences, and professional services.
 
 **Brand promise:** Connect. Experience. Get Things Done.
 
@@ -73,11 +73,11 @@ Professional services, consulting, specialist skills, and task-based services. P
 
 ## 6. Differentiating capabilities (phased)
 
-- YUKU Verified: identity, credentials, and provider quality checks.
-- YUKU AI Match: explainable matching by category, location, availability, budget, language, rating, and customer preferences. AI must not make high-impact verification or safety decisions alone.
-- YUKU Live: in-app video consultation/calls where appropriate, with consent and abuse reporting.
-- YUKU Rewards: points, vouchers, referral, and membership with transparent terms.
-- YUKU Partner: provider dashboard for profile, listings, availability, bookings, analytics, earnings, and payout status.
+- MAVO Verified: identity, credentials, and provider quality checks.
+- MAVO AI Match: explainable matching by category, location, availability, budget, language, rating, and customer preferences. AI must not make high-impact verification or safety decisions alone.
+- MAVO Live: in-app video consultation/calls where appropriate, with consent and abuse reporting.
+- MAVO Rewards: points, vouchers, referral, and membership with transparent terms.
+- MAVO Partner: provider dashboard for profile, listings, availability, bookings, analytics, earnings, and payout status.
 - Smart search: filters and ranking with transparent sponsored placement labels if ads are introduced.
 
 ## 7. Current repository baseline (reviewed 2026-11-27)
@@ -177,7 +177,7 @@ Before migrations, inspect existing data and constraints, design backward-compat
 - Pilot one additional market only after Indonesia marketplace metrics are healthy.
 
 ### Phase 5 — Differentiation and scale
-- AI Match, YUKU Live, Rewards, Partner analytics.
+- AI Match, MAVO Live, Rewards, Partner analytics.
 - Search ranking quality, fraud/risk controls, reliability and performance.
 - Expand country by country based on unit economics and provider/customer liquidity.
 
