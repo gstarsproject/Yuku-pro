@@ -382,3 +382,7 @@ Status awal tahap 1:
 - Updated Flutter package identity, backend package identity, Docker development database labels, and CI paths to MAVO.
 - Repository and historical binary archive names are not changed in this pass; external service URLs and persisted database identifiers require a coordinated migration rather than blind text replacement.
 - CI/build verification is required after the rename; no production deployment was initiated.
+
+- [x] Branding cleanup extended to the archived transaction reference pack and its example database name; legacy YUKU path names for the Flutter app, API/theme files, blueprint, OpenAPI contract, and transaction pack were renamed to MAVO.
+- [x] CI verified on branding migration commit `c18a31c54c7aa6e0a3fe6655ba2c30157b7b5a52`: Admin CI, Backend CI, and Cloudflare Worker CI passed. Flutter Mobile CI was still pending at the last status check; rerun/confirm it before treating the rename as fully validated.
+- [ ] Remaining legacy binary ZIP `YUKU_All_In_One_v1.zip` is retained unchanged as an archive; its internal contents were not rewritten. Production was not deployed.
