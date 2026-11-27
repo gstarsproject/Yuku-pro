@@ -560,6 +560,8 @@ if (avatarMedia) {
         if (!/^[0-9a-f-]{36}$/i.test(recipientId) || recipientId === user.id) return json({success:false,message:"Pengguna tujuan tidak valid."},400);
         const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[recipientId]);
         if (!target.rows[0]) return json({success:false,message:"Pengguna tidak ditemukan."},404);
+        const blocked = await c.query('SELECT EXISTS(SELECT 1 FROM "UserBlock" WHERE ("blockerId"=$1 AND "blockedId"=$2) OR ("blockerId"=$2 AND "blockedId"=$1)) AS blocked',[user.id,recipientId]);
+        if (blocked.rows[0]?.blocked) return json({success:false,message:"Chat tidak tersedia karena salah satu akun memblokir akun lainnya."},403);
         const mutual = await c.query('SELECT EXISTS (SELECT 1 FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2) AS "aFollowsB", EXISTS (SELECT 1 FROM "Follow" WHERE "followerId"=$2 AND "followingId"=$1) AS "bFollowsA"',[user.id,recipientId]);
         if (mutual.rows[0]?.aFollowsB !== true || mutual.rows[0]?.bFollowsA !== true)
           return json({success:false,message:"Chat pribadi hanya tersedia jika kalian sudah saling mengikuti."},403);
