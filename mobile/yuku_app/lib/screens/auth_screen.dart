@@ -72,7 +72,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   decoration: InputDecoration(labelText: 'Password', prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
-                  validator: (v) => (v == null || v.length < 10) ? 'Password minimal 10 karakter' : null),
+                  validator: (v) => _register
+                    ? ((v == null || v.length < 10) ? 'Password minimal 10 karakter' : null)
+                    : ((v == null || v.isEmpty) ? 'Masukkan password' : null)),
                 if (_error != null) ...[
                   const SizedBox(height: 14),
                   Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
