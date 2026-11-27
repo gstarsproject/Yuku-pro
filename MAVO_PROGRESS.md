@@ -42,6 +42,7 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [ ] Uji di perangkat Samsung: akun kedua Unfollow akun pertama, kembali ke Home, tarik layar ke bawah, lalu pastikan postingan FOLLOWERS tidak lagi terlihat.
 
 ## Pembaruan 2026-11-27 — Like dan Komentar (implementasi awal)
+- Perbaikan CI: analyzer menemukan koma ekstra pada builder feed; sudah diperbaiki pada commit `d91431cd50bfed3f52cd4bc20238d9d6f12c6eab`. Menunggu validasi ulang CI untuk commit perbaikan.
 - [x] Tambah model Prisma `PostLike` dan `PostComment` beserta relasi ke User dan Post.
 - [x] Tambah migration SQL `20261127040000_add_post_likes_comments`.
 - [x] Terapkan tabel dan indeks Like/Komentar pada Neon branch pengujian `mavo-test` (project `lucky-truth-84216061`, branch `br-divine-shape-bi7a8pkw`); produksi tidak disentuh.
