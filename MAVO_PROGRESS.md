@@ -249,3 +249,5 @@ Status awal tahap 1:
 
 - [x] Home Stories strip sekarang memuat Story aktif dari API, menampilkan nama kreator unik (bukan chip kategori contoh), dan menampilkan status kosong/error.
 - [x] Future Story di Home disimpan agar tidak meminta ulang API pada setiap rebuild; pull-to-refresh memperbarui Story dan feed bersama.
+
+- [x] Story chip Home membawa userId kreator; membuka StoriesScreen yang difilter hanya untuk kreator terpilih, bukan daftar semua Story.
