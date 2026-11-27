@@ -425,3 +425,11 @@ Status awal tahap 1:
 - [x] Re-checked Cloudflare metadata after deployment: both Neon access keys remain configured as Worker secrets and endpoint/region remain configured as plain-text bindings on `mavo-api-preview`.
 - [ ] Runtime upload/readback test from authenticated MAVO mobile app remains pending. The public Worker health URL could not be independently fetched by the web inspection path; do not infer runtime health or upload success from CI deployment alone.
 - Production remains untouched.
+
+
+## MAVO Neon Object Storage 403 investigation — 2026-11-27
+- [x] Confirmed the TEST storage bucket remained empty after the failed mobile upload.
+- [x] Queried Neon TEST storage logs; only bucket creation was recorded, with no successful object PUT.
+- [x] Compared Neon's own presigned upload URL format with the Worker implementation. Neon signs both `content-type` and `host`; the custom Worker signer had signed only `host`.
+- [x] Updated Worker presigning to sign `content-type;host` for PUT requests and use deterministic bytewise ordering for canonical query parameters (commit `8679a35d4cbada49d90cc307d301db81b95473dd`).
+- [ ] Await preview CI validation/deployment and then retest a real photo upload + readback. Production remains untouched.
