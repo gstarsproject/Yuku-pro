@@ -372,6 +372,75 @@ class _FeedTab extends StatelessWidget {
   );
 }
 
+
+class _PostsFeed extends StatefulWidget {
+  final bool following;
+  final bool liveOnly;
+  const _PostsFeed({required this.following, required this.liveOnly});
+  @override
+  State<_PostsFeed> createState() => _PostsFeedState();
+}
+class _PostsFeedState extends State<_PostsFeed> {
+  late Future<List<Map<String, dynamic>>> _future;
+  @override
+  void initState() { super.initState(); _future = MavoApi.posts(following: widget.following); }
+  @override
+  void didUpdateWidget(covariant _PostsFeed oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.following != widget.following || oldWidget.liveOnly != widget.liveOnly) {
+      _future = MavoApi.posts(following: widget.following);
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
+    if (widget.liveOnly) return const Padding(padding: EdgeInsets.symmetric(vertical: 34), child: Center(child: Column(children: [
+      Icon(Icons.wifi_tethering_rounded, size: 38, color: MavoColors.violet), SizedBox(height: 8),
+      Text('Live streaming MAVO', style: TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+      SizedBox(height: 4), Text('Siaran langsung akan tampil di sini.', style: TextStyle(fontSize: 11, color: MavoColors.muted)),
+    ])));
+    return FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) return const Padding(padding: EdgeInsets.all(28), child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+      if (snapshot.hasError) return Padding(padding: const EdgeInsets.all(20), child: Column(children: [
+        const Text('Postingan belum dapat dimuat.', style: TextStyle(color: MavoColors.muted)),
+        TextButton(onPressed: () => setState(() => _future = MavoApi.posts(following: widget.following)), child: const Text('Coba lagi')),
+      ]));
+      final posts = snapshot.data ?? const <Map<String, dynamic>>[];
+      if (posts.isEmpty) return Padding(padding: const EdgeInsets.symmetric(vertical: 30), child: Center(child: Text(
+        widget.following ? 'Belum ada postingan dari akun yang kamu ikuti.' : 'Belum ada postingan. Jadilah yang pertama berbagi!',
+        textAlign: TextAlign.center, style: const TextStyle(color: MavoColors.muted, fontSize: 12))));
+      return Column(children: posts.map((post) => Padding(padding: const EdgeInsets.only(bottom: 12), child: _ApiPostCard(post: post))).toList());
+    });
+  }
+}
+class _ApiPostCard extends StatelessWidget {
+  final Map<String, dynamic> post;
+  const _ApiPostCard({required this.post});
+  @override
+  Widget build(BuildContext context) {
+    final author = post['authorName']?.toString() ?? 'MAVO User';
+    final content = post['content']?.toString() ?? '';
+    final likes = post['likesCount'] ?? 0, comments = post['commentsCount'] ?? 0;
+    final media = post['media'] is List ? post['media'] as List : const [];
+    return Container(width: double.infinity, padding: const EdgeInsets.all(15), decoration: BoxDecoration(
+      color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFEDEBF3)),
+      boxShadow: [BoxShadow(color: MavoColors.midnight.withValues(alpha: .04), blurRadius: 16, offset: const Offset(0, 5))]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)),
+          const SizedBox(width: 10), Expanded(child: Text(author, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight, fontSize: 13))),
+          const Icon(Icons.more_horiz_rounded, color: MavoColors.muted)]),
+        if (content.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 13), child: Text(content, style: const TextStyle(fontSize: 13, height: 1.45, color: MavoColors.ink))),
+        if (media.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Row(children: [
+          const Icon(Icons.perm_media_outlined, color: MavoColors.violet, size: 17), const SizedBox(width: 6),
+          Text('${media.length} media', style: const TextStyle(fontSize: 11, color: MavoColors.muted))])),
+        const Divider(height: 22),
+        Row(children: [const Icon(Icons.favorite_border_rounded, size: 18, color: MavoColors.muted), const SizedBox(width: 5),
+          Text('$likes', style: const TextStyle(fontSize: 11, color: MavoColors.muted)), const SizedBox(width: 18),
+          const Icon(Icons.mode_comment_outlined, size: 18, color: MavoColors.muted), const SizedBox(width: 5),
+          Text('$comments', style: const TextStyle(fontSize: 11, color: MavoColors.muted))]),
+      ]));
+  }
+}
+
 class _CommunityPost extends StatefulWidget {
   const _CommunityPost();
 
