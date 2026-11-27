@@ -36,6 +36,12 @@ void main() {
     expect(find.text('Pilih foto atau video'), findsOneWidget);
     expect(find.text('Foto'), findsOneWidget);
     expect(find.text('Video'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Bagikan Story'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Bagikan Story'), findsOneWidget);
     expect(find.text('Story akan otomatis hilang setelah 24 jam.'), findsOneWidget);
   });
