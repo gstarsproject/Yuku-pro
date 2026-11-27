@@ -333,6 +333,41 @@ class MAVOApi {
     await _decode(response);
   }
 
+  static Future<Map<String, dynamic>> userBlockStatus(String userId) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.get(
+      Uri.parse('$baseUrl/api/v1/users/$userId/block'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 20));
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> setUserBlocked(String userId, {required bool blocked}) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final uri = Uri.parse('$baseUrl/api/v1/users/$userId/block');
+    final response = blocked
+        ? await _client.post(uri, headers: {'Authorization': 'Bearer $token'})
+        : await _client.delete(uri, headers: {'Authorization': 'Bearer $token'});
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
+  static Future<void> reportUser({
+    required String userId,
+    required String reason,
+    String details = '',
+  }) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/reports'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'targetUserId': userId, 'reason': reason, 'details': details.trim()}),
+    ).timeout(const Duration(seconds: 20));
+    await _decode(response);
+  }
+
   static Future<List<Map<String, dynamic>>> stories() async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
