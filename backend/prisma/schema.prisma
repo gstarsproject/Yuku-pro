@@ -100,6 +100,10 @@ model User {
   sessions       UserSession[]
   following      Follow[] @relation("UserFollowing")
   followers      Follow[] @relation("UserFollowers")
+  blocksMade     UserBlock[] @relation("UserBlocksMade")
+  blocksReceived UserBlock[] @relation("UserBlocksReceived")
+  reportsSubmitted ContentReport[] @relation("ReportsSubmitted")
+  reportsAgainst ContentReport[] @relation("ReportsAgainst")
 }
 
 model Profile {
@@ -390,6 +394,32 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId, createdAt])
   @@index([followingId, createdAt])
+}
+
+model UserBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  blockerId String   @db.Uuid
+  blockedId String   @db.Uuid
+  createdAt DateTime @default(now())
+  blocker   User     @relation("UserBlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("UserBlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+  @@unique([blockerId, blockedId])
+  @@index([blockedId, createdAt])
+}
+
+model ContentReport {
+  id           String   @id @default(uuid()) @db.Uuid
+  reporterId   String   @db.Uuid
+  targetUserId String   @db.Uuid
+  reason       String   @db.VarChar(80)
+  details      String?  @db.VarChar(1000)
+  status       String   @default("OPEN") @db.VarChar(20)
+  createdAt    DateTime @default(now())
+  reporter     User     @relation("ReportsSubmitted", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser   User     @relation("ReportsAgainst", fields: [targetUserId], references: [id], onDelete: Cascade)
+  @@unique([reporterId, targetUserId])
+  @@index([status, createdAt])
+  @@index([targetUserId, createdAt])
 }
 
 model UserSession {
