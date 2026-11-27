@@ -144,16 +144,13 @@ export default {
    try {
     const ipLimit = await authRateLimit(env, request, "register");
     if (ipLimit) return ipLimit;
-   try {
     const body = await readRequestBody(request);
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
     const identityLimit = await authRateLimit(env, request, "register", email);
     if (identityLimit) return identityLimit;
     const password = typeof body.password === "string" ? body.password : "";
-    const identityLimit = await authRateLimit(env, request, "login", email);
-    if (identityLimit) return identityLimit;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 10 || password.length > 128 || displayName.length < 2 || displayName.length > 40)
+    if (!/^[^\s@]+@[\s@]+\.[^\s@]+$/.test(email) || password.length < 10 || password.length > 128 || displayName.length < 2 || displayName.length > 40)
       return json({success:false,message:"Email, password (10–128 karakter), atau nama tidak valid"},400);
     const passwordHash = await makePasswordHash(password);
     return await db(env, async c => {
@@ -177,10 +174,11 @@ export default {
    try {
     const ipLimit = await authRateLimit(env, request, "login");
     if (ipLimit) return ipLimit;
-   try {
     const body = await readRequestBody(request);
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
+    const identityLimit = await authRateLimit(env, request, "login", email);
+    if (identityLimit) return identityLimit;
     if (!email || !password || password.length > 128) return json({success:false,message:"Email atau password tidak valid"},400);
     return await db(env, async c => {
       const result = await c.query('SELECT u."id",u."email",u."passwordHash",u."role",u."status",p."displayName" FROM "User" u LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE u."email"=$1 LIMIT 1',[email]);
