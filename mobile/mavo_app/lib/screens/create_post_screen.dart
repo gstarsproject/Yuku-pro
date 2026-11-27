@@ -147,11 +147,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             const Text('Tambahkan ke postingan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: MavoColors.midnight)),
             const SizedBox(height: 12),
             Row(children: [
-              _AttachAction(icon: Icons.photo_library_outlined, label: 'Foto', color: MavoColors.aqua, onTap: _pickImages),
+              _AttachAction(icon: Icons.photo_library_outlined, label: 'Foto', color: MavoColors.violet, onTap: _pickImages),
               const SizedBox(width: 10),
               _AttachAction(icon: Icons.videocam_outlined, label: 'Video', color: MavoColors.coral, onTap: _pickVideo),
               const SizedBox(width: 10),
-              _AttachAction(icon: Icons.location_on_outlined, label: 'Lokasi', color: MavoColors.violet, onTap: _editLocation),
+              _AttachAction(icon: Icons.location_on_outlined, label: 'Lokasi', color: MavoColors.midnight, onTap: _editLocation),
             ]),
           ]),
         ),
