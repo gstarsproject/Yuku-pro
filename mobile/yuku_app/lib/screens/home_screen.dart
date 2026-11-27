@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             final story = entry.value;
                             final name = (story['authorName'] ?? 'Creator').toString();
                             final colors = [MavoColors.coral, MavoColors.aqua, Color(0xFFFFB84D), Color(0xFF8A6BFF), Color(0xFFEF70B5)];
-                            return _StoryItem(label: name, color: colors[entry.key % colors.length]);
+                            return _StoryItem(label: name, color: colors[entry.key % colors.length], creatorId: (story['userId'] ?? story['authorId'] ?? '').toString());
                           }),
                           if (snapshot.hasError)
                             const SizedBox(width: 105, child: Center(child: Text('Story gagal dimuat', style: TextStyle(fontSize: 10, color: MavoColors.muted)))),
@@ -442,7 +442,8 @@ class _StoryItem extends StatelessWidget {
   final String label;
   final Color color;
   final bool isAdd;
-  const _StoryItem({required this.label, required this.color, this.isAdd = false});
+  final String? creatorId;
+  const _StoryItem({required this.label, required this.color, this.isAdd = false, this.creatorId});
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -451,7 +452,7 @@ class _StoryItem extends StatelessWidget {
       borderRadius: BorderRadius.circular(35),
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => StoriesScreen(initialStory: label),
+          builder: (_) => StoriesScreen(initialStory: label, initialUserId: creatorId),
         ));
       },
       child: Column(children: [
