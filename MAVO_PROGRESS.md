@@ -344,3 +344,13 @@ Status awal tahap 1:
 - [ ] Audit menemukan CORS masih wildcard `*`. Belum diubah karena domain web resmi yang harus diizinkan belum ditentukan; Flutter native tidak menggunakan CORS browser.
 - [ ] Validasi metadata media pada create post/story perlu diperketat dan dibandingkan dengan ukuran/tipe objek aktual di R2; upload E2E menunggu kredensial Object Storage.
 - Catatan: perubahan hanya pada branch feature dan preview Worker. Production tetap tidak disentuh.
+
+
+### Validasi metadata media — 2026-11-27 (commit 8b94553)
+- [x] Tambah validasi bersama untuk media post dan story: tipe MIME harus sesuai IMAGE/VIDEO, ekstensi file harus sesuai MIME, nama objek harus UUID di folder milik pengguna sendiri, dan ukuran metadata dibatasi foto 20 MB/video 100 MB.
+- [x] Worker CI run `46004831758`: TypeScript typecheck dan kedua Wrangler dry-run PASS.
+- [x] Deploy otomatis kedua Worker preview PASS.
+- [x] Verifikasi Cloudflare: `mavo-preview` versi `99bf0071-6e2a-4f0b-9e17-880eaa726251` dan `mavo-api-preview` versi `bde6f5fe-175b-4d1d-beec-ec1bd18f0dfc`; binding rate limiter dan HYPERDRIVE tetap tersedia.
+- [ ] Batas ukuran di sini memvalidasi metadata yang dikirim aplikasi, bukan ukuran byte objek aktual di R2. Pemeriksaan objek aktual tetap perlu saat Object Storage secrets tersedia.
+- [ ] CORS wildcard dan uji runtime HTTP 413/429 masih menjadi pekerjaan sebelum rilis publik.
+- Catatan: hanya preview yang diperbarui; production tidak disentuh.
