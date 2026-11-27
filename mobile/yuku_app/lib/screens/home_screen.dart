@@ -258,7 +258,7 @@ class _FeedTab extends StatelessWidget {
     onTap: onTap,
     borderRadius: BorderRadius.circular(8),
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(label, style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w800 : FontWeight.w600, color: selected ? MavoColors.violet : MavoColors.muted)),
+      Text(label, style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w900 : FontWeight.w600, color: selected ? MavoColors.violet : MavoColors.muted)),
       const SizedBox(height: 6),
       Container(height: 3, width: selected ? 28 : 0, decoration: BoxDecoration(color: MavoColors.violet, borderRadius: BorderRadius.circular(3))),
     ]),
@@ -278,7 +278,7 @@ class _CommunityPostState extends State<_CommunityPost> {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFEDEBF3)), boxShadow: [BoxShadow(color: MavoColors.midnight.withValues(alpha: .045), blurRadius: 18, offset: const Offset(0, 6))]),
     clipBehavior: Clip.antiAlias,
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
@@ -371,7 +371,7 @@ class _PillarCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 5),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFEDEBF3)), boxShadow: [BoxShadow(color: MavoColors.midnight.withValues(alpha: .03), blurRadius: 12, offset: const Offset(0, 4))]),
     child: Column(children: [
       CircleAvatar(radius: 20, backgroundColor: soft, child: Icon(icon, color: color, size: 20)),
       const SizedBox(height: 8),
