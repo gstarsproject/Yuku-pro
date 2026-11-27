@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
+import '../services/mavo_api.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -11,6 +12,7 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final _controller = TextEditingController();
   String _audience = 'Publik';
+  bool _publishing = false;
 
   @override
   void dispose() {
@@ -18,16 +20,29 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
-  void _publishDraft() {
+  Future<void> _publishDraft() async {
     if (_controller.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tulis sesuatu dulu sebelum membagikan.')),
       );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Draft siap. Publikasi akan aktif setelah API postingan tersedia.')),
-    );
+    setState(() => _publishing = true);
+    try {
+      final audience = _audience == 'Pengikut' ? 'FOLLOWERS' : (_audience == 'Privat' ? 'PRIVATE' : 'PUBLIC');
+      await MavoApi.createPost(content: _controller.text, audience: audience);
+      if (!mounted) return;
+      _controller.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Postingan berhasil dibagikan ke MAVO.')),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _publishing = false);
+    }
   }
 
   @override
@@ -36,8 +51,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       title: const Text('Buat Postingan', style: TextStyle(fontWeight: FontWeight.w800)),
       actions: [
         TextButton(
-          onPressed: _publishDraft,
-          child: const Text('Bagikan', style: TextStyle(fontWeight: FontWeight.w800)),
+          onPressed: _publishing ? null : _publishDraft,
+          child: _publishing ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Bagikan', style: TextStyle(fontWeight: FontWeight.w800)),
         ),
         const SizedBox(width: 8),
       ],
