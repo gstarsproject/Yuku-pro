@@ -441,3 +441,12 @@ Status awal tahap 1:
 - [x] `Deploy alternate preview hostname` succeeded.
 - [ ] Mobile photo upload and readback still need real-device verification. A successful deploy is not proof that Neon accepts the PUT or that the image renders after reload.
 - Production remains untouched.
+
+
+## Follow-up 403 root-cause correction — 2026-11-27
+- [x] Rechecked Neon storage logs and bucket after the user's second 403 report; no successful PUT/object was recorded.
+- [x] Audited the Worker SigV4 implementation and found the canonical request had literal backslash-n separators rather than actual newline separators.
+- [x] Corrected canonical request newline encoding (commit `ff049502d73d7437c8a09938cae70c923888956f`).
+- [x] Found and corrected the timestamp formatter's escaped regex so SigV4 `X-Amz-Date` removes milliseconds correctly (commit `23d4f51977280f18b169fc446d9d1bfd9ffd4455`).
+- [ ] Latest Preview Worker CI/deploy run `46022757977` is still running; wait for success before asking for another device test.
+- Production remains untouched.
