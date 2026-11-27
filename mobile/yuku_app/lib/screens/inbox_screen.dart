@@ -5,6 +5,30 @@ import '../theme/yuku_theme.dart';
 
 class InboxScreen extends StatefulWidget {
   const InboxScreen({super.key});
+
+  static Future<void> openDirectChat(
+    BuildContext context, {
+    required String recipientId,
+    required String name,
+  }) async {
+    try {
+      final conversation = await YukuApi.createConversation(recipientId);
+      if (!context.mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => _ChatScreen(
+          conversationId: conversation['id'].toString(),
+          peerId: recipientId,
+          name: name,
+        ),
+      ));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
   @override
   State<InboxScreen> createState() => _InboxScreenState();
 }
