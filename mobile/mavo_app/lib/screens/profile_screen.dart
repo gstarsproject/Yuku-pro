@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/mavo_api.dart';
 import '../theme/mavo_theme.dart';
@@ -116,8 +117,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(children: [
             Expanded(child: OutlinedButton(onPressed: _editProfile, child: const Text('Edit Profil'))),
             const SizedBox(width: 9),
-            Expanded(child: OutlinedButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Fitur bagikan profil akan segera tersedia.'))), child: const Text('Bagikan Profil'))),
+            Expanded(child: OutlinedButton(onPressed: () async {
+              final shareText = 'Kenali saya di MAVO!\\n$name\\n$bio';
+              await Clipboard.setData(ClipboardData(text: shareText));
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Info profil disalin. Kamu bisa membagikannya lewat aplikasi lain.')));
+            }, child: const Text('Salin Profil'))),
           ]),
           const SizedBox(height: 22),
           Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(borderRadius: BorderRadius.circular(18),
