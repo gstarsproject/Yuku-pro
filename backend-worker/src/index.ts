@@ -107,7 +107,7 @@ async function readRequestBody(request: Request) {
       total += value.byteLength;
       if (total > 8192) {
         await reader.cancel();
-        throw new Error("Payload too large");
+        throw new RequestBodyError("Ukuran data terlalu besar. Maksimal 8 KB.",413);
       }
       chunks.push(value);
     }
