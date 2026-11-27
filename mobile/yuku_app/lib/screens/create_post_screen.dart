@@ -40,9 +40,25 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         'Privat' => 'PRIVATE',
         _ => 'PUBLIC',
       };
-      await YukuApi.createPost(content: _controller.text, audience: audience);
+      final uploaded = <Map<String,dynamic>>[];
+      for (final item in _media) {
+        final ext = item.name.toLowerCase().split('.').last;
+        final isVideo = ['mp4','mov'].contains(ext);
+        final mime = switch (ext) {
+          'jpg' || 'jpeg' => 'image/jpeg',
+          'png' => 'image/png',
+          'webp' => 'image/webp',
+          'gif' => 'image/gif',
+          'mov' => 'video/quicktime',
+          _ => 'video/mp4',
+        };
+        uploaded.add(await YukuApi.uploadMediaFile(file: File(item.path), mediaType: isVideo ? 'VIDEO' : 'IMAGE', contentType: mime));
+      }
+      await YukuApi.createPost(content: _controller.text, audience: audience, media: uploaded, locationName: _locationController.text);
       if (!mounted) return;
       _controller.clear();
+      _locationController.clear();
+      _media.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Postingan berhasil dibagikan!')),
       );
