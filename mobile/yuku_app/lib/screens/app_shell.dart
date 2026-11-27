@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/yuku_theme.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
 import 'create_post_screen.dart';
@@ -17,15 +18,21 @@ class _AppShellState extends State<AppShell> {
   final pages = const [
     HomeScreen(),
     ExploreScreen(),
-    const CreatePostScreen(),
+    CreatePostScreen(),
     InboxScreen(),
-    const ProfileScreen(),
+    ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: MavoColors.background,
     body: IndexedStack(index: index, children: pages),
     bottomNavigationBar: NavigationBar(
+      height: 68,
+      elevation: 10,
+      shadowColor: MavoColors.midnight.withValues(alpha: .08),
+      backgroundColor: Colors.white,
+      indicatorColor: MavoColors.violetSoft,
       selectedIndex: index,
       onDestinationSelected: (value) => setState(() => index = value),
       destinations: const [
