@@ -333,3 +333,14 @@ Status awal tahap 1:
 - [x] Verifikasi Cloudflare: `mavo-api-preview` versi `3771252d-e51e-4845-93cd-55f7123bf98d` memiliki binding `USER_ACTION_LIMITER`.
 - [ ] Uji runtime HTTP 429 dengan sesi pengguna valid belum dilakukan.
 - Catatan: kedua Worker preview sudah diperbarui otomatis melalui GitHub Actions. Production tidak disentuh.
+
+
+### Audit request-body & API security — 2026-11-27 (commit 919144b)
+- [x] Memperbaiki jalur streaming body: payload yang melampaui 8 KiB tanpa/meski Content-Length sekarang melempar `RequestBodyError` HTTP 413, bukan error generik yang dapat berubah menjadi 400/503.
+- [x] GitHub Actions Worker CI run `46004558506`: TypeScript typecheck PASS dan kedua Wrangler dry-run PASS.
+- [x] Deploy otomatis kedua Worker preview PASS.
+- [x] Verifikasi Cloudflare: `mavo-preview` versi `4351c1ac-a3e1-4d1c-9389-152398355aab`; `mavo-api-preview` versi `e6059f1f-e4f7-4cd9-803c-2749439356ca`; keduanya memuat AUTH_IP_LIMITER, AUTH_ID_LIMITER, USER_ACTION_LIMITER, dan HYPERDRIVE.
+- [ ] Uji HTTP 413 aktual terhadap Worker preview belum dilakukan; akses HTTP langsung dari lingkungan pemeriksaan diblokir.
+- [ ] Audit menemukan CORS masih wildcard `*`. Belum diubah karena domain web resmi yang harus diizinkan belum ditentukan; Flutter native tidak menggunakan CORS browser.
+- [ ] Validasi metadata media pada create post/story perlu diperketat dan dibandingkan dengan ukuran/tipe objek aktual di R2; upload E2E menunggu kredensial Object Storage.
+- Catatan: perubahan hanya pada branch feature dan preview Worker. Production tetap tidak disentuh.
