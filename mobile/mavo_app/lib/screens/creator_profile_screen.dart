@@ -84,7 +84,6 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   Future<void> _toggleBlock() async {
     final id = widget.creatorUserId;
     if (id == null || id.isEmpty || _loadingSafety || _blockedByUser) return;
-    final action = _isBlocked ? 'membuka blokir' : 'memblokir';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -102,7 +101,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     try {
       await MAVOApi.setUserBlocked(id, blocked: !_isBlocked);
       if (!mounted) return;
-      setState(() { _isBlocked = !_isBlocked; _following = false; _followers = _followers; });
+      setState(() { _isBlocked = !_isBlocked; _following = false; });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isBlocked ? 'Akun berhasil diblokir.' : 'Blokir akun dibuka.')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
