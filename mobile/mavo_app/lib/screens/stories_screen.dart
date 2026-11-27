@@ -136,7 +136,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [MavoColors.violet, MavoColors.midnight, MavoColors.coral],
+              colors: [MavoColors.violet, MavoColors.midnight],
             ),
           ),
           child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
