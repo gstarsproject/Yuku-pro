@@ -251,3 +251,17 @@ Status awal tahap 1:
 - [x] Future Story di Home disimpan agar tidak meminta ulang API pada setiap rebuild; pull-to-refresh memperbarui Story dan feed bersama.
 
 - [x] Story chip Home membawa userId kreator; membuka StoriesScreen yang difilter hanya untuk kreator terpilih, bukan daftar semua Story.
+
+
+## Audit lanjutan — pemeriksaan endpoint Worker dan model transaksi (27 Nov 2026)
+- [x] Periksa route Like/Komentar: sesi wajib, postingan harus terlihat oleh pengguna, Like memakai unique constraint + ON CONFLICT, komentar dibatasi 1.000 karakter.
+- [x] Periksa route Chat: sesi, participant membership, dan mutual-follow diperiksa sebelum membaca/mengirim pesan; Unfollow memblokir chat.
+- [x] Periksa feed: query terparameterisasi dan filter PUBLIC/FOLLOWERS/PRIVATE diterapkan di server.
+- [x] Periksa akses unduh media: URL sementara hanya dibuat setelah pemeriksaan owner/audience/follow dan expiry Story.
+- [ ] Hardening request body: readRequestBody saat ini hanya memeriksa Content-Length; body tanpa header atau header tidak valid dapat melewati batas 8 KB. Perlu pembacaan stream dengan batas byte.
+- [ ] Tambahkan rate limiting untuk register/login dan endpoint interaksi; belum ada binding limiter terkonfigurasi di Worker. Jangan menganggap proteksi brute-force sudah tersedia.
+- [ ] Sembunyikan detail database dari endpoint health publik; /health/db saat ini mengembalikan nama database dan waktu server.
+- [ ] Periksa CORS: saat ini Access-Control-Allow-Origin '*' digunakan. API menggunakan Bearer token, tetapi origin perlu dibatasi sesuai domain aplikasi sebelum rilis publik.
+- [ ] Audit marketplace menemukan model Prisma Booking, Payment, LedgerEntry, CommissionRule, ProviderPayout, PaymentWebhookEvent, Review, dan Dispute sudah tersedia, tetapi Worker belum memiliki route booking/payment/ledger/commission/payout/dispute. Endpoint layanan hanya untuk discovery/detail. Karena itu transaksi marketplace belum dapat digunakan end-to-end.
+- [ ] Belum ada integrasi payment gateway sandbox maupun verifikasi signature webhook yang bisa diaudit di Worker.
+- [ ] Tidak ada perubahan kode, database, deploy, atau merge pada pemeriksaan ini; catatan ini hanya merekam hasil audit source di branch pengembangan.
