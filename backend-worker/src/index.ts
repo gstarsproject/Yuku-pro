@@ -61,20 +61,22 @@ function isValidMediaItem(item: unknown, userId: string): item is { objectKey: s
     filename.toLowerCase().endsWith("." + extension) &&
     Number.isSafeInteger(byteSize) && byteSize >= 1 && byteSize <= maxBytes;
 }
-async function presignMedia(env: Env, method: "GET"|"PUT", objectKey: string, expires = 900) {
-  const now = new Date(), stamp = now.toISOString().replace(/[:-]|\.\d{3}/g,""), date = stamp.slice(0,8);
+async function presignMedia(env: Env, method: "GET"|"PUT", objectKey: string, expires = 900, contentType?: string) {
+  const now = new Date(), stamp = now.toISOString().replace(/[:-]|\\.\\d{3}/g,""), date = stamp.slice(0,8);
   const endpoint = new URL(env.AWS_ENDPOINT_URL_S3);
   const canonicalUri = "/" + ["mavo-media", ...objectKey.split("/")].map(awsEncode).join("/");
   const scope = date + "/" + env.AWS_REGION + "/s3/aws4_request";
+  const signedHeaders = contentType ? "content-type;host" : "host";
   const params: [string,string][] = [
     ["X-Amz-Algorithm","AWS4-HMAC-SHA256"],
     ["X-Amz-Credential",env.AWS_ACCESS_KEY_ID + "/" + scope],
     ["X-Amz-Date",stamp],
     ["X-Amz-Expires",String(expires)],
-    ["X-Amz-SignedHeaders","host"]
+    ["X-Amz-SignedHeaders",signedHeaders]
   ];
-  const canonicalQuery = params.map(([k,v])=>[awsEncode(k),awsEncode(v)] as const).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>k+"="+v).join("&");
-  const canonicalRequest = method+"\n"+canonicalUri+"\n"+canonicalQuery+"\nhost:"+endpoint.host+"\n\nhost\nUNSIGNED-PAYLOAD";
+  const canonicalQuery = params.map(([k,v])=>[awsEncode(k),awsEncode(v)] as const).sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0).map(([k,v])=>k+"="+v).join("&");
+  const canonicalHeaders = contentType ? "content-type:"+contentType.trim().toLowerCase()+"\\nhost:"+endpoint.host+"\\n" : "host:"+endpoint.host+"\\n";
+  const canonicalRequest = method+"\\n"+canonicalUri+"\\n"+canonicalQuery+"\\n"+canonicalHeaders+"\\n"+signedHeaders+"\\nUNSIGNED-PAYLOAD";
   const stringToSign = "AWS4-HMAC-SHA256\n"+stamp+"\n"+scope+"\n"+await sha256(canonicalRequest);
   const kDate = await hmacBytes(encoder.encode("AWS4"+env.AWS_SECRET_ACCESS_KEY),date);
   const kRegion = await hmacBytes(kDate,env.AWS_REGION);
@@ -340,7 +342,7 @@ if (avatarMedia) {
       const limited = await userActionRateLimit(env, user.id, "media-upload-url"); if (limited) return limited;
       const extension = contentType.split("/")[1].replace("jpeg","jpg").replace("quicktime","mov");
       const objectKey = "users/"+user.id+"/"+crypto.randomUUID()+"."+extension;
-      const uploadUrl = await presignMedia(env,"PUT",objectKey,900);
+      const uploadUrl = await presignMedia(env,"PUT",objectKey,900,contentType);
       return json({success:true,data:{objectKey,uploadUrl,method:"PUT",headers:{"Content-Type":contentType},expiresIn:900}});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Media upload URL failed",e); return json({success:false,message:"Tidak dapat menyiapkan upload media."},503); }
