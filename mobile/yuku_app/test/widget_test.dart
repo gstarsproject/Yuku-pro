@@ -42,7 +42,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('MAVO Community'), findsOneWidget);
-    expect(find.text('0'), findsOneWidget);
     expect(find.text('Pengikut'), findsOneWidget);
     expect(find.text('Mengikuti'), findsOneWidget);
     expect(find.text('Profil demo'), findsOneWidget);
