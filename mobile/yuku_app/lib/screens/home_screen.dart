@@ -176,7 +176,11 @@ class _PostsFeedState extends State<_PostsFeed> {
   Future<void> refresh() async {
     final request = YukuApi.posts();
     setState(() => _future = request);
-    await request;
+    try {
+      await request;
+    } catch (_) {
+      // FutureBuilder renders the request error; keep pull-to-refresh usable.
+    }
   }
 
   @override
@@ -242,6 +246,19 @@ class _PostCardState extends State<_PostCard> {
       builder: (_) => _PostCommentsSheet(postId: widget.post['id'].toString()),
     );
     if (count != null && mounted) setState(() => _comments = count);
+  }
+
+  @override
+  void didUpdateWidget(covariant _PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post['id'] != widget.post['id'] ||
+        oldWidget.post['likedByMe'] != widget.post['likedByMe'] ||
+        oldWidget.post['likesCount'] != widget.post['likesCount'] ||
+        oldWidget.post['commentsCount'] != widget.post['commentsCount']) {
+      _liked = widget.post['likedByMe'] == true;
+      _likes = (widget.post['likesCount'] as num?)?.toInt() ?? 0;
+      _comments = (widget.post['commentsCount'] as num?)?.toInt() ?? 0;
+    }
   }
 
   @override
