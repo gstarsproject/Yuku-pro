@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
 import '../services/yuku_api.dart';
+import 'inbox_screen.dart';
 
 class CreatorProfileScreen extends StatefulWidget {
   final String creatorName;
@@ -197,9 +198,13 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
           )),
           const SizedBox(width: 10),
           Expanded(child: OutlinedButton.icon(
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Percakapan akan aktif setelah layanan chat terhubung.')),
-            ),
+            onPressed: widget.creatorUserId == null
+                ? null
+                : () => InboxScreen.openDirectChat(
+                    context,
+                    recipientId: widget.creatorUserId!,
+                    name: displayName,
+                  ),
             icon: const Icon(Icons.chat_bubble_outline_rounded),
             label: const Text('Pesan'),
             style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13)),
