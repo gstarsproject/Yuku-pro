@@ -90,6 +90,8 @@ model User {
   documents      VerificationDocument[]
   messages       Message[]
   posts          Post[]
+  postLikes      PostLike[]
+  postComments   PostComment[]
   sessions       UserSession[]
   following      Follow[] @relation("UserFollowing")
   followers      Follow[] @relation("UserFollowers")
@@ -332,6 +334,8 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     PostLike[]
+  comments  PostComment[]
 
   @@index([createdAt])
   @@index([authorId, createdAt])
@@ -357,4 +361,27 @@ model UserSession {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, expiresAt])
+}
+
+model PostLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model PostComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @db.Uuid
+  userId    String   @db.Uuid
+  content   String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
 }
