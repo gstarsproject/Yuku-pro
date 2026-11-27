@@ -6,21 +6,26 @@ Terakhir diperbarui: 2026-11-27
 MAVO adalah satu ekosistem Social Media + Live Streaming + Chat + Global Marketplace.
 Pilar marketplace: MAVO FRIEND, EXPERIENCE, MAVO PRO.
 Navigasi utama: Home, Explore, Create, Inbox, Profile.
+Brand: MAVO — CONNECT. SHARE. EXPLORE.
+Arah produk tetap satu ekosistem; bukan marketplace saja.
 
 ## Tahap 1 — Social Media
 - [x] Audit alur Create: sebelumnya hanya menampilkan snackbar draft, belum memanggil API.
 - [x] Tambah endpoint API untuk membuat postingan teks dan membaca feed.
-- [x] Tambah model Post dan migration SQL untuk PostgreSQL.
+- [x] Tambah model Post di Prisma dan migration SQL `20261127000100_add_posts`.
+- [x] Migration postingan tercatat pada database preview Neon `mavo-test`; database produksi tidak disentuh.
 - [x] Hubungkan tombol Bagikan ke API dengan status loading dan pesan hasil.
 - [x] Hubungkan Home ke feed postingan dari API.
-- [x] Terapkan migration `20261127000100_add_posts` hanya ke database preview Neon `mavo-test` (Post + dua index; tercatat di `_prisma_migrations`).
-- [ ] Uji create/read dan privasi Publik/Pengikut/Privat melalui Worker preview dan APK Android.
-- [ ] Build APK dan uji di Android.
+- [x] Feed membatasi postingan PUBLIC untuk semua pengguna login, FOLLOWERS hanya untuk pengikut, dan PRIVATE hanya untuk pemilik.
+- [x] Perbaiki widget test Inbox agar dirender di dalam Scaffold seperti struktur aplikasi sebenarnya.
+- [x] GitHub CI pada commit `69b8aafca472b451ac48c369c3a612848ad2f308`: Backend CI PASS, Flutter Mobile CI PASS, Cloudflare Worker CI PASS.
+- [x] APK preview Android berhasil dibangun. Artifact: `mavo-android-arm64-preview`, run `45972701723`, artifact `15185868757`.
+- [ ] Uji create/read dan privasi Publik/Pengikut/Privat secara end-to-end melalui Worker preview dan APK Android.
+- [ ] Pastikan Worker preview sudah menjalankan versi endpoint posting terbaru sebelum uji end-to-end.
 
 ## Batasan saat ini
-- Fitur postingan yang dibuat pada tahap ini hanya teks maksimal 2.000 karakter.
+- Fitur postingan pada tahap ini hanya teks maksimal 2.000 karakter.
 - Foto/video, like server-side, komentar, share, story, hashtag, dan trending belum diaktifkan.
-- Worker preview belum dipastikan ter-deploy pada versi endpoint posting terbaru; pipeline validasi Worker lulus, tetapi deploy hanya berjalan pada push branch.
-- CI Flutter terakhir: analisis lulus; 2 dari 6 widget test gagal karena test lama memakai `pumpAndSettle` pada layar dengan animasi berulang dan test profil kreator mengacu ke widget demo yang tidak lagi tampil di Home. Test sedang diperbarui.
+- CI PASS adalah validasi otomatis; belum membuktikan uji alur posting end-to-end dari APK.
+- Database pengujian adalah branch Neon `mavo-test`, bukan database produksi.
 - Jangan deploy ke produksi atau merge PR tanpa persetujuan.
-- Database yang dituju untuk pengujian adalah branch Neon `mavo-test`, bukan database produksi.
