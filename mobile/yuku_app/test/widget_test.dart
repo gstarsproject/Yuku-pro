@@ -40,7 +40,7 @@ void main() {
     expect(find.text('Bagikan cerita'), findsOneWidget);
   });
 
-  testWidgets('Creator profile follow button updates preview state', (tester) async {
+  testWidgets('Creator demo profile keeps follow disabled without account id', (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: CreatorProfileScreen(creatorName: 'MAVO Community'),
     ));
@@ -48,12 +48,8 @@ void main() {
 
     expect(find.text('MAVO Community'), findsOneWidget);
     expect(find.text('1280'), findsOneWidget);
-
-    await tester.tap(find.text('Ikuti'));
-    await tester.pump();
-
-    expect(find.text('Mengikuti'), findsNWidgets(2));
-    expect(find.text('1281'), findsOneWidget);
+    expect(find.text('Profil demo'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
   });
 
   testWidgets('MAVO authentication screen shows sign in form', (tester) async {
