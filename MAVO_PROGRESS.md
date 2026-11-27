@@ -416,3 +416,12 @@ Status awal tahap 1:
 - [ ] GitHub Worker deploy job is skipped on pull_request events by design; a push to `feature/mavo-user-auth` is required to run the preview-only deployment workflow. Production remains untouched.
 
 - [x] Persisted the Neon TEST endpoint and region in `backend-worker/wrangler.preview-alt.jsonc` for `mavo-api-preview` (commit `2825d75dc300040e81b8cc2219b45db2f8dae735`) so future Wrangler preview deploys retain the non-secret storage configuration.
+
+
+## MAVO Preview deployment after Neon storage binding — 2026-11-27
+- [x] GitHub Actions push workflow run `46018440632` completed successfully.
+- [x] Preview validation job succeeded: TypeScript typecheck, primary Wrangler dry-run, and alternate hostname dry-run all passed.
+- [x] Preview deploy job succeeded: `Deploy mavo-preview only` and `Deploy alternate preview hostname` both completed successfully.
+- [x] Re-checked Cloudflare metadata after deployment: both Neon access keys remain configured as Worker secrets and endpoint/region remain configured as plain-text bindings on `mavo-api-preview`.
+- [ ] Runtime upload/readback test from authenticated MAVO mobile app remains pending. The public Worker health URL could not be independently fetched by the web inspection path; do not infer runtime health or upload success from CI deployment alone.
+- Production remains untouched.
