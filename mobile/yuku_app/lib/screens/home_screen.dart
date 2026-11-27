@@ -194,42 +194,164 @@ class _PostsFeedState extends State<_PostsFeed> {
       }
       final posts = snapshot.data ?? [];
       if (posts.isEmpty) return Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: const Center(child: Text("Belum ada postingan. Jadilah yang pertama berbagi cerita!", textAlign: TextAlign.center, style: TextStyle(color: MavoColors.muted))));
-      return Column(children: posts.map((post) {
-        final name = (post["authorName"] ?? "Pengguna MAVO").toString();
-        final content = (post["content"] ?? "").toString();
-        final audience = switch ((post["audience"] ?? "PUBLIC").toString()) { "FOLLOWERS" => "Pengikut", "PRIVATE" => "Privat", _ => "Publik" };
-        return Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                final authorId = (post["authorId"] ?? "").toString();
-                if (authorId.isEmpty) return;
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => CreatorProfileScreen(
-                    creatorName: name,
-                    creatorUserId: authorId,
-                  ),
-                ));
-              },
-              child: Row(children: [
-                const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)),
-                const SizedBox(width: 10),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
-                  Text(audience, style: const TextStyle(fontSize: 10, color: MavoColors.muted)),
-                ])),
-              ]),
-            )),
-            const Icon(Icons.more_horiz, color: MavoColors.muted),
-          ]),
-          const SizedBox(height: 13),
-          Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
-        ]));
-      }).toList());
-    },
+      return Column(children: posts.map((post) => _PostCard(post: post, onChanged: refresh)).toList());,
   );
 }
+class _PostCard extends StatefulWidget {
+  final Map<String, dynamic> post;
+  final Future<void> Function() onChanged;
+  const _PostCard({required this.post, required this.onChanged});
+  @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  late bool _liked;
+  late int _likes;
+  late int _comments;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _liked = widget.post['likedByMe'] == true;
+    _likes = (widget.post['likesCount'] as num?)?.toInt() ?? 0;
+    _comments = (widget.post['commentsCount'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> _toggleLike() async {
+    if (_busy) return;
+    final previous = _liked;
+    setState(() { _busy = true; _liked = !previous; _likes += _liked ? 1 : -1; });
+    try {
+      final result = await YukuApi.setPostLike(widget.post['id'].toString(), liked: _liked);
+      if (!mounted) return;
+      setState(() { _liked = result['likedByMe'] == true; _likes = (result['likesCount'] as num).toInt(); });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _liked = previous; _likes += previous ? 1 : -1; });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally { if (mounted) setState(() => _busy = false); }
+  }
+
+  Future<void> _openComments() async {
+    final count = await showModalBottomSheet<int>(
+      context: context, isScrollControlled: true, useSafeArea: true,
+      builder: (_) => _PostCommentsSheet(postId: widget.post['id'].toString()),
+    );
+    if (count != null && mounted) setState(() => _comments = count);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (widget.post['authorName'] ?? 'Pengguna MAVO').toString();
+    final content = (widget.post['content'] ?? '').toString();
+    final authorId = (widget.post['authorId'] ?? '').toString();
+    final audience = switch ((widget.post['audience'] ?? 'PUBLIC').toString()) { 'FOLLOWERS' => 'Pengikut', 'PRIVATE' => 'Privat', _ => 'Publik' };
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: authorId.isEmpty ? null : () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => CreatorProfileScreen(creatorName: name, creatorUserId: authorId),
+            )),
+            child: Row(children: [
+              const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)),
+              const SizedBox(width: 10),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+                Text(audience, style: const TextStyle(fontSize: 10, color: MavoColors.muted)),
+              ])),
+            ]),
+          )),
+          const Icon(Icons.more_horiz, color: MavoColors.muted),
+        ]),
+        const SizedBox(height: 13),
+        Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
+        const Divider(height: 22),
+        Row(children: [
+          IconButton(
+            visualDensity: VisualDensity.compact, onPressed: _busy ? null : _toggleLike,
+            icon: Icon(_liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: _liked ? MavoColors.coral : MavoColors.muted, size: 21),
+          ),
+          Text('$_likes', style: const TextStyle(color: MavoColors.muted, fontSize: 12)),
+          const SizedBox(width: 16),
+          IconButton(visualDensity: VisualDensity.compact, onPressed: _openComments, icon: const Icon(Icons.mode_comment_outlined, color: MavoColors.muted, size: 20)),
+          Text('$_comments komentar', style: const TextStyle(color: MavoColors.muted, fontSize: 12)),
+        ]),
+      ]),
+    );
+  }
+}
+
+class _PostCommentsSheet extends StatefulWidget {
+  final String postId;
+  const _PostCommentsSheet({required this.postId});
+  @override
+  State<_PostCommentsSheet> createState() => _PostCommentsSheetState();
+}
+
+class _PostCommentsSheetState extends State<_PostCommentsSheet> {
+  final _controller = TextEditingController();
+  late Future<List<Map<String, dynamic>>> _future;
+  bool _sending = false;
+  @override
+  void initState() { super.initState(); _future = YukuApi.postComments(widget.postId); }
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+
+  Future<void> _send() async {
+    final value = _controller.text.trim();
+    if (value.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      await YukuApi.addPostComment(widget.postId, value);
+      _controller.clear();
+      setState(() => _future = YukuApi.postComments(widget.postId));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally { if (mounted) setState(() => _sending = false); }
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.only(left: 18, right: 18, top: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+    child: SizedBox(height: MediaQuery.of(context).size.height * .65, child: Column(children: [
+      const Text('Komentar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+      const SizedBox(height: 12),
+      Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return Center(child: Text('Komentar gagal dimuat: ${snapshot.error}'));
+          final items = snapshot.data ?? [];
+          if (items.isEmpty) return const Center(child: Text('Belum ada komentar. Mulai percakapan!'));
+          return ListView.builder(itemCount: items.length, itemBuilder: (context, i) {
+            final item = items[i];
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person, color: MavoColors.violet)),
+              title: Text((item['authorName'] ?? 'Pengguna MAVO').toString(), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              subtitle: Text((item['content'] ?? '').toString()),
+            );
+          });
+        },
+      )),
+      Row(children: [
+        Expanded(child: TextField(controller: _controller, maxLength: 1000, decoration: const InputDecoration(hintText: 'Tulis komentar...', counterText: ''))),
+        IconButton(onPressed: _sending ? null : _send, icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded, color: MavoColors.violet)),
+      ]),
+      Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () async {
+        final latest = await YukuApi.postComments(widget.postId);
+        if (context.mounted) Navigator.pop(context, latest.length);
+      }, child: const Text('Selesai'))),
+    ])),
+  );
+}
+
 class _StoryItem extends StatelessWidget {
   final String label;
   final Color color;
