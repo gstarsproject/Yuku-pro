@@ -214,3 +214,6 @@ Status awal tahap 1:
 - [x] Endpoint baca/kirim pesan dan tandai dibaca memeriksa ulang relasi Follow dua arah; chat lama tidak bisa dipakai setelah salah satu pihak Unfollow.
 - [ ] Jalankan Worker CI dan verifikasi skenario dua akun: belum saling Follow ditolak, saling Follow diizinkan, salah satu Unfollow memblokir akses.
 - [ ] Perbarui/deploy Worker preview hanya setelah validasi CI; produksi tidak disentuh.
+
+- [x] Tombol Pesan di profil kreator kini membuka percakapan langsung melalui Inbox; server tetap menjadi pengaman utama dan menolak jika belum saling Follow.
+- [ ] Uji navigasi tombol Pesan dan skenario mutual-follow di dua perangkat setelah APK batch terbaru tersedia.
