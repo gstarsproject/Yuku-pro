@@ -363,3 +363,14 @@ Status awal tahap 1:
 - [x] Cloudflare preview versions: `mavo-preview` `4e07670f-7468-4715-89ed-250fb815ed29`; `mavo-api-preview` `5e2019c4-c3bb-493c-81bd-84ed9d0e8c4b`; semua binding rate limiter dan HYPERDRIVE terpasang.
 - [ ] Uji upload aktual dan validasi byte objek tetap tertunda sampai Object Storage credentials dikonfigurasi.
 - Catatan: production tidak disentuh.
+
+
+## Audit keamanan Worker lanjutan — 2026-11-27
+- [x] Tinjau ulang jalur autentikasi, profil, follow, upload URL, URL unduh media, postingan, Story, interaksi Like/Komentar, Inbox, dan notifikasi pada source branch pengembangan.
+- [x] Konfirmasi endpoint profil, follow, media, post, Story, interaksi, chat, dan notifikasi memerlukan sesi aktif sebelum mengembalikan data privat atau melakukan mutasi.
+- [x] Konfirmasi media post menerapkan aturan PUBLIC/FOLLOWERS/PRIVATE saat URL unduh diminta; media Story memeriksa masa aktif dan audiens; akses chat memeriksa peserta serta relasi mutual-follow.
+- [x] Query yang ditinjau menggunakan parameter SQL untuk input pengguna; pencarian pengguna membatasi panjang query dan jumlah hasil.
+- [ ] **Risiko media yang masih terbuka:** URL PUT presigned saat ini menandatangani host, tetapi belum mengikat Content-Type dan ukuran byte aktual. Server memvalidasi metadata aplikasi, bukan isi objek R2. Jangan tandai upload aman/selesai sebelum menambahkan pemeriksaan objek aktual dan menjalankan tes upload/unduh di TEST.
+- [ ] **CORS:** wildcard masih dipakai. Tetapkan allowlist setelah domain web resmi MAVO dipastikan; jangan menebak domain.
+- [ ] **Runtime:** pengujian 400/413/429, akses media lintas akun, dan skenario dua akun masih perlu dilakukan di preview.
+- Catatan: tahap ini hanya audit source. Belum ada perubahan kode, database, konfigurasi, atau deployment. Branch pengembangan dan lingkungan TEST tetap terpisah dari produksi.
