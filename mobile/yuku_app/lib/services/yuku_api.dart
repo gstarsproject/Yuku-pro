@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/io_client.dart';
 
 class YukuApi {
   static const String baseUrl = 'https://mavo-api-preview.gstars-business.workers.dev';
@@ -11,28 +10,9 @@ class YukuApi {
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
   static const String _tokenKey = 'mavo_access_token';
 
-  // Resolve the API hostname over HTTPS using a pinned public resolver IP.
-  // The API connection still uses the real hostname for TLS certificate
-  // verification and the HTTP Host header; no certificate checks are disabled.
-  static Future<List<InternetAddress>>? _addressesFuture;
-  static int _nextAddress = 0;
-
-  static http.Client _createClient() {
-    final nativeClient = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 15)
-      ..findProxy = (uri) { return 'DIRECT'; }
-      ..connectionFactory = (uri, proxyHost, proxyPort) async {
-        if (uri.host != _apiHost) {
-          return Socket.startConnect(uri.host, uri.port);
-        }
-        final addresses = await _resolveApiAddresses();
-        final address = addresses[_nextAddress++ % addresses.length];
-        return Socket.startConnect(address, uri.port);
-      };
-    return IOClient(nativeClient);
-  }
-
-  static final http.Client _client = _createClient();
+  // Use Android's normal network DNS resolver. The INTERNET permission
+  // is added by the release CI workflow before the APK is built.
+  static final http.Client _client = http.Client();
 
   static Future<List<InternetAddress>> _resolveApiAddresses() {
     return _addressesFuture ??= _lookupWithCloudflare().catchError(
