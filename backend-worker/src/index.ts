@@ -397,6 +397,51 @@ if (avatarMedia) {
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Follow operation failed",e); return json({success:false,message:"Tidak dapat memperbarui pengikut."},503); }
   }
+  const blockMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/block$/i);
+  if (blockMatch && ["GET","POST","DELETE"].includes(request.method)) {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const targetId = blockMatch[1];
+      if (targetId === user.id) return json({success:false,message:"Kamu tidak bisa memblokir akun sendiri."},400);
+      const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[targetId]);
+      if (!target.rows[0]) return json({success:false,message:"Akun tidak ditemukan."},404);
+      if (request.method === "GET") {
+        const state = await c.query('SELECT EXISTS(SELECT 1 FROM "UserBlock" WHERE "blockerId"=$1 AND "blockedId"=$2) AS "isBlocked", EXISTS(SELECT 1 FROM "UserBlock" WHERE "blockerId"=$2 AND "blockedId"=$1) AS "blockedByUser"',[user.id,targetId]);
+        return json({success:true,data:state.rows[0]});
+      }
+      const limited = await userActionRateLimit(env,user.id,"user-block"); if (limited) return limited;
+      if (request.method === "POST") {
+        await c.query('INSERT INTO "UserBlock" ("id","blockerId","blockedId","createdAt") VALUES ($1,$2,$3,NOW()) ON CONFLICT ("blockerId","blockedId") DO NOTHING',[crypto.randomUUID(),user.id,targetId]);
+        await c.query('DELETE FROM "Follow" WHERE ("followerId"=$1 AND "followingId"=$2) OR ("followerId"=$2 AND "followingId"=$1)',[user.id,targetId]);
+        return json({success:true,data:{isBlocked:true},message:"Akun berhasil diblokir."});
+      }
+      await c.query('DELETE FROM "UserBlock" WHERE "blockerId"=$1 AND "blockedId"=$2',[user.id,targetId]);
+      return json({success:true,data:{isBlocked:false},message:"Blokir akun dibuka."});
+    });
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User block failed",e); return json({success:false,message:"Pengaturan blokir gagal diproses."},503); }
+  }
+  if (path === "/api/v1/reports" && request.method === "POST") {
+   try {
+    const body = await readRequestBody(request);
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const limited = await userActionRateLimit(env,user.id,"content-report"); if (limited) return limited;
+      const targetUserId = typeof body.targetUserId === "string" ? body.targetUserId : "";
+      const reason = typeof body.reason === "string" ? body.reason : "";
+      const details = typeof body.details === "string" ? body.details.trim() : "";
+      const allowedReasons = ["SPAM","HARASSMENT","HATE","IMPERSONATION","INAPPROPRIATE","SCAM","OTHER"];
+      if (!/^[0-9a-f-]{36}$/i.test(targetUserId) || targetUserId === user.id || !allowedReasons.includes(reason) || details.length > 1000)
+        return json({success:false,message:"Data laporan tidak valid."},400);
+      const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[targetUserId]);
+      if (!target.rows[0]) return json({success:false,message:"Akun yang dilaporkan tidak ditemukan."},404);
+      await c.query('INSERT INTO "ContentReport" ("id","reporterId","targetUserId","reason","details","status","createdAt") VALUES ($1,$2,$3,$4,$5,\'OPEN\',NOW()) ON CONFLICT ("reporterId","targetUserId") DO NOTHING',[crypto.randomUUID(),user.id,targetUserId,reason,details || null]);
+      return json({success:true,message:"Laporan diterima. Tim MAVO akan meninjaunya."},201);
+    });
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Content report failed",e); return json({success:false,message:"Laporan gagal dikirim."},503); }
+  }
   const relationMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/relations$/i);
   if (relationMatch && request.method === "GET") {
    try {
