@@ -395,3 +395,10 @@ Status awal tahap 1:
 - [x] Admin, Backend, and Cloudflare Worker CI passed on the previous branding commit `93abc4e8dc37593f309ad1d4ebc2395ca9d85d58`.
 - [ ] Flutter Mobile CI for the latest follow-up was created as a pull_request run but still reported `pending` with no job records at last check; its build/test result is not yet verified.
 - [ ] Do not merge or deploy production until Flutter CI and device smoke tests pass.
+
+
+## 2026-11-27 — Preview observability configuration
+- Updated `backend-worker/wrangler.preview-alt.jsonc` for the `mavo-api-preview` Worker to match the Cloudflare Preview dashboard observability settings.
+- Preview logs enabled with head sampling 1, invocation logs enabled, and persistence enabled.
+- Preview traces disabled (head sampling 1; persistence setting retained) and issue detection disabled.
+- This is a Wrangler configuration sync only. It does not install Neon S3 credentials or prove media upload works; Worker secret configuration and upload E2E remain pending.
