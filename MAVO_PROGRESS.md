@@ -298,3 +298,14 @@ Status awal tahap 1:
 - [ ] Runtime test 400/413 belum bisa dilakukan melalui pemeriksa endpoint yang tersedia di sesi ini.
 - [ ] Flutter Mobile CI tidak menghasilkan job pada commit ini; tidak ada APK baru yang dibangun dari perubahan ini.
 
+## Pembaruan 2026-11-27 — Rate limit autentikasi (implementasi, menunggu validasi)
+- [x] Tambah Cloudflare Workers Rate Limiting binding pada konfigurasi preview utama dan alternate preview.
+- [x] Batasi percobaan register/login hingga 30 request per IP per 60 detik.
+- [x] Batasi percobaan per email hingga 5 request per 60 detik, dengan scope register/login terpisah.
+- [x] API mengembalikan HTTP 429 saat batas terlampaui.
+- [x] Counter IP dan email dipisahkan agar setiap request tidak menghitung counter IP dua kali.
+- [ ] Validasi TypeScript dan Wrangler dry-run untuk konfigurasi rate limit masih menunggu hasil CI.
+- [ ] Deployment preview yang terpantau saat pemeriksaan belum menampilkan binding AUTH_IP_LIMITER dan AUTH_ID_LIMITER; jangan anggap rate limit sudah aktif pada server sebelum deployment versi terbaru terverifikasi.
+- Catatan: Cloudflare Rate Limiting API bersifat approximate per lokasi Cloudflare; bukan pembatas global yang strict. Pembatas IP dapat memengaruhi beberapa pengguna yang berbagi IP jaringan seluler.
+- CORS masih menggunakan wildcard. Perlu menentukan domain web resmi sebelum mengubah allowlist; aplikasi Flutter native tidak bergantung pada CORS browser.
+- Tidak ada perubahan pada production Worker atau database production.
