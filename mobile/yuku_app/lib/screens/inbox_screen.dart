@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
+import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 
 class InboxScreen extends StatefulWidget {
   const InboxScreen({super.key});
-
   @override
   State<InboxScreen> createState() => _InboxScreenState();
 }
 
 class _InboxScreenState extends State<InboxScreen> {
+  late Future<List<Map<String, dynamic>>> _future = YukuApi.conversations();
   final TextEditingController _search = TextEditingController();
-  final List<_Conversation> _conversations = [
-    _Conversation('Nadia Putri', 'Hai! Kapan kita mulai?', '10:42', 2, true, const Color(0xFFFF8BA7)),
-    _Conversation('Rizky Mahendra', 'Makasih banyak ya 🙌', '09:18', 0, true, const Color(0xFF6C9BFF)),
-    _Conversation('MAVO Creators', 'Dina: Ada event baru minggu ini', 'Kemarin', 5, false, const Color(0xFF9B7BFF), group: true),
-    _Conversation('Kevin Tan', 'Voice message · 0:18', 'Kemarin', 0, false, const Color(0xFF55BFAF)),
-    _Conversation('Sarah Amelia', 'Sampai ketemu di sana!', 'Sen', 0, false, const Color(0xFFFFB45C)),
-  ];
+
+  void _refresh() => setState(() => _future = YukuApi.conversations());
 
   @override
   void dispose() {
@@ -24,249 +20,261 @@ class _InboxScreenState extends State<InboxScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _conversations.where((c) =>
-      c.name.toLowerCase().contains(_search.text.toLowerCase())).toList();
-    return SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-            child: Row(children: [
-              const Expanded(child: Text('Pesan', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900, color: MavoColors.ink))),
-              IconButton(onPressed: () => _showInfo(context), icon: const Icon(Icons.edit_square, color: MavoColors.violet)),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: TextField(
-              controller: _search,
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                hintText: 'Cari percakapan',
-                prefixIcon: Icon(Icons.search_rounded),
-                contentPadding: EdgeInsets.symmetric(vertical: 13),
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 100,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              scrollDirection: Axis.horizontal,
-              children: [
-                _StoryAvatar(name: 'Catatan', color: MavoColors.violet, add: true),
-                _StoryAvatar(name: 'Nadia', color: const Color(0xFFFF8BA7), online: true),
-                _StoryAvatar(name: 'Rizky', color: const Color(0xFF6C9BFF), online: true),
-                _StoryAvatar(name: 'Kevin', color: const Color(0xFF55BFAF)),
-                _StoryAvatar(name: 'Sarah', color: const Color(0xFFFFB45C)),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 4, 20, 10),
-            child: Row(children: [
-              Text('Semua pesan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: MavoColors.ink)),
-              Spacer(),
-              Text('Terbaru', style: TextStyle(color: MavoColors.muted, fontSize: 12)),
-              SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down_rounded, size: 17, color: MavoColors.muted),
-            ]),
-          ),
-          Expanded(
-            child: filtered.isEmpty
-              ? const Center(child: Text('Percakapan tidak ditemukan', style: TextStyle(color: MavoColors.muted)))
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 3),
-                  itemBuilder: (context, index) {
-                    final c = filtered[index];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                      leading: _Avatar(name: c.name, color: c.color, group: c.group, online: c.online),
-                      title: Row(children: [
-                        Expanded(child: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.ink))),
-                        Text(c.time, style: TextStyle(fontSize: 11, color: c.unread > 0 ? MavoColors.violet : MavoColors.muted)),
-                      ]),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 5),
-                        child: Row(children: [
-                          Expanded(child: Text(c.preview, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: c.unread > 0 ? MavoColors.ink : MavoColors.muted, fontWeight: c.unread > 0 ? FontWeight.w600 : FontWeight.w400))),
-                          if (c.unread > 0) Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(color: MavoColors.violet, shape: BoxShape.circle),
-                            child: Text('${c.unread}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                          ),
-                        ]),
-                      ),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => _ChatScreen(conversation: c))),
-                    );
-                  },
-                ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 7),
-            child: Text('Pratinjau chat · pesan belum tersinkronisasi', style: TextStyle(fontSize: 10, color: MavoColors.muted.withOpacity(.8))),
-          ),
-        ],
-      ),
+  Future<void> _newChat() async {
+    final selected = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => const _NewChatDialog(),
     );
-  }
-
-  void _showInfo(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Chat baru akan aktif setelah layanan pesan MAVO terhubung.')),
-    );
-  }
-}
-
-class _Conversation {
-  final String name, preview, time;
-  final int unread;
-  final bool online, group;
-  final Color color;
-  const _Conversation(this.name, this.preview, this.time, this.unread, this.online, this.color, {this.group = false});
-}
-
-class _StoryAvatar extends StatelessWidget {
-  final String name;
-  final Color color;
-  final bool online, add;
-  const _StoryAvatar({required this.name, required this.color, this.online = false, this.add = false});
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 69,
-    child: Column(children: [
-      Stack(children: [
-        Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: add ? MavoColors.violet.withOpacity(.25) : color, width: 2)),
-          child: CircleAvatar(radius: 25, backgroundColor: color.withValues(alpha: .13), child: add ? const Icon(Icons.add_rounded, color: MavoColors.violet) : Text(name.substring(0, 1), style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 18))),
+    if (selected == null || !mounted) return;
+    try {
+      final conversation = await YukuApi.createConversation(selected['id'].toString());
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => _ChatScreen(
+          conversationId: conversation['id'].toString(),
+          peerId: selected['id'].toString(),
+          name: selected['displayName']?.toString() ?? 'Pengguna MAVO',
         ),
-        if (online) Positioned(right: 1, bottom: 2, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: const Color(0xFF36C98F), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)))),
-      ]),
-      const SizedBox(height: 5),
-      Text(name, style: const TextStyle(fontSize: 11, color: MavoColors.muted)),
+      ));
+      _refresh();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 12, 12),
+        child: Row(children: [
+          const Expanded(child: Text('Pesan', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900, color: MavoColors.ink))),
+          IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _NotificationsScreen())),
+            icon: const Icon(Icons.notifications_none_rounded, color: MavoColors.violet)),
+          IconButton(onPressed: _newChat, icon: const Icon(Icons.edit_square, color: MavoColors.violet)),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: TextField(controller: _search, onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(hintText: 'Cari percakapan', prefixIcon: Icon(Icons.search_rounded))),
+      ),
+      const SizedBox(height: 12),
+      Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Pesan belum dapat dimuat', style: TextStyle(color: MavoColors.muted)),
+            TextButton(onPressed: _refresh, child: const Text('Coba lagi')),
+          ]));
+          final items = (snapshot.data ?? []).where((item) =>
+            (item['displayName']?.toString() ?? '').toLowerCase().contains(_search.text.toLowerCase())).toList();
+          if (items.isEmpty) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.chat_bubble_outline_rounded, size: 42, color: MavoColors.muted),
+            const SizedBox(height: 10),
+            const Text('Belum ada percakapan', style: TextStyle(color: MavoColors.muted)),
+            TextButton.icon(onPressed: _newChat, icon: const Icon(Icons.add), label: const Text('Mulai chat')),
+          ]));
+          return RefreshIndicator(onRefresh: () async => _refresh(), child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 16),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final unread = (item['unreadCount'] as num?)?.toInt() ?? 0;
+              final name = item['displayName']?.toString() ?? 'Pengguna MAVO';
+              return ListTile(
+                leading: CircleAvatar(backgroundColor: MavoColors.violetSoft,
+                  child: Text(name.isEmpty ? 'M' : name[0].toUpperCase(), style: const TextStyle(color: MavoColors.violet, fontWeight: FontWeight.w800))),
+                title: Text(name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.ink)),
+                subtitle: Text(item['lastMessage']?.toString() ?? 'Mulai percakapan', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: unread > 0 ? MavoColors.ink : MavoColors.muted, fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.normal)),
+                trailing: unread > 0 ? CircleAvatar(radius: 11, backgroundColor: MavoColors.violet,
+                  child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 10))) : null,
+                onTap: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _ChatScreen(
+                    conversationId: item['id'].toString(), peerId: item['userId'].toString(), name: name)));
+                  _refresh();
+                },
+              );
+            },
+          ));
+        },
+      )),
     ]),
   );
 }
 
-class _Avatar extends StatelessWidget {
-  final String name;
-  final Color color;
-  final bool group, online;
-  const _Avatar({required this.name, required this.color, this.group = false, this.online = false});
+class _NewChatDialog extends StatefulWidget {
+  const _NewChatDialog();
+  @override
+  State<_NewChatDialog> createState() => _NewChatDialogState();
+}
+
+class _NewChatDialogState extends State<_NewChatDialog> {
+  final TextEditingController _query = TextEditingController();
+  List<Map<String, dynamic>> _users = [];
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _search(String value) async {
+    if (value.trim().length < 2) { setState(() { _users = []; _error = null; }); return; }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final result = await YukuApi.searchUsers(value);
+      if (mounted) setState(() => _users = result);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
-  Widget build(BuildContext context) => Stack(children: [
-    CircleAvatar(radius: 26, backgroundColor: color.withValues(alpha: .15), child: group ? Icon(Icons.groups_rounded, color: color) : Text(name.substring(0, 1), style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 19))),
-    if (online) Positioned(right: 0, bottom: 0, child: Container(width: 13, height: 13, decoration: BoxDecoration(color: const Color(0xFF36C98F), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)))),
-  ]);
+  void dispose() { _query.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Chat baru'),
+    content: SizedBox(width: 360, height: 330, child: Column(children: [
+      TextField(controller: _query, autofocus: true, onChanged: _search,
+        decoration: const InputDecoration(hintText: 'Cari nama pengguna', prefixIcon: Icon(Icons.search))),
+      const SizedBox(height: 10),
+      if (_loading) const LinearProgressIndicator(),
+      if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+      Expanded(child: _users.isEmpty
+        ? Center(child: Text(_query.text.length < 2 ? 'Ketik minimal 2 karakter' : 'Pengguna tidak ditemukan',
+            style: const TextStyle(color: MavoColors.muted)))
+        : ListView.builder(itemCount: _users.length, itemBuilder: (_, i) {
+            final user = _users[i];
+            final name = user['displayName']?.toString() ?? 'Pengguna';
+            return ListTile(leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+              title: Text(name), onTap: () => Navigator.pop(context, user));
+          })),
+    ])),
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tutup'))],
+  );
 }
 
 class _ChatScreen extends StatefulWidget {
-  final _Conversation conversation;
-  const _ChatScreen({required this.conversation});
-
+  final String conversationId, peerId, name;
+  const _ChatScreen({required this.conversationId, required this.peerId, required this.name});
   @override
   State<_ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<_ChatScreen> {
   final TextEditingController _message = TextEditingController();
-  final List<_ChatMessage> _messages = [
-    _ChatMessage('Hai! Senang bisa terhubung di MAVO 😊', false),
-    _ChatMessage('Hai juga! Apa kabar?', true),
-    _ChatMessage(widgetPreview, false),
-  ];
-
-  static const String widgetPreview = 'Lagi eksplor fitur baru MAVO nih.';
+  List<Map<String, dynamic>> _messages = [];
+  String? _myId;
+  bool _loading = true, _sending = false;
+  String? _error;
 
   @override
-  void dispose() {
-    _message.dispose();
-    super.dispose();
+  void initState() { super.initState(); _load(); }
+
+  Future<void> _load() async {
+    try {
+      final me = await YukuApi.currentUser();
+      await YukuApi.markConversationRead(widget.conversationId);
+      final messages = await YukuApi.conversationMessages(widget.conversationId);
+      if (mounted) setState(() { _myId = me?['id']?.toString(); _messages = messages; _loading = false; _error = null; });
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _error = e.toString(); });
+    }
   }
 
-  void _send() {
+  Future<void> _send() async {
     final value = _message.text.trim();
-    if (value.isEmpty) return;
-    setState(() {
-      _messages.add(_ChatMessage(value, true));
+    if (value.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      await YukuApi.sendMessage(widget.conversationId, value);
       _message.clear();
-    });
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  void dispose() { _message.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(widget.name, style: const TextStyle(fontWeight: FontWeight.w800))),
+    body: Column(children: [
+      Expanded(child: _loading ? const Center(child: CircularProgressIndicator())
+        : _error != null ? Center(child: TextButton(onPressed: _load, child: const Text('Muat ulang pesan')))
+        : RefreshIndicator(onRefresh: _load, child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(16),
+          itemCount: _messages.length, itemBuilder: (_, index) {
+            final message = _messages[index];
+            final mine = message['senderId']?.toString() == _myId;
+            return Align(alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .78),
+                margin: const EdgeInsets.only(bottom: 9), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(color: mine ? MavoColors.violet : Colors.white,
+                  borderRadius: BorderRadius.circular(16)),
+                child: Text(message['body']?.toString() ?? '', style: TextStyle(color: mine ? Colors.white : MavoColors.ink))));
+          },
+        ))),
+      SafeArea(top: false, child: Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Row(children: [
+          Expanded(child: TextField(controller: _message, textInputAction: TextInputAction.send, onSubmitted: (_) => _send(),
+            decoration: const InputDecoration(hintText: 'Tulis pesan...', contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12)))),
+          const SizedBox(width: 8),
+          IconButton.filled(onPressed: _sending ? null : _send,
+            style: IconButton.styleFrom(backgroundColor: MavoColors.violet, foregroundColor: Colors.white),
+            icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.send_rounded)),
+        ]))),
+    ]),
+  );
+}
+
+class _NotificationsScreen extends StatefulWidget {
+  const _NotificationsScreen();
+  @override
+  State<_NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<_NotificationsScreen> {
+  late Future<List<Map<String, dynamic>>> _future = YukuApi.notifications();
+  Future<void> _refresh() async => setState(() => _future = YukuApi.notifications());
+
+  Future<void> _markAll() async {
+    await YukuApi.markNotificationsRead();
+    if (mounted) _refresh();
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      titleSpacing: 0,
-      title: Row(children: [
-        _Avatar(name: widget.conversation.name, color: widget.conversation.color, group: widget.conversation.group, online: widget.conversation.online),
-        const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.conversation.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-          Text(widget.conversation.online ? 'Online' : 'Aktif baru-baru ini', style: const TextStyle(fontSize: 10, color: MavoColors.muted)),
-        ])),
-      ]),
-      actions: [
-        IconButton(onPressed: () => _unavailable(context), icon: const Icon(Icons.call_outlined)),
-        IconButton(onPressed: () => _unavailable(context), icon: const Icon(Icons.videocam_outlined)),
-      ],
-    ),
-    body: Column(children: [
-      Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12), color: MavoColors.violetSoft, child: const Text('Mode pratinjau — pesan hanya tersimpan di layar ini.', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: MavoColors.violet))),
-      Expanded(child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _messages.length,
-        itemBuilder: (context, index) {
-          final m = _messages[index];
-          return Align(
-            alignment: m.mine ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .78),
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              decoration: BoxDecoration(
-                color: m.mine ? MavoColors.violet : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(17), topRight: const Radius.circular(17),
-                  bottomLeft: Radius.circular(m.mine ? 17 : 4), bottomRight: Radius.circular(m.mine ? 4 : 17),
-                ),
-              ),
-              child: Text(m.text, style: TextStyle(color: m.mine ? Colors.white : MavoColors.ink, fontSize: 13)),
-            ),
-          );
+    appBar: AppBar(title: const Text('Notifikasi'), actions: [TextButton(onPressed: _markAll, child: const Text('Tandai dibaca'))]),
+    body: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+      if (snapshot.hasError) return Center(child: TextButton(onPressed: _refresh, child: const Text('Coba lagi')));
+      final items = snapshot.data ?? [];
+      if (items.isEmpty) return const Center(child: Text('Belum ada notifikasi', style: TextStyle(color: MavoColors.muted)));
+      return RefreshIndicator(onRefresh: _refresh, child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(), itemCount: items.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (_, index) {
+          final item = items[index];
+          final read = item['readAt'] != null;
+          return ListTile(leading: CircleAvatar(backgroundColor: MavoColors.violetSoft,
+              child: Icon(item['type'] == 'MESSAGE' ? Icons.chat_bubble_outline : Icons.notifications_none, color: MavoColors.violet)),
+            title: Text(item['message']?.toString() ?? 'Aktivitas baru',
+              style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.w800, color: MavoColors.ink)),
+            subtitle: Text(item['actorName']?.toString() ?? 'MAVO', style: const TextStyle(color: MavoColors.muted)),
+            trailing: read ? null : const Icon(Icons.circle, size: 9, color: MavoColors.violet));
         },
-      )),
-      SafeArea(top: false, child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        child: Row(children: [
-          IconButton(onPressed: () => _unavailable(context), icon: const Icon(Icons.add_circle_outline_rounded, color: MavoColors.violet)),
-          Expanded(child: TextField(
-            controller: _message,
-            textInputAction: TextInputAction.send,
-            onSubmitted: (_) => _send(),
-            decoration: const InputDecoration(hintText: 'Tulis pesan...', contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
-          )),
-          const SizedBox(width: 7),
-          IconButton.filled(onPressed: _send, style: IconButton.styleFrom(backgroundColor: MavoColors.violet, foregroundColor: Colors.white), icon: const Icon(Icons.send_rounded)),
-        ]),
-      )),
-    ]),
+      ));
+    }),
   );
-
-  void _unavailable(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fitur ini akan aktif setelah integrasi layanan chat.')));
-  }
-}
-
-class _ChatMessage {
-  final String text;
-  final bool mine;
-  const _ChatMessage(this.text, this.mine);
 }
