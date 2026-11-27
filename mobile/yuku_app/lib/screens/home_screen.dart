@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: 18),
-            sliver: SliverToBoxAdapter(child: _CommunityPost()),
+            sliver: SliverToBoxAdapter(child: _PostsFeed()),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
@@ -154,6 +154,45 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class _PostsFeed extends StatefulWidget {
+  const _PostsFeed();
+  @override
+  State<_PostsFeed> createState() => _PostsFeedState();
+}
+
+class _PostsFeedState extends State<_PostsFeed> {
+  late Future<List<Map<String, dynamic>>> _future;
+  @override
+  void initState() { super.initState(); _future = YukuApi.posts(); }
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
+    future: _future,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Padding(padding: EdgeInsets.all(28), child: Center(child: CircularProgressIndicator()));
+      }
+      if (snapshot.hasError) {
+        return Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: Column(children: [
+          const Text("Feed belum dapat dimuat.", style: TextStyle(color: MavoColors.ink, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          TextButton(onPressed: () => setState(() => _future = YukuApi.posts()), child: const Text("Coba lagi")),
+        ]));
+      }
+      final posts = snapshot.data ?? [];
+      if (posts.isEmpty) return Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: const Center(child: Text("Belum ada postingan. Jadilah yang pertama berbagi cerita!", textAlign: TextAlign.center, style: TextStyle(color: MavoColors.muted))));
+      return Column(children: posts.map((post) {
+        final name = (post["authorName"] ?? "Pengguna MAVO").toString();
+        final content = (post["content"] ?? "").toString();
+        final audience = switch ((post["audience"] ?? "PUBLIC").toString()) { "FOLLOWERS" => "Pengikut", "PRIVATE" => "Privat", _ => "Publik" };
+        return Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)), Text(audience, style: const TextStyle(fontSize: 10, color: MavoColors.muted))])), const Icon(Icons.more_horiz, color: MavoColors.muted)]),
+          const SizedBox(height: 13),
+          Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
+        ]));
+      }).toList());
+    },
+  );
+}
 class _StoryItem extends StatelessWidget {
   final String label;
   final Color color;
