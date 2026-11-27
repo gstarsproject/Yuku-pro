@@ -265,14 +265,32 @@ export default {
     const body = await readRequestBody(request);
     const content = typeof body.content === "string" ? body.content.trim() : "";
     const audience = typeof body.audience === "string" ? body.audience : "PUBLIC";
-    if (!content || content.length > MAX_POST_CONTENT_LENGTH) return json({success:false,message:"Isi postingan wajib diisi (maksimal 2.000 karakter)."},400);
+    const media = Array.isArray(body.media) ? body.media : [];
+    const locationName = typeof body.locationName === "string" ? body.locationName.trim().slice(0,200) : null;
+    const latitude = typeof body.latitude === "number" ? body.latitude : null;
+    const longitude = typeof body.longitude === "number" ? body.longitude : null;
+    if ((!content && media.length === 0) || content.length > MAX_POST_CONTENT_LENGTH || media.length > 10) return json({success:false,message:"Isi postingan atau media wajib diisi (maksimal 10 file)."},400);
     if (!["PUBLIC","FOLLOWERS","PRIVATE"].includes(audience)) return json({success:false,message:"Pilihan privasi tidak valid."},400);
+    if ((latitude === null) !== (longitude === null) || (latitude !== null && (Math.abs(latitude)>90 || Math.abs(longitude!)>180))) return json({success:false,message:"Koordinat lokasi tidak valid."},400);
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      for (const item of media) {
+        if (!item || typeof item.objectKey !== "string" || !item.objectKey.startsWith("users/"+user.id+"/") ||
+            !["IMAGE","VIDEO"].includes(item.mediaType) || typeof item.contentType !== "string" ||
+            !Number.isSafeInteger(Number(item.byteSize)) || Number(item.byteSize)<1) return json({success:false,message:"Data media tidak valid."},400);
+      }
       const id = crypto.randomUUID();
-      const result = await c.query('INSERT INTO "Post" ("id","authorId","content","audience","createdAt","updatedAt") VALUES ($1,$2,$3,$4,NOW(),NOW()) RETURNING "id","authorId","content","audience","createdAt"',[id,user.id,content,audience]);
-      return json({success:true,data:{...result.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
+      await c.query("BEGIN");
+      try {
+        const result = await c.query('INSERT INTO "Post" ("id","authorId","content","audience","locationName","latitude","longitude","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) RETURNING "id","authorId","content","audience","locationName","latitude","longitude","createdAt"',[id,user.id,content,audience,locationName,latitude,longitude]);
+        for (let i=0;i<media.length;i++) {
+          const item=media[i];
+          await c.query('INSERT INTO "MediaAsset" ("id","ownerId","postId","mediaType","objectKey","contentType","byteSize","sortOrder","createdAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())',[crypto.randomUUID(),user.id,id,item.mediaType,item.objectKey,item.contentType,Number(item.byteSize),i]);
+        }
+        await c.query("COMMIT");
+        return json({success:true,data:{...result.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
+      } catch(e) { await c.query("ROLLBACK"); throw e; }
     });
    } catch(e) { console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
   }
