@@ -47,11 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 42,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [MavoColors.violet, MavoColors.coral, Color(0xFFFFC45C)],
-                    ),
+                    color: MavoColors.violet,
                   ),
                   alignment: Alignment.center,
                   child: const Text('M', style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.w900)),
@@ -133,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ...visibleStories.asMap().entries.map((entry) {
                             final story = entry.value;
                             final name = (story['authorName'] ?? 'Creator').toString();
-                            final colors = [MavoColors.coral, MavoColors.aqua, Color(0xFFFFB84D), Color(0xFF8A6BFF), Color(0xFFEF70B5)];
+                            final colors = [MavoColors.violet, MavoColors.midnight, MavoColors.coral, MavoColors.violet];
                             return _StoryItem(label: name, color: colors[entry.key % colors.length], creatorId: (story['userId'] ?? story['authorId'] ?? '').toString());
                           }),
                           if (snapshot.hasError)
@@ -183,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(width: 9),
                 Expanded(child: _PillarCard(icon: Icons.explore_rounded, title: 'EXPERIENCE', subtitle: 'Discover more', color: MavoColors.coral, soft: MavoColors.coralSoft)),
                 SizedBox(width: 9),
-                Expanded(child: _PillarCard(icon: Icons.work_rounded, title: 'PRO', subtitle: 'Find services', color: MavoColors.aqua, soft: Color(0xFFE8FAFC))),
+                Expanded(child: _PillarCard(icon: Icons.work_rounded, title: 'PRO', subtitle: 'Find services', color: MavoColors.midnight, soft: MavoColors.violetSoft)),
               ]),
             ),
           ),
