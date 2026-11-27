@@ -103,7 +103,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
                             child: Text(name.isEmpty ? 'M' : name.substring(0, 1).toUpperCase(), style: const TextStyle(color: MavoColors.violet, fontWeight: FontWeight.w800)),
                           ),
                           title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                          subtitle: Text(user['following'] == true ? 'Mengikuti kamu juga' : 'Pengguna MAVO'),
+                          subtitle: Text(user['following'] == true ? 'Sudah kamu ikuti' : 'Belum kamu ikuti'),
                           onTap: userId.isEmpty ? null : () {
                             Navigator.pop(sheetContext);
                             Navigator.of(context).push(MaterialPageRoute(
