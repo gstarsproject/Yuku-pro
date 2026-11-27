@@ -20,12 +20,12 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] Perbaiki widget test Inbox agar dirender di dalam Scaffold seperti struktur aplikasi sebenarnya.
 - [x] GitHub CI pada commit `69b8aafca472b451ac48c369c3a612848ad2f308`: Backend CI PASS, Flutter Mobile CI PASS, Cloudflare Worker CI PASS.
 - [x] APK preview Android berhasil dibangun. Artifact: `mavo-android-arm64-preview`, run `45972701723`, artifact `15185868757`.
-- [ ] Uji create/read dan privasi Publik/Pengikut/Privat secara end-to-end melalui Worker preview dan APK Android.
-- [ ] Pastikan Worker preview sudah menjalankan versi endpoint posting terbaru sebelum uji end-to-end.
+- [x] Deployment Worker preview `mavo-api-preview` dan `mavo-preview` terdaftar di Cloudflare pada 2026-11-27 sekitar 09:12 UTC.
+- [ ] Uji runtime health/database dan alur create/read serta privasi Publik/Pengikut/Privat secara end-to-end melalui APK Android.
 
 ## Batasan saat ini
 - Fitur postingan pada tahap ini hanya teks maksimal 2.000 karakter.
 - Foto/video, like server-side, komentar, share, story, hashtag, dan trending belum diaktifkan.
-- CI PASS adalah validasi otomatis; belum membuktikan uji alur posting end-to-end dari APK.
+- CI PASS dan catatan deployment belum membuktikan alur posting end-to-end sudah berfungsi dari APK.
 - Database pengujian adalah branch Neon `mavo-test`, bukan database produksi.
 - Jangan deploy ke produksi atau merge PR tanpa persetujuan.
