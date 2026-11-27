@@ -161,13 +161,45 @@ export default {
     });
    } catch(e) { console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
   }
+  const postInteractionMatch = path.match(/^\\/api\\/v1\\/posts\\/([0-9a-f-]{36})\\/(like|comments)$/i);
+  if (postInteractionMatch && ["GET","POST","DELETE"].includes(request.method)) {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const postId = postInteractionMatch[1], action = postInteractionMatch[2].toLowerCase();
+      const visible = await c.query('SELECT p."id",p."authorId" FROM "Post" p JOIN "User" u ON u."id"=p."authorId" WHERE p."id"=$1 AND u."status"=\'ACTIVE\' AND (p."audience"=\'PUBLIC\' OR p."authorId"=$2 OR (p."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$2 AND f."followingId"=p."authorId"))) LIMIT 1',[postId,user.id]);
+      if (!visible.rows[0]) return json({success:false,message:"Postingan tidak ditemukan atau tidak dapat diakses."},404);
+      if (action === "like") {
+        if (request.method === "GET") {
+          const state = await c.query('SELECT EXISTS(SELECT 1 FROM "PostLike" WHERE "postId"=$1 AND "userId"=$2) AS "likedByMe",(SELECT COUNT(*)::int FROM "PostLike" WHERE "postId"=$1) AS "likesCount"',[postId,user.id]);
+          return json({success:true,data:state.rows[0]});
+        }
+        if (request.method === "POST") await c.query('INSERT INTO "PostLike" ("id","postId","userId","createdAt") VALUES ($1,$2,$3,NOW()) ON CONFLICT ("postId","userId") DO NOTHING',[crypto.randomUUID(),postId,user.id]);
+        else await c.query('DELETE FROM "PostLike" WHERE "postId"=$1 AND "userId"=$2',[postId,user.id]);
+        const state = await c.query('SELECT EXISTS(SELECT 1 FROM "PostLike" WHERE "postId"=$1 AND "userId"=$2) AS "likedByMe",(SELECT COUNT(*)::int FROM "PostLike" WHERE "postId"=$1) AS "likesCount"',[postId,user.id]);
+        return json({success:true,data:state.rows[0]});
+      }
+      if (request.method === "GET") {
+        const comments = await c.query('SELECT cm."id",cm."content",cm."createdAt",cm."userId",pr."displayName" AS "authorName",pr."avatarUrl" AS "authorAvatar" FROM "PostComment" cm LEFT JOIN "Profile" pr ON pr."userId"=cm."userId" WHERE cm."postId"=$1 ORDER BY cm."createdAt" ASC LIMIT 100',[postId]);
+        return json({success:true,count:comments.rowCount,data:comments.rows});
+      }
+      if (request.method !== "POST") return json({success:false,message:"Method not allowed"},405);
+      const body = await readRequestBody(request), content = typeof body.content === "string" ? body.content.trim() : "";
+      if (!content || content.length > 1000) return json({success:false,message:"Komentar wajib diisi (maksimal 1.000 karakter)."},400);
+      const inserted = await c.query('INSERT INTO "PostComment" ("id","postId","userId","content","createdAt") VALUES ($1,$2,$3,$4,NOW()) RETURNING "id","postId","userId","content","createdAt"',[crypto.randomUUID(),postId,user.id,content]);
+      return json({success:true,data:{...inserted.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
+    });
+   } catch(e) { console.error("Post interaction failed",e); return json({success:false,message:"Interaksi postingan gagal diproses."},503); }
+  }
+
   if (path === "/api/v1/posts" && request.method === "GET") {
    try {
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit")||30),1),50);
-      const result = await c.query('SELECT p."id",p."authorId",p."content",p."audience",p."createdAt",pr."displayName" AS "authorName",pr."avatarUrl" AS "authorAvatar" FROM "Post" p JOIN "User" u ON u."id"=p."authorId" LEFT JOIN "Profile" pr ON pr."userId"=p."authorId" WHERE u."status"=\'ACTIVE\' AND (p."audience"=\'PUBLIC\' OR p."authorId"=$1 OR (p."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$1 AND f."followingId"=p."authorId"))) ORDER BY p."createdAt" DESC LIMIT $2',[user.id,limit]);
+      const result = await c.query('SELECT p."id",p."authorId",p."content",p."audience",p."createdAt",pr."displayName" AS "authorName",pr."avatarUrl" AS "authorAvatar",(SELECT COUNT(*)::int FROM "PostLike" l WHERE l."postId"=p."id") AS "likesCount",(SELECT COUNT(*)::int FROM "PostComment" cm WHERE cm."postId"=p."id") AS "commentsCount",EXISTS(SELECT 1 FROM "PostLike" ml WHERE ml."postId"=p."id" AND ml."userId"=$1) AS "likedByMe" FROM "Post" p JOIN "User" u ON u."id"=p."authorId" LEFT JOIN "Profile" pr ON pr."userId"=p."authorId" WHERE u."status"=\'ACTIVE\' AND (p."audience"=\'PUBLIC\' OR p."authorId"=$1 OR (p."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$1 AND f."followingId"=p."authorId"))) ORDER BY p."createdAt" DESC LIMIT $2',[user.id,limit]);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
    } catch(e) { console.error("Load posts failed",e); return json({success:false,message:"Feed gagal dimuat."},503); }
