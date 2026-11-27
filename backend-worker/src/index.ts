@@ -131,7 +131,7 @@ export default {
     return await db(env, async c => {
       const viewer = await getSessionUser(c,request);
       if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
-      const result = await c.query('SELECT u."id",pr."displayName",pr."avatarUrl",pr."bio",(SELECT COUNT(*)::int FROM "Post" p WHERE p."authorId"=u."id") AS "postsCount",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followingId"=u."id") AS "followers",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followerId"=u."id") AS "followingCount",COALESCE(pp."verificationStatus"=\\'VERIFIED\\',FALSE) AS "isVerified" FROM "User" u LEFT JOIN "Profile" pr ON pr."userId"=u."id" LEFT JOIN "ProviderProfile" pp ON pp."userId"=u."id" WHERE u."id"=$1 AND u."status"=\\'ACTIVE\\' AND u."role"<>\\'ADMIN\\' LIMIT 1',[profileMatch[1]]);
+      const result = await c.query(`SELECT u."id",pr."displayName",pr."avatarUrl",pr."bio",(SELECT COUNT(*)::int FROM "Post" p WHERE p."authorId"=u."id") AS "postsCount",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followingId"=u."id") AS "followers",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followerId"=u."id") AS "followingCount",COALESCE(pp."verificationStatus"='VERIFIED',FALSE) AS "isVerified" FROM "User" u LEFT JOIN "Profile" pr ON pr."userId"=u."id" LEFT JOIN "ProviderProfile" pp ON pp."userId"=u."id" WHERE u."id"=$1 AND u."status"='ACTIVE' AND u."role"<>'ADMIN' LIMIT 1`,[profileMatch[1]]);
       if (!result.rows[0]) return json({success:false,message:"Profil tidak ditemukan."},404);
       return json({success:true,data:result.rows[0]});
     });
