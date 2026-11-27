@@ -57,10 +57,10 @@ void main() {
 
   testWidgets('MAVO authentication screen switches to registration', (tester) async {
     await tester.pumpWidget(MaterialApp(home: AuthScreen(onAuthenticated: (_) {})));
-    await tester.tap(find.text('Belum punya akun? Daftar sekarang'));
+    await tester.tap(find.text('Daftar'));
     await tester.pumpAndSettle();
-    expect(find.text('Bergabung dengan MAVO'), findsOneWidget);
+    expect(find.text('Buat akun MAVO'), findsOneWidget);
     expect(find.text('Nama lengkap'), findsOneWidget);
-    expect(find.text('Buat Akun'), findsOneWidget);
+    expect(find.text('Daftar sekarang'), findsOneWidget);
   });
 }
