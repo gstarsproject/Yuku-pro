@@ -17,7 +17,7 @@ void main() {
   });
 
   testWidgets('Inbox opens a conversation preview', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: InboxScreen()));
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: InboxScreen())));
     await tester.pump();
 
     expect(find.text('Pesan'), findsOneWidget);
