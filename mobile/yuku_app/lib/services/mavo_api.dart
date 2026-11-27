@@ -54,8 +54,9 @@ class MavoApi {
     return Map<String, dynamic>.from(body['data'] as Map);
   }
 
-  static Future<List<Map<String, dynamic>>> posts() async {
-    final response = await http.get(Uri.parse('$baseUrl/api/v1/posts'), headers: await _headers())
+  static Future<List<Map<String, dynamic>>> posts({bool followingOnly = false}) async {
+    final uri = Uri.parse('$baseUrl/api/v1/posts').replace(queryParameters: followingOnly ? {'following': 'true'} : null);
+    final response = await http.get(uri, headers: await _headers())
       .timeout(const Duration(seconds: 20));
     final body = await _decode(response);
     return (body['data'] as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
