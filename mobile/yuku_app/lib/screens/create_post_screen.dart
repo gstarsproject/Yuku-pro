@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../theme/yuku_theme.dart';
-import '../services/yuku_api.dart';
+import '../theme/MAVO_theme.dart';
+import '../services/MAVO_api.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -52,9 +52,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           'mov' => 'video/quicktime',
           _ => 'video/mp4',
         };
-        uploaded.add(await YukuApi.uploadMediaFile(file: File(item.path), mediaType: isVideo ? 'VIDEO' : 'IMAGE', contentType: mime));
+        uploaded.add(await MAVOApi.uploadMediaFile(file: File(item.path), mediaType: isVideo ? 'VIDEO' : 'IMAGE', contentType: mime));
       }
-      await YukuApi.createPost(content: _controller.text, audience: audience, media: uploaded, locationName: _locationController.text);
+      await MAVOApi.createPost(content: _controller.text, audience: audience, media: uploaded, locationName: _locationController.text);
       if (!mounted) return;
       _controller.clear();
       _locationController.clear();
