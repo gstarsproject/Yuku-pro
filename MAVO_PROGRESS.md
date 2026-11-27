@@ -316,3 +316,11 @@ Status awal tahap 1:
 - [x] Kedua preview Worker kini memuat binding rate limiter; ini memverifikasi konfigurasi terpasang, bukan pengujian beban/429 end-to-end.
 - [ ] Uji runtime respons 429 dengan aman dan verifikasi batas per-IP/per-email tanpa mengunci pengguna sungguhan.
 - [ ] Rate limit belum diterapkan ke production.
+## Pembaruan 2026-11-27 — Throttling aktivitas pengguna (menunggu deployment preview)
+- [x] Tambah USER_ACTION_LIMITER dengan batas 30 request per menit per user dan per jenis aktivitas.
+- [x] Terapkan throttling untuk update profil, follow/unfollow, pembuatan URL upload media, pembuatan post, pembuatan percakapan, pengiriman pesan, pembuatan story, serta like/comment.
+- [x] Tambah binding USER_ACTION_LIMITER pada kedua konfigurasi Worker preview.
+- [ ] Menunggu GitHub Actions validate dan deployment preview untuk commit perubahan ini.
+- [ ] Verifikasi binding USER_ACTION_LIMITER pada kedua Worker setelah deployment.
+- [ ] Uji runtime HTTP 429; belum ada klaim bahwa pembatasan aktivitas sudah aktif di server.
+- Catatan: rate limit aktivitas bersifat per user dan per jenis aksi; pembatas Cloudflare bersifat approximate. Production tidak disentuh.
