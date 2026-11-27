@@ -125,19 +125,28 @@ class YukuApi {
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
     final response = await _client.get(Uri.parse('$baseUrl/api/v1/users/$userId/profile'),
       headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 20));
-    return (await _decode(response))['data'] as Map<String, dynamic>;
+    final data = (await _decode(response))['data'] as Map<String, dynamic>;
+    if ((data['avatarMediaId'] ?? '').toString().isNotEmpty) {
+      data['avatarUrl'] = await mediaDownloadUrl(data['avatarMediaId'].toString());
+    }
+    return data;
   }
 
   static Future<Map<String, dynamic>> updateProfile({
     required String displayName, required String bio, String avatarUrl = '',
+    Map<String,dynamic>? avatarMedia,
   }) async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
     final response = await _client.patch(Uri.parse('$baseUrl/api/v1/profile'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode({'displayName': displayName.trim(), 'bio': bio.trim(), 'avatarUrl': avatarUrl.trim()}))
+      body: jsonEncode({'displayName': displayName.trim(), 'bio': bio.trim(), 'avatarUrl': avatarUrl.trim(), if (avatarMedia != null) 'avatarMedia': avatarMedia}))
       .timeout(const Duration(seconds: 25));
-    return (await _decode(response))['data'] as Map<String, dynamic>;
+    final data = (await _decode(response))['data'] as Map<String, dynamic>;
+    if ((data['avatarMediaId'] ?? '').toString().isNotEmpty) {
+      data['avatarUrl'] = await mediaDownloadUrl(data['avatarMediaId'].toString());
+    }
+    return data;
   }
 
   static Future<Map<String, dynamic>> followStatus(String userId) async {
