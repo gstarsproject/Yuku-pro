@@ -189,6 +189,13 @@ class YukuApi {
     return {'objectKey':data['objectKey'],'mediaType':mediaType,'contentType':contentType,'byteSize':size};
   }
 
+  static Future<String> mediaDownloadUrl(String mediaId) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.get(Uri.parse('$baseUrl/api/v1/media/$mediaId/url'), headers: {'Authorization':'Bearer $token'}).timeout(const Duration(seconds: 20));
+    final data = (await _decode(response))['data'] as Map<String,dynamic>;
+    return data['downloadUrl'] as String;
+  }
   static Future<Map<String, dynamic>> createPost({
     required String content,
     required String audience,
