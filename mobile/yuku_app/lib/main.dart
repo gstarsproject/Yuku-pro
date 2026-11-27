@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/app_shell.dart';
+import 'screens/auth_gate.dart';
 import 'theme/yuku_theme.dart';
 
 void main() {
@@ -16,7 +16,7 @@ class YukuApp extends StatelessWidget {
       title: 'MAVO',
       debugShowCheckedModeBanner: false,
       theme: YukuTheme.light,
-      home: const AppShell(),
+      home: const AuthGate(),
     );
   }
 }
