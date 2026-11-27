@@ -222,6 +222,47 @@ export default {
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User login failed",e); return json({success:false,message:"Login gagal. Coba lagi."},400); }
   }
 
+  if (path === "/api/v1/admin/login" && request.method === "POST") {
+   try {
+    const ipLimit = await authRateLimit(env, request, "login");
+    if (ipLimit) return ipLimit;
+    const body = await readRequestBody(request);
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    const identityLimit = await authRateLimit(env, request, "login", email);
+    if (identityLimit) return identityLimit;
+    if (!email || !password || password.length > 128) return json({success:false,message:"Email atau password tidak valid"},400);
+    return await db(env, async c => {
+      const result = await c.query('SELECT u."id",u."email",u."passwordHash",u."role",u."status",p."displayName" FROM "User" u LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE u."email"=$1 LIMIT 1',[email]);
+      const user = result.rows[0];
+      if (!user || user.role !== "ADMIN" || user.status !== "ACTIVE" || !(await checkPassword(password,user.passwordHash)))
+        return json({success:false,message:"Email atau password admin tidak valid"},401);
+      const session = await createUserSession(c,{id:user.id,email:user.email,role:user.role,displayName:user.displayName});
+      return json({success:true,data:session});
+    });
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Admin login failed",e); return json({success:false,message:"Login admin gagal. Coba lagi."},503); }
+  }
+
+  if (path === "/api/v1/admin/overview" && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const header = request.headers.get("authorization") || "";
+      const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+      if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi admin tidak valid."},401);
+      const tokenHash = await sha256(token);
+      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\'ADMIN\' AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
+      if (!auth.rows[0]) return json({success:false,message:"Akses khusus admin. Silakan login kembali."},401);
+      const [users, providers, bookings, disputes] = await Promise.all([
+        c.query('SELECT COUNT(*)::int AS count FROM "User"'),
+        c.query('SELECT COUNT(*)::int AS count FROM "User" WHERE "role"=\'PROVIDER\' AND "status"=\'ACTIVE\''),
+        c.query('SELECT COUNT(*)::int AS count FROM "Booking" WHERE "createdAt">=date_trunc(\'day\',NOW())'),
+        c.query('SELECT COUNT(*)::int AS count FROM "Dispute" WHERE "status"=\'OPEN\'')
+      ]);
+      return json({success:true,data:{totalUsers:users.rows[0].count,activeProviders:providers.rows[0].count,bookingsToday:bookings.rows[0].count,openDisputes:disputes.rows[0].count,generatedAt:new Date().toISOString()}});
+    });
+   } catch(e) { console.error("Admin overview failed",e); return json({success:false,message:"Data dashboard admin gagal dimuat."},503); }
+  }
+
   if (path === "/api/v1/auth/logout" && request.method === "POST") {
    try {
     const header = request.headers.get("authorization") || "";
