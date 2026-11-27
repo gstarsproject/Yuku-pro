@@ -71,13 +71,16 @@ async function createUserSession(c: Client, user: {id:string;email:string;role:s
     [crypto.randomUUID(), user.id, tokenHash]);
   return { accessToken: token, tokenType: "Bearer", expiresIn: TOKEN_TTL_SECONDS, user };
 }
+class RequestBodyError extends Error {
+  constructor(message: string, readonly status: 400 | 413) { super(message); this.name = "RequestBodyError"; }
+}
 async function readRequestBody(request: Request) {
   const declaredLength = request.headers.get("content-length");
   if (declaredLength !== null) {
     const size = Number(declaredLength);
-    if (!Number.isSafeInteger(size) || size < 0 || size > 8192) throw new Error("Payload too large");
+    if (!Number.isSafeInteger(size) || size < 0 || size > 8192) throw new RequestBodyError("Ukuran data terlalu besar. Maksimal 8 KB.",413);
   }
-  if (!request.body) throw new Error("Request body is required");
+  if (!request.body) throw new RequestBodyError("Data request wajib diisi.",400);
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -101,8 +104,13 @@ async function readRequestBody(request: Request) {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid JSON object");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    throw new RequestBodyError("Format JSON tidak valid.",400);
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new RequestBodyError("Data JSON harus berupa objek.",400);
   return parsed as Record<string, unknown>;
 }
 async function getSessionUser(c: Client, request: Request) {
@@ -146,7 +154,7 @@ export default {
        throw e;
       }
     });
-   } catch(e) { console.error("Registration failed",e); return json({success:false,message:"Pendaftaran gagal. Periksa data dan coba lagi."},400); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Registration failed",e); return json({success:false,message:"Pendaftaran gagal. Periksa data dan coba lagi."},400); }
   }
   if (path === "/api/v1/auth/user/login" && request.method === "POST") {
    try {
@@ -161,7 +169,7 @@ export default {
         return json({success:false,message:"Email atau password tidak valid"},401);
       return json({success:true,data:await createUserSession(c,{id:user.id,email:user.email,role:user.role,displayName:user.displayName})});
     });
-   } catch(e) { console.error("User login failed",e); return json({success:false,message:"Login gagal. Coba lagi."},400); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User login failed",e); return json({success:false,message:"Login gagal. Coba lagi."},400); }
   }
 
   if (path === "/api/v1/auth/logout" && request.method === "POST") {
@@ -173,7 +181,7 @@ export default {
       await db(env, c => c.query('DELETE FROM "UserSession" WHERE "tokenHash"=$1',[tokenHash]));
     }
     return json({success:true,message:"Sesi telah diakhiri"});
-   } catch(e) { console.error("Logout failed",e); return json({success:false,message:"Tidak dapat mengakhiri sesi"},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Logout failed",e); return json({success:false,message:"Tidak dapat mengakhiri sesi"},503); }
   }
   if (path === "/api/v1/auth/me" && request.method === "GET") {
    try {
@@ -181,7 +189,7 @@ export default {
       const user = await getSessionUser(c,request);
       return user ? json({success:true,data:user}) : json({success:false,message:"Sesi tidak valid atau kedaluwarsa"},401);
     });
-   } catch(e) { console.error("Session lookup failed",e); return json({success:false,message:"Tidak dapat memeriksa sesi"},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Session lookup failed",e); return json({success:false,message:"Tidak dapat memeriksa sesi"},503); }
   }
 
   const profileMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/profile$/i);
@@ -194,7 +202,7 @@ export default {
       if (!result.rows[0]) return json({success:false,message:"Profil tidak ditemukan."},404);
       return json({success:true,data:result.rows[0]});
     });
-   } catch(e) { console.error("Profile lookup failed",e); return json({success:false,message:"Profil gagal dimuat."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Profile lookup failed",e); return json({success:false,message:"Profil gagal dimuat."},503); }
   }
   if (path === "/api/v1/profile" && request.method === "PATCH") {
    try {
@@ -223,7 +231,7 @@ if (avatarMedia) {
       const media = await c.query('SELECT "id" FROM "MediaAsset" WHERE "ownerId"=$1 AND "objectKey"=$2 LIMIT 1', [viewer.id,saved.avatarUrl]);
       return json({success:true,data:{...saved,avatarMediaId:media.rows[0]?.id || null}});
     });
-   } catch(e) { console.error("Profile update failed",e); return json({success:false,message:"Profil gagal disimpan."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Profile update failed",e); return json({success:false,message:"Profil gagal disimpan."},503); }
   }
   const followMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/follow$/i);
   if (followMatch && ["GET","POST","DELETE"].includes(request.method)) {
@@ -244,7 +252,7 @@ if (avatarMedia) {
       const result = await c.query('SELECT EXISTS(SELECT 1 FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2) AS following, (SELECT COUNT(*)::int FROM "Follow" WHERE "followingId"=$2) AS followers, (SELECT COUNT(*)::int FROM "Follow" WHERE "followerId"=$2) AS followingCount',[viewer.id,targetId]);
       return json({success:true,data:result.rows[0]});
     });
-   } catch(e) { console.error("Follow operation failed",e); return json({success:false,message:"Tidak dapat memperbarui pengikut."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Follow operation failed",e); return json({success:false,message:"Tidak dapat memperbarui pengikut."},503); }
   }
   const relationMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/relations$/i);
   if (relationMatch && request.method === "GET") {
@@ -259,7 +267,7 @@ if (avatarMedia) {
         : await c.query('SELECT u."id",p."displayName",p."avatarUrl",EXISTS(SELECT 1 FROM "Follow" mine WHERE mine."followerId"=$1 AND mine."followingId"=u."id") AS "following" FROM "Follow" f JOIN "User" u ON u."id"=f."followingId" JOIN "Profile" p ON p."userId"=u."id" WHERE f."followerId"=$2 AND u."status"=\'ACTIVE\' ORDER BY f."createdAt" DESC LIMIT 200',[viewer.id,targetId]);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
-   } catch(e) { console.error("User relations request failed",e); return json({success:false,message:"Daftar pengikut gagal dimuat."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User relations request failed",e); return json({success:false,message:"Daftar pengikut gagal dimuat."},503); }
   }
 
   if (path === "/api/v1/media/upload-url" && request.method === "POST") {
@@ -280,7 +288,7 @@ if (avatarMedia) {
       const uploadUrl = await presignMedia(env,"PUT",objectKey,900);
       return json({success:true,data:{objectKey,uploadUrl,method:"PUT",headers:{"Content-Type":contentType},expiresIn:900}});
     });
-   } catch(e) { console.error("Media upload URL failed",e); return json({success:false,message:"Tidak dapat menyiapkan upload media."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Media upload URL failed",e); return json({success:false,message:"Tidak dapat menyiapkan upload media."},503); }
   }
   const mediaUrlMatch = path.match(/^\/api\/v1\/media\/([0-9a-f-]{36})\/url$/i);
   if (mediaUrlMatch && request.method === "GET") {
@@ -298,7 +306,7 @@ if (avatarMedia) {
       const downloadUrl = await presignMedia(env,"GET",media.objectKey,900);
       return json({success:true,data:{downloadUrl,contentType:media.contentType,mediaType:media.mediaType,expiresIn:900}});
     });
-   } catch(e) { console.error("Media download URL failed",e); return json({success:false,message:"Media gagal dimuat."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Media download URL failed",e); return json({success:false,message:"Media gagal dimuat."},503); }
   }
 
   if (path === "/api/v1/posts" && request.method === "POST") {
@@ -333,7 +341,7 @@ if (avatarMedia) {
         return json({success:true,data:{...result.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
       } catch(e) { await c.query("ROLLBACK"); throw e; }
     });
-   } catch(e) { console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
   }
   if (path === "/api/v1/users/search" && request.method === "GET") {
    try {
@@ -345,7 +353,7 @@ if (avatarMedia) {
       const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\'ACTIVE\' AND u."role"<>\'ADMIN\' AND u."id"<>$1 AND p."displayName" ILIKE $2 ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query + '%']);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
-   } catch(e) { console.error("User search failed",e); return json({success:false,message:"Pencarian pengguna gagal."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User search failed",e); return json({success:false,message:"Pencarian pengguna gagal."},503); }
   }
   // Direct chat endpoints are participant-scoped; keep this check before message access.
   if (path === "/api/v1/conversations" && ["GET","POST"].includes(request.method)) {
@@ -376,7 +384,7 @@ if (avatarMedia) {
       const result = await c.query('SELECT cv."id",peer."id" AS "userId",pr."displayName",pr."avatarUrl",lm."body" AS "lastMessage",lm."createdAt" AS "lastMessageAt",(SELECT COUNT(*)::int FROM "Message" um WHERE um."conversationId"=cv."id" AND um."senderId"<>$1 AND um."readAt" IS NULL) AS "unreadCount" FROM "ConversationParticipant" mine JOIN "Conversation" cv ON cv."id"=mine."conversationId" JOIN "ConversationParticipant" other ON other."conversationId"=cv."id" AND other."userId"<>$1 JOIN "User" peer ON peer."id"=other."userId" AND peer."status"=\'ACTIVE\' LEFT JOIN "Profile" pr ON pr."userId"=peer."id" LEFT JOIN LATERAL (SELECT m."body",m."createdAt" FROM "Message" m WHERE m."conversationId"=cv."id" ORDER BY m."createdAt" DESC LIMIT 1) lm ON TRUE WHERE mine."userId"=$1 AND EXISTS (SELECT 1 FROM "Follow" f1 WHERE f1."followerId"=$1 AND f1."followingId"=peer."id") AND EXISTS (SELECT 1 FROM "Follow" f2 WHERE f2."followerId"=peer."id" AND f2."followingId"=$1) ORDER BY COALESCE(lm."createdAt",cv."createdAt") DESC LIMIT 100',[user.id]);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
-   } catch(e) { console.error("Conversations request failed",e); return json({success:false,message:"Percakapan gagal dimuat."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Conversations request failed",e); return json({success:false,message:"Percakapan gagal dimuat."},503); }
   }
   const messageMatch = path.match(/^\/api\/v1\/conversations\/([0-9a-f-]{36})\/(messages|read)$/i);
   if (messageMatch && ["GET","POST"].includes(request.method)) {
@@ -411,7 +419,7 @@ if (avatarMedia) {
       }
       return json({success:true,data:{...inserted.rows[0],senderName:user.displayName,senderAvatar:user.avatarUrl}},201);
     });
-   } catch(e) { console.error("Messages request failed",e); return json({success:false,message:"Pesan gagal diproses."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Messages request failed",e); return json({success:false,message:"Pesan gagal diproses."},503); }
   }
   if (path === "/api/v1/notifications" && ["GET","POST"].includes(request.method)) {
    try {
@@ -426,7 +434,7 @@ if (avatarMedia) {
       const unread = await c.query('SELECT COUNT(*)::int AS count FROM "Notification" WHERE "recipientId"=$1 AND "readAt" IS NULL',[user.id]);
       return json({success:true,count:result.rowCount,unreadCount:unread.rows[0]?.count || 0,data:result.rows});
     });
-   } catch(e) { console.error("Notifications request failed",e); return json({success:false,message:"Notifikasi gagal dimuat."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Notifications request failed",e); return json({success:false,message:"Notifikasi gagal dimuat."},503); }
   }
   if (path === "/api/v1/stories" && ["GET","POST"].includes(request.method)) {
    try {
@@ -462,7 +470,7 @@ if (avatarMedia) {
       const result = await c.query('SELECT s."id",s."userId",s."content",s."audience",s."createdAt",s."expiresAt",s."locationName",(SELECT COALESCE(json_agg(json_build_object(\'id\',ma."id",\'mediaType\',ma."mediaType",\'contentType\',ma."contentType\') ORDER BY ma."sortOrder"),\'[]\'::json) FROM "MediaAsset" ma WHERE ma."storyId"=s."id") AS "media",p."displayName" AS "authorName",p."avatarUrl" AS "authorAvatar" FROM "Story" s JOIN "User" u ON u."id"=s."userId" LEFT JOIN "Profile" p ON p."userId"=s."userId" WHERE s."expiresAt">NOW() AND u."status"=\'ACTIVE\' AND (s."audience"=\'PUBLIC\' OR s."userId"=$1 OR (s."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$1 AND f."followingId"=s."userId"))) ORDER BY s."createdAt" DESC LIMIT 100',[user.id]);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
-   } catch(e) { console.error("Stories request failed",e); return json({success:false,message:"Story gagal diproses."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Stories request failed",e); return json({success:false,message:"Story gagal diproses."},503); }
   }
   const postInteractionMatch = path.match(/^\/api\/v1\/posts\/([0-9a-f-]{36})\/(like|comments)$/i);
   if (postInteractionMatch && ["GET","POST","DELETE"].includes(request.method)) {
@@ -497,7 +505,7 @@ if (avatarMedia) {
       if (visible.rows[0].authorId !== user.id) await c.query('INSERT INTO "Notification" ("id","recipientId","actorId","type","entityId","message","createdAt") VALUES ($1,$2,$3,\'COMMENT\',$4,$5,NOW())',[crypto.randomUUID(),visible.rows[0].authorId,user.id,postId,(user.displayName || "Seseorang") + " mengomentari postinganmu."]);
       return json({success:true,data:{...inserted.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
     });
-   } catch(e) { console.error("Post interaction failed",e); return json({success:false,message:"Interaksi postingan gagal diproses."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Post interaction failed",e); return json({success:false,message:"Interaksi postingan gagal diproses."},503); }
   }
 
   if (path === "/api/v1/posts" && request.method === "GET") {
@@ -531,7 +539,7 @@ if (avatarMedia) {
       );
       return json({success:true,count:result.rowCount,data:result.rows});
     });
-   } catch(e) { console.error("Load posts failed",e); return json({success:false,message:"Feed gagal dimuat."},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Load posts failed",e); return json({success:false,message:"Feed gagal dimuat."},503); }
   }
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "yuku-api-worker", status: "ok" });
@@ -558,7 +566,7 @@ if (avatarMedia) {
      WHERE s."isPublished"=TRUE AND u."status"='ACTIVE' AND ($1='' OR s."title" ILIKE '%'||$1||'%' OR s."description" ILIKE '%'||$1||'%') AND ($2='' OR c."slug"=$2) AND ($3='' OR c."pillar"=$3) AND ($4='' OR s."city" ILIKE '%'||$4||'%')
      ORDER BY (p."verificationStatus"='VERIFIED') DESC,p."averageRating" DESC NULLS LAST,s."createdAt" DESC LIMIT $5`,[q,category,pillar,city,limit]));
     return json({ success:true, count:r.rowCount, data:r.rows });
-   } catch(e) { console.error("Services query failed",e); return json({ success:false,message:"Unable to load services" },503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Services query failed",e); return json({ success:false,message:"Unable to load services" },503); }
   }
   const m=path.match(/^\/api\/v1\/services\/([0-9a-f-]{36})$/i);
   if (m) {
@@ -568,7 +576,7 @@ if (avatarMedia) {
      WHERE s."id"=$1 AND s."isPublished"=TRUE AND u."status"='ACTIVE' LIMIT 1`,[m[1]]));
     if(!r.rows[0]) return json({success:false,message:"Service not found"},404);
     return json({success:true,data:r.rows[0]});
-   } catch(e) { console.error("Service detail query failed",e); return json({success:false,message:"Unable to load service"},503); }
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Service detail query failed",e); return json({success:false,message:"Unable to load service"},503); }
   }
   return json({ success:false,message:"Not found" },404);
  }
