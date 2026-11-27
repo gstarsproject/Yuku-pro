@@ -54,6 +54,21 @@ class MavoApi {
     return Map<String, dynamic>.from(body['data'] as Map);
   }
 
+  static Future<List<Map<String, dynamic>>> posts() async {
+    final response = await http.get(Uri.parse('$baseUrl/api/v1/posts'), headers: await _headers())
+      .timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> createPost({required String content, String audience = 'PUBLIC'}) async {
+    final response = await http.post(Uri.parse('$baseUrl/api/v1/posts'),
+      headers: await _headers(),
+      body: jsonEncode({'content': content.trim(), 'audience': audience, 'media': []}))
+      .timeout(const Duration(seconds: 25));
+    final body = await _decode(response);
+    return Map<String, dynamic>.from(body['data'] as Map);
+  }
   static Future<Map<String, dynamic>> profile(String userId) async {
     final response = await http.get(Uri.parse('$baseUrl/api/v1/users/$userId/profile'),
       headers: await _headers()).timeout(const Duration(seconds: 15));
