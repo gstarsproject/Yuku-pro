@@ -54,6 +54,24 @@ class MavoApi {
     return Map<String, dynamic>.from(body['data'] as Map);
   }
 
+  static Future<Map<String, dynamic>> profile(String userId) async {
+    final response = await http.get(Uri.parse('$baseUrl/api/v1/users/$userId/profile'),
+      headers: await _headers()).timeout(const Duration(seconds: 15));
+    final body = await _decode(response);
+    return Map<String, dynamic>.from(body['data'] as Map);
+  }
+
+  static Future<Map<String, dynamic>> updateProfile({
+    required String displayName,
+    required String bio,
+  }) async {
+    final response = await http.patch(Uri.parse('$baseUrl/api/v1/profile'),
+      headers: await _headers(),
+      body: jsonEncode({'displayName': displayName.trim(), 'bio': bio.trim()}))
+      .timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return Map<String, dynamic>.from(body['data'] as Map);
+  }
   static Future<void> logout() async {
     try {
       await http.post(Uri.parse('$baseUrl/api/v1/auth/logout'), headers: await _headers());
