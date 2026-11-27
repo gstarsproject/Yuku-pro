@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:MAVO_app/screens/app_shell.dart';
-import 'package:MAVO_app/screens/auth_screen.dart';
-import 'package:MAVO_app/screens/creator_profile_screen.dart';
-import 'package:MAVO_app/screens/inbox_screen.dart';
-import 'package:MAVO_app/screens/stories_screen.dart';
+import 'package:mavo_app/screens/app_shell.dart';
+import 'package:mavo_app/screens/auth_screen.dart';
+import 'package:mavo_app/screens/creator_profile_screen.dart';
+import 'package:mavo_app/screens/inbox_screen.dart';
+import 'package:mavo_app/screens/stories_screen.dart';
 
 void main() {
   testWidgets('MAVO home shell renders', (tester) async {
