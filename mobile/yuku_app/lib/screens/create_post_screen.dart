@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/yuku_theme.dart';
 import '../services/yuku_api.dart';
 
@@ -11,17 +13,21 @@ class CreatePostScreen extends StatefulWidget {
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final _controller = TextEditingController();
+  final _locationController = TextEditingController();
+  final _picker = ImagePicker();
+  final List<XFile> _media = [];
   String _audience = 'Publik';
   bool _isPublishing = false;
 
   @override
   void dispose() {
     _controller.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
   Future<void> _publishDraft() async {
-    if (_controller.text.trim().isEmpty) {
+    if (_controller.text.trim().isEmpty && _media.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tulis sesuatu dulu sebelum membagikan.')),
       );
@@ -115,11 +121,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             const Text('Tambahkan ke postingan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: MavoColors.midnight)),
             const SizedBox(height: 12),
             Row(children: [
-              _AttachAction(icon: Icons.photo_library_outlined, label: 'Foto', color: MavoColors.aqua, onTap: () => _showUnavailable('Upload foto')),
+              _AttachAction(icon: Icons.photo_library_outlined, label: 'Foto', color: MavoColors.aqua, onTap: _pickImages),
               const SizedBox(width: 10),
-              _AttachAction(icon: Icons.videocam_outlined, label: 'Video', color: MavoColors.coral, onTap: () => _showUnavailable('Upload video')),
+              _AttachAction(icon: Icons.videocam_outlined, label: 'Video', color: MavoColors.coral, onTap: _pickVideo),
               const SizedBox(width: 10),
-              _AttachAction(icon: Icons.location_on_outlined, label: 'Lokasi', color: MavoColors.violet, onTap: () => _showUnavailable('Tag lokasi')),
+              _AttachAction(icon: Icons.location_on_outlined, label: 'Lokasi', color: MavoColors.violet, onTap: _editLocation),
             ]),
           ]),
         ),
