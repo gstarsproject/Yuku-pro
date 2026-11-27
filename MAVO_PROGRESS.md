@@ -237,3 +237,12 @@ Status awal tahap 1:
 - [x] Pull-to-refresh tetap menyelesaikan indikator meskipun request feed gagal; error ditampilkan oleh FutureBuilder dan pengguna tetap dapat mencoba lagi.
 - [ ] Tunggu hasil Flutter CI dan uji runtime Like/Unlike serta komentar dua akun pada APK gabungan.
 - [ ] Tab For You/Following/Live/Explore masih perlu dihubungkan ke sumber data/filter yang sesuai; saat ini jangan dianggap sebagai filter aktif.
+
+## Feed tab dan refresh Story (27 Nov 2026)
+- [x] API feed mendukung filter authorId, following-only, dan public-only dengan parameter query terikat.
+- [x] Tab Following meminta postingan dari akun yang diikuti; visibilitas FOLLOWERS/PRIVATE tetap difilter oleh aturan server.
+- [x] Tab Explore meminta postingan PUBLIC saja.
+- [x] Tab Live menampilkan status belum tersedia secara jelas; tidak menampilkan konten feed palsu.
+- [x] Refresh Story tidak lagi melempar error async tanpa penanganan; FutureBuilder menampilkan error dan tombol coba lagi tetap tersedia.
+- [ ] Worker CI dan Flutter CI untuk batch ini harus lulus sebelum dianggap siap.
+- [ ] Live streaming dan Story media tetap menunggu konfigurasi storage dan pengujian runtime.
