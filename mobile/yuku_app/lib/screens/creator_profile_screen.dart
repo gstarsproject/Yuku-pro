@@ -23,11 +23,23 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   int _followingCount = 0;
   bool _loadingFollow = false;
   String? _followError;
+  Map<String, dynamic> _profile = {};
+  bool _profileLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadFollowStatus();
+    _loadCreatorProfile();
+  }
+
+  Future<void> _loadCreatorProfile() async {
+    final id = widget.creatorUserId;
+    if (id == null || id.isEmpty) { if (mounted) setState(() => _profileLoading = false); return; }
+    try {
+      final data = await YukuApi.userProfile(id);
+      if (mounted) setState(() { _profile = data; _profileLoading = false; });
+    } catch (_) { if (mounted) setState(() => _profileLoading = false); }
   }
 
   Future<void> _loadFollowStatus() async {
@@ -124,7 +136,12 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final displayName = (_profile['displayName'] ?? widget.creatorName).toString();
+    final displayBio = (_profile['bio'] ?? widget.bio).toString();
+    final avatarUrl = (_profile['avatarUrl'] ?? '').toString();
+    final verified = _profile['isVerified'] == true;
+    return Scaffold(
     appBar: AppBar(
       title: const Text('Profil kreator', style: TextStyle(fontWeight: FontWeight.w800)),
       actions: [IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
@@ -143,23 +160,24 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
           child: CircleAvatar(
             radius: 48,
             backgroundColor: Colors.white,
-            child: Text(widget.creatorName.isEmpty ? 'M' : widget.creatorName.substring(0, 1).toUpperCase(),
+            backgroundImage: avatarUrl.startsWith('https://') ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl.startsWith('https://') ? null : Text(displayName.isEmpty ? 'M' : displayName.substring(0, 1).toUpperCase(),
               style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: MavoColors.violet)),
           ),
         )),
         const SizedBox(height: 14),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Flexible(child: Text(widget.creatorName, textAlign: TextAlign.center,
+          Flexible(child: Text(displayName, textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: MavoColors.midnight))),
           const SizedBox(width: 5),
-          const Icon(Icons.verified_rounded, color: MavoColors.violet, size: 18),
+          if (verified) const Icon(Icons.verified_rounded, color: MavoColors.violet, size: 18),
         ]),
         const SizedBox(height: 7),
-        Text(widget.bio, textAlign: TextAlign.center,
+        Text(displayBio, textAlign: TextAlign.center,
           style: const TextStyle(color: MavoColors.muted, fontSize: 12, height: 1.5)),
         const SizedBox(height: 20),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _Metric(value: '24', label: 'Postingan'),
+          _Metric(value: _profileLoading ? '—' : (_profile['postsCount'] ?? 0).toString(), label: 'Postingan'),
           const SizedBox(width: 34),
           InkWell(onTap: widget.creatorUserId == null ? null : () => _showRelations('followers'), child: _Metric(value: _followers.toString(), label: 'Pengikut')),
           const SizedBox(width: 34),
@@ -210,6 +228,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
       ],
     ),
   );
+  }
 }
 
 class _Metric extends StatelessWidget {
