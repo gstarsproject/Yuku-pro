@@ -75,8 +75,8 @@ async function presignMedia(env: Env, method: "GET"|"PUT", objectKey: string, ex
     ["X-Amz-SignedHeaders",signedHeaders]
   ];
   const canonicalQuery = params.map(([k,v])=>[awsEncode(k),awsEncode(v)] as const).sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0).map(([k,v])=>k+"="+v).join("&");
-  const canonicalHeaders = contentType ? "content-type:"+contentType.trim().toLowerCase()+"\\nhost:"+endpoint.host+"\\n" : "host:"+endpoint.host+"\\n";
-  const canonicalRequest = method+"\\n"+canonicalUri+"\\n"+canonicalQuery+"\\n"+canonicalHeaders+"\\n"+signedHeaders+"\\nUNSIGNED-PAYLOAD";
+  const canonicalHeaders = contentType ? "content-type:"+contentType.trim().toLowerCase()+"\nhost:"+endpoint.host+"\n" : "host:"+endpoint.host+"\n";
+  const canonicalRequest = method+"\n"+canonicalUri+"\n"+canonicalQuery+"\n"+canonicalHeaders+"\n"+signedHeaders+"\nUNSIGNED-PAYLOAD";
   const stringToSign = "AWS4-HMAC-SHA256\n"+stamp+"\n"+scope+"\n"+await sha256(canonicalRequest);
   const kDate = await hmacBytes(encoder.encode("AWS4"+env.AWS_SECRET_ACCESS_KEY),date);
   const kRegion = await hmacBytes(kDate,env.AWS_REGION);
