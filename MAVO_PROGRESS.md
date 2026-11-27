@@ -206,3 +206,11 @@ Status awal tahap 1:
 - Upload media post/story dan foto profil belum dapat diuji sampai secret Object Storage dikonfigurasi manual di Cloudflare preview.
 - Like/Komentar dan Story masih memerlukan pengujian runtime.
 - Worker preview harus mengikuti source terbaru sebelum pengujian API; jangan deploy produksi.
+
+
+## Pembaruan 2026-11-27 — Tahap 1: aturan chat saling mengikuti
+- [x] Worker menolak pembuatan percakapan pribadi jika kedua pengguna belum saling Follow (HTTP 403).
+- [x] Daftar Inbox hanya menampilkan percakapan dengan relasi Follow dua arah yang masih aktif.
+- [x] Endpoint baca/kirim pesan dan tandai dibaca memeriksa ulang relasi Follow dua arah; chat lama tidak bisa dipakai setelah salah satu pihak Unfollow.
+- [ ] Jalankan Worker CI dan verifikasi skenario dua akun: belum saling Follow ditolak, saling Follow diizinkan, salah satu Unfollow memblokir akses.
+- [ ] Perbarui/deploy Worker preview hanya setelah validasi CI; produksi tidak disentuh.
