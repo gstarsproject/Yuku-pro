@@ -29,7 +29,7 @@ export default function DashboardPage() {
       cache: 'no-store',
     });
     if (response.status === 401) {
-      sessionStorage.removeItem('yuku_admin_token');
+      sessionStorage.removeItem('MAVO_admin_token');
       setToken('');
       setOverview(null);
       setError('Sesi berakhir. Silakan login kembali.');
@@ -41,7 +41,7 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('yuku_admin_token');
+    const saved = sessionStorage.getItem('MAVO_admin_token');
     if (saved) {
       setToken(saved);
       loadOverview(saved).catch((err: Error) => setError(err.message));
@@ -61,7 +61,7 @@ export default function DashboardPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Email atau password tidak valid.');
-      sessionStorage.setItem('yuku_admin_token', result.accessToken);
+      sessionStorage.setItem('MAVO_admin_token', result.accessToken);
       setToken(result.accessToken);
       setPassword('');
       await loadOverview(result.accessToken);
@@ -73,7 +73,7 @@ export default function DashboardPage() {
   }
 
   function logout() {
-    sessionStorage.removeItem('yuku_admin_token');
+    sessionStorage.removeItem('MAVO_admin_token');
     setToken('');
     setOverview(null);
     setPassword('');
@@ -84,17 +84,17 @@ export default function DashboardPage() {
     return (
       <main className="login-wrap">
         <form className="login-card" onSubmit={handleLogin}>
-          <div className="brand login-brand">YUKU</div>
-          <p className="login-kicker">YUKU OPERATIONS</p>
+          <div className="brand login-brand">MAVO</div>
+          <p className="login-kicker">MAVO OPERATIONS</p>
           <h1>Admin Sign In</h1>
-          <p className="login-description">Masuk ke panel pengelolaan marketplace YUKU.</p>
+          <p className="login-description">Masuk ke panel pengelolaan marketplace MAVO.</p>
           <label htmlFor="email">Email admin</label>
           <input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <label htmlFor="password">Password</label>
           <input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           {error && <p className="error-message">{error}</p>}
           <button className="primary-button" type="submit" disabled={loading}>{loading ? 'Memproses…' : 'Masuk ke Dashboard'}</button>
-          <p className="login-footnote">Akses khusus administrator resmi YUKU.</p>
+          <p className="login-footnote">Akses khusus administrator resmi MAVO.</p>
         </form>
       </main>
     );
@@ -110,7 +110,7 @@ export default function DashboardPage() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">YUKU</div>
+        <div className="brand">MAVO</div>
         <div className="tagline">Yuk, Ketemu. · Admin</div>
         <nav className="nav">
           <a className="active" href="/">Overview</a>
@@ -123,7 +123,7 @@ export default function DashboardPage() {
       </aside>
       <main>
         <div className="top">
-          <div><div className="eyebrow">YUKU OPERATIONS</div><h1>Business overview</h1></div>
+          <div><div className="eyebrow">MAVO OPERATIONS</div><h1>Business overview</h1></div>
           <button className="logout-button" onClick={logout}>Keluar</button>
         </div>
         <section className="grid">
@@ -136,7 +136,7 @@ export default function DashboardPage() {
         </section>
         <section className="card" style={{ marginTop: 20 }}>
           <h2>Status dashboard</h2>
-          <p>Data ditarik langsung dari API YUKU. Waktu pembaruan: {new Date().toLocaleString('id-ID')}.</p>
+          <p>Data ditarik langsung dari API MAVO. Waktu pembaruan: {new Date().toLocaleString('id-ID')}.</p>
           {error && <p className="error-message">{error}</p>}
         </section>
       </main>
