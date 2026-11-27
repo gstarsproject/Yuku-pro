@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 
 class StoriesScreen extends StatefulWidget {
@@ -10,123 +11,180 @@ class StoriesScreen extends StatefulWidget {
 }
 
 class _StoriesScreenState extends State<StoriesScreen> {
-  late int _index;
-  final List<_StoryData> _stories = const [
-    _StoryData('Discover', 'Jelajahi hal baru setiap hari.', Color(0xFFFF5C7A), Icons.explore_rounded),
-    _StoryData('Travel', 'Temukan tempat yang belum pernah kamu kunjungi.', Color(0xFF27C7D9), Icons.flight_takeoff_rounded),
-    _StoryData('Lifestyle', 'Bagikan momen terbaik versi kamu.', Color(0xFFFFB84D), Icons.wb_sunny_rounded),
-    _StoryData('Creators', 'Karya hebat dimulai dari satu cerita.', Color(0xFF8A6BFF), Icons.auto_awesome_rounded),
-    _StoryData('Community', 'Terhubung dengan komunitas MAVO.', Color(0xFFEF70B5), Icons.people_alt_rounded),
-  ];
+  late Future<List<Map<String, dynamic>>> _storiesFuture;
 
   @override
   void initState() {
     super.initState();
-    _index = _stories.indexWhere((s) => s.name == widget.initialStory);
-    if (_index < 0) _index = 0;
+    _storiesFuture = YukuApi.stories();
   }
 
-  void _next() {
-    if (_index < _stories.length - 1) {
-      setState(() => _index++);
-    } else {
-      Navigator.pop(context);
+  Future<void> _refresh() async {
+    final request = YukuApi.stories();
+    setState(() => _storiesFuture = request);
+    await request;
+  }
+
+  Future<void> _composeStory() async {
+    final controller = TextEditingController();
+    String audience = 'PUBLIC';
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 18, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Buat Story', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLength: 500,
+              maxLines: 5,
+              minLines: 3,
+              decoration: const InputDecoration(hintText: 'Apa cerita kamu hari ini?', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: audience,
+              decoration: const InputDecoration(labelText: 'Siapa yang bisa melihat?'),
+              items: const [
+                DropdownMenuItem(value: 'PUBLIC', child: Text('Publik')),
+                DropdownMenuItem(value: 'FOLLOWERS', child: Text('Pengikut')),
+              ],
+              onChanged: (value) => setSheetState(() => audience = value ?? 'PUBLIC'),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(width: double.infinity, child: FilledButton(
+              onPressed: () async {
+                final content = controller.text.trim();
+                if (content.isEmpty) return;
+                try {
+                  await YukuApi.createStory(content: content, audience: audience);
+                  if (sheetContext.mounted) Navigator.pop(sheetContext, true);
+                } catch (e) {
+                  if (sheetContext.mounted) ScaffoldMessenger.of(sheetContext).showSnackBar(
+                    SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+                  );
+                }
+              },
+              child: const Text('Bagikan Story'),
+            )),
+          ]),
+        ),
+      ),
+    );
+    controller.dispose();
+    if (created == true && mounted) {
+      await _refresh();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Story berhasil dibagikan. Berlaku selama 24 jam.')));
     }
   }
 
-  void _previous() {
-    if (_index > 0) setState(() => _index--);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final story = _stories[_index];
-    return Scaffold(
-      backgroundColor: MavoColors.midnight,
-      body: SafeArea(
-        child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-            child: Row(children: List.generate(_stories.length, (i) => Expanded(
-              child: Container(
-                height: 3,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: i <= _index ? Colors.white : Colors.white24,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ))),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
-            child: Row(children: [
-              CircleAvatar(backgroundColor: story.color.withOpacity(.2), child: Icon(story.icon, color: story.color)),
-              const SizedBox(width: 10),
-              Expanded(child: Text(story.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
-              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded, color: Colors.white)),
-            ]),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTapUp: (details) {
-                final width = MediaQuery.of(context).size.width;
-                if (details.localPosition.dx < width * .35) {
-                  _previous();
-                } else {
-                  _next();
-                }
-              },
-              child: Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(12, 4, 12, 18),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [story.color, MavoColors.midnight],
-                  ),
-                ),
-                child: Stack(children: [
-                  Positioned(right: -35, top: 40, child: Icon(story.icon, size: 230, color: Colors.white.withOpacity(.10))),
-                  Center(child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(story.icon, size: 66, color: Colors.white),
-                      const SizedBox(height: 22),
-                      Text(story.name.toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 29, fontWeight: FontWeight.w900, letterSpacing: 2)),
-                      const SizedBox(height: 12),
-                      Text(story.description, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5)),
-                      const SizedBox(height: 30),
-                      const Text('MAVO · CONNECT. SHARE. EXPLORE.', style: TextStyle(color: Colors.white70, fontSize: 9, letterSpacing: 1.1)),
-                    ]),
-                  )),
-                  Positioned(left: 0, right: 0, bottom: 0, child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Row(children: [
-                      Expanded(child: OutlinedButton(
-                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload story akan aktif setelah integrasi media.'))),
-                        style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white70)),
-                        child: const Text('Bagikan cerita'),
-                      )),
-                      const SizedBox(width: 10),
-                      IconButton(onPressed: _next, icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white)),
-                    ]),
-                  )),
-                ]),
-              ),
+  void _viewStory(Map<String, dynamic> story) {
+    final name = (story['authorName'] ?? 'Pengguna MAVO').toString();
+    final content = (story['content'] ?? '').toString();
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(14),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 390),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [MavoColors.violet, MavoColors.midnight, MavoColors.coral],
             ),
           ),
-        ]),
+          child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const CircleAvatar(backgroundColor: Colors.white24, child: Icon(Icons.person, color: Colors.white)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: Colors.white)),
+            ]),
+            Center(child: Text(content, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 22, height: 1.45, fontWeight: FontWeight.w700))),
+            const Text('MAVO · STORY 24 JAM', style: TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1.1)),
+          ]),
+        ),
       ),
     );
   }
-}
 
-class _StoryData {
-  final String name, description;
-  final Color color;
-  final IconData icon;
-  const _StoryData(this.name, this.description, this.color, this.icon);
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: MavoColors.cloud,
+    appBar: AppBar(
+      title: const Text('MAVO Stories', style: TextStyle(fontWeight: FontWeight.w800)),
+      backgroundColor: MavoColors.cloud,
+      foregroundColor: MavoColors.midnight,
+      actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
+    ),
+    floatingActionButton: FloatingActionButton.extended(
+      onPressed: _composeStory,
+      backgroundColor: MavoColors.violet,
+      foregroundColor: Colors.white,
+      icon: const Icon(Icons.add_rounded),
+      label: const Text('Buat Story'),
+    ),
+    body: FutureBuilder<List<Map<String, dynamic>>>(
+      future: _storiesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Story belum dapat dimuat.'),
+          TextButton(onPressed: _refresh, child: const Text('Coba lagi')),
+        ]));
+        final stories = snapshot.data ?? [];
+        if (stories.isEmpty) return Center(child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.auto_awesome_rounded, size: 54, color: MavoColors.violet),
+            const SizedBox(height: 14),
+            const Text('Belum ada Story', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+            const SizedBox(height: 6),
+            const Text('Bagikan momen singkatmu. Story akan hilang otomatis setelah 24 jam.', textAlign: TextAlign.center, style: TextStyle(color: MavoColors.muted)),
+            const SizedBox(height: 16),
+            FilledButton.icon(onPressed: _composeStory, icon: const Icon(Icons.add), label: const Text('Buat Story')),
+          ]),
+        ));
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+            itemCount: stories.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final story = stories[index];
+              final name = (story['authorName'] ?? 'Pengguna MAVO').toString();
+              final content = (story['content'] ?? '').toString();
+              final audience = story['audience'] == 'FOLLOWERS' ? 'Pengikut' : 'Publik';
+              return Card(
+                elevation: 0,
+                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: ListTile(
+                  onTap: () => _viewStory(story),
+                  leading: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: MavoColors.violet, width: 2)),
+                    child: const CircleAvatar(backgroundColor: MavoColors.violetSoft, child: Icon(Icons.auto_awesome, color: MavoColors.violet)),
+                  ),
+                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+                  subtitle: Text(content, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  trailing: Text(audience, style: const TextStyle(fontSize: 10, color: MavoColors.muted)),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    ),
+  );
 }
