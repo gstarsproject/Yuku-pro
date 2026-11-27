@@ -4,6 +4,7 @@ import '../services/mavo_api.dart';
 import '../theme/mavo_theme.dart';
 import 'stories_screen.dart';
 import 'creator_profile_screen.dart';
+import 'inbox_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -58,7 +59,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text('Connect. Share. Explore.', style: TextStyle(color: MavoColors.muted, fontSize: 11, fontWeight: FontWeight.w500)),
                 ])),
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                  tooltip: 'Notifikasi',
                   icon: const Icon(Icons.notifications_none_rounded, color: MavoColors.midnight, size: 27),
                 ),
                 const CircleAvatar(
