@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
+import '../services/yuku_api.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -11,6 +12,7 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final _controller = TextEditingController();
   String _audience = 'Publik';
+  bool _isPublishing = false;
 
   @override
   void dispose() {
@@ -18,16 +20,34 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
-  void _publishDraft() {
+  Future<void> _publishDraft() async {
     if (_controller.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tulis sesuatu dulu sebelum membagikan.')),
       );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Draft siap. Publikasi akan aktif setelah API postingan tersedia.')),
-    );
+    setState(() => _isPublishing = true);
+    try {
+      final audience = switch (_audience) {
+        'Pengikut' => 'FOLLOWERS',
+        'Privat' => 'PRIVATE',
+        _ => 'PUBLIC',
+      };
+      await YukuApi.createPost(content: _controller.text, audience: audience);
+      if (!mounted) return;
+      _controller.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Postingan berhasil dibagikan!')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _isPublishing = false);
+    }
   }
 
   @override
@@ -36,8 +56,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       title: const Text('Buat Postingan', style: TextStyle(fontWeight: FontWeight.w800)),
       actions: [
         TextButton(
-          onPressed: _publishDraft,
-          child: const Text('Bagikan', style: TextStyle(fontWeight: FontWeight.w800)),
+          onPressed: _isPublishing ? null : _publishDraft,
+          child: _isPublishing ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Bagikan', style: TextStyle(fontWeight: FontWeight.w800)),
         ),
         const SizedBox(width: 8),
       ],
