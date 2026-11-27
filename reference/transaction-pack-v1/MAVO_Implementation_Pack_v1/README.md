@@ -1,6 +1,6 @@
-# YUKU Implementation Pack v1 — Transaction Core
+# MAVO Implementation Pack v1 — Transaction Core
 
-This package is an implementation foundation for YUKU's marketplace transaction domain.
+This package is an implementation foundation for MAVO's marketplace transaction domain.
 It is **not yet a production-ready marketplace**. It includes a PostgreSQL/Prisma data model,
 NestJS transaction module scaffolding, booking/payment/payout rules, and setup notes.
 
