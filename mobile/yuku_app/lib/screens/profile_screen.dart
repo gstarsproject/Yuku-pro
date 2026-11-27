@@ -17,9 +17,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic> _profile = {};
+  late Future<List<Map<String, dynamic>>> _postsFuture;
 
   @override
-  void initState() { super.initState(); _loadProfile(); }
+  void initState() {
+    super.initState();
+    _loadProfile();
+    final id = widget.user?['id']?.toString() ?? '';
+    _postsFuture = id.isEmpty ? Future.value([]) : YukuApi.posts(authorId: id);
+  }
 
   Future<void> _loadProfile() async {
     final id = widget.user?['id']?.toString() ?? '';
@@ -128,13 +134,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _ProfileTab(icon: Icons.person_pin_outlined, selected: _tab == 2, onTap: () => setState(() => _tab = 2)),
           ]),
           const SizedBox(height: 26),
-          Icon(_tab == 0 ? Icons.photo_library_outlined : (_tab == 1 ? Icons.video_library_outlined : Icons.people_outline_rounded),
-            size: 42, color: MavoColors.violet.withValues(alpha: .65)),
-          const SizedBox(height: 10),
-          Text(_tab == 0 ? 'Postingan kamu: ' + (_profile['postsCount'] ?? 0).toString() : (_tab == 1 ? 'Belum ada video' : 'Belum ada konten bertanda'),
-            textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
-          const SizedBox(height: 5),
-          const Text('Konten yang kamu bagikan akan tampil di sini.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: MavoColors.muted)),
+          if (_tab == 0)
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _postsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(padding: EdgeInsets.all(28), child: Center(child: CircularProgressIndicator()));
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Postingan gagal dimuat: ${snapshot.error}', style: const TextStyle(color: MavoColors.muted)));
+                }
+                final posts = snapshot.data ?? [];
+                if (posts.isEmpty) {
+                  return const Padding(padding: EdgeInsets.all(28), child: Column(children: [
+                    Icon(Icons.photo_library_outlined, size: 42, color: MavoColors.violet),
+                    SizedBox(height: 10),
+                    Text('Belum ada postingan', style: TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+                    SizedBox(height: 5),
+                    Text('Postingan yang kamu bagikan akan tampil di sini.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: MavoColors.muted)),
+                  ]));
+                }
+                return Column(children: posts.map((post) => Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: Padding(padding: const EdgeInsets.all(14), child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(post['content']?.toString() ?? '', style: const TextStyle(color: MavoColors.ink)),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        const Icon(Icons.favorite_border, size: 16, color: MavoColors.violet),
+                        const SizedBox(width: 4),
+                        Text('${post['likesCount'] ?? 0}'),
+                        const SizedBox(width: 14),
+                        const Icon(Icons.chat_bubble_outline, size: 16, color: MavoColors.violet),
+                        const SizedBox(width: 4),
+                        Text('${post['commentsCount'] ?? 0}'),
+                        const Spacer(),
+                        Text(post['audience']?.toString() ?? 'PUBLIC', style: const TextStyle(fontSize: 10, color: MavoColors.muted)),
+                      ]),
+                    ],
+                  )),
+                )).toList());
+              },
+            )
+          else
+            Padding(padding: const EdgeInsets.all(28), child: Column(children: [
+              Icon(_tab == 1 ? Icons.video_library_outlined : Icons.person_pin_outlined, size: 42, color: MavoColors.violet.withValues(alpha: .65)),
+              const SizedBox(height: 10),
+              Text(_tab == 1 ? 'Belum ada video' : 'Belum ada konten bertanda', textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+            ])),
         ],
       )),
     );
