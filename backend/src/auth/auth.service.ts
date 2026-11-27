@@ -142,9 +142,10 @@ export class AuthService {
   private async verifyPassword(password: string, storedHash: string) {
     if (storedHash.startsWith('pbkdf2$')) {
       const parts = storedHash.split('$');
-      if (parts.length !== 4 || parts[1] !== '310000' || !/^[a-f0-9]{32}$/i.test(parts[2]) || !/^[a-f0-9]{64}$/i.test(parts[3])) return false;
+      const iterations = Number(parts[1]);
+      if (parts.length !== 4 || ![100000, 310000].includes(iterations) || !/^[a-f0-9]{32}$/i.test(parts[2]) || !/^[a-f0-9]{64}$/i.test(parts[3])) return false;
       const expected = Buffer.from(parts[3], 'hex');
-      const actual = (await pbkdf2(password, Buffer.from(parts[2], 'hex'), 310000, 32, 'sha256')) as Buffer;
+      const actual = (await pbkdf2(password, Buffer.from(parts[2], 'hex'), iterations, 32, 'sha256')) as Buffer;
       return actual.length === expected.length && timingSafeEqual(actual, expected);
     }
     const parts = storedHash.split(':');
