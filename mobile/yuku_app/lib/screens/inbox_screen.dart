@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
@@ -11,11 +12,26 @@ class InboxScreen extends StatefulWidget {
 class _InboxScreenState extends State<InboxScreen> {
   late Future<List<Map<String, dynamic>>> _future = YukuApi.conversations();
   final TextEditingController _search = TextEditingController();
+  Timer? _refreshTimer;
 
-  void _refresh() => setState(() => _future = YukuApi.conversations());
+  @override
+  void initState() {
+    super.initState();
+    // Keep the inbox in sync when the other device sends a new message.
+    _refreshTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (mounted) _refresh();
+    });
+  }
+
+  Future<void> _refresh() async {
+    final next = YukuApi.conversations();
+    if (mounted) setState(() => _future = next);
+    try { await next; } catch (_) { /* FutureBuilder displays the error. */ }
+  }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -51,6 +67,7 @@ class _InboxScreenState extends State<InboxScreen> {
         padding: const EdgeInsets.fromLTRB(18, 14, 12, 12),
         child: Row(children: [
           const Expanded(child: Text('Pesan', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900, color: MavoColors.ink))),
+          IconButton(onPressed: _refresh, tooltip: 'Muat ulang pesan', icon: const Icon(Icons.refresh_rounded, color: MavoColors.violet)),
           IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _NotificationsScreen())),
             icon: const Icon(Icons.notifications_none_rounded, color: MavoColors.violet)),
           IconButton(onPressed: _newChat, icon: const Icon(Icons.edit_square, color: MavoColors.violet)),
@@ -72,13 +89,16 @@ class _InboxScreenState extends State<InboxScreen> {
           ]));
           final items = (snapshot.data ?? []).where((item) =>
             (item['displayName']?.toString() ?? '').toLowerCase().contains(_search.text.toLowerCase())).toList();
-          if (items.isEmpty) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.chat_bubble_outline_rounded, size: 42, color: MavoColors.muted),
-            const SizedBox(height: 10),
-            const Text('Belum ada percakapan', style: TextStyle(color: MavoColors.muted)),
-            TextButton.icon(onPressed: _newChat, icon: const Icon(Icons.add), label: const Text('Mulai chat')),
-          ]));
-          return RefreshIndicator(onRefresh: () async => _refresh(), child: ListView.separated(
+          if (items.isEmpty) return RefreshIndicator(onRefresh: _refresh, child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [SizedBox(height: 220, child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.chat_bubble_outline_rounded, size: 42, color: MavoColors.muted),
+              const SizedBox(height: 10),
+              const Text('Belum ada percakapan', style: TextStyle(color: MavoColors.muted)),
+              TextButton.icon(onPressed: _newChat, icon: const Icon(Icons.add), label: const Text('Mulai chat')),
+              TextButton(onPressed: _refresh, child: const Text('Perbarui daftar')),
+            ])))]));
+          return RefreshIndicator(onRefresh: _refresh, child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(14, 6, 14, 16),
             itemCount: items.length,
