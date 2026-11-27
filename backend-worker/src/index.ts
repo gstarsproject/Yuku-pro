@@ -43,7 +43,8 @@ async function presignMedia(env: Env, method: "GET"|"PUT", objectKey: string, ex
   const signature = hexBytes(await crypto.subtle.sign("HMAC",await crypto.subtle.importKey("raw",kSigning,{name:"HMAC",hash:"SHA-256"},false,["sign"]),encoder.encode(stringToSign)));
   return endpoint.origin+canonicalUri+"?"+canonicalQuery+"&X-Amz-Signature="+signature;
 }
-\nconst PASSWORD_HASH_ITERATIONS = 100000; // Cloudflare Workers WebCrypto supports at most 100,000 PBKDF2 iterations.
+
+const PASSWORD_HASH_ITERATIONS = 100000; // Cloudflare Workers WebCrypto supports at most 100,000 PBKDF2 iterations.
 async function makePasswordHash(password: string) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -260,7 +261,8 @@ export default {
     });
    } catch(e) { console.error("Media download URL failed",e); return json({success:false,message:"Media gagal dimuat."},503); }
   }
-\n  if (path === "/api/v1/posts" && request.method === "POST") {
+
+  if (path === "/api/v1/posts" && request.method === "POST") {
    try {
     const body = await readRequestBody(request);
     const content = typeof body.content === "string" ? body.content.trim() : "";
