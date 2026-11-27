@@ -231,3 +231,9 @@ Status awal tahap 1:
 - [x] Profil kreator mengganti panel konten demo dengan daftar postingan aktual dari API.
 - [x] Daftar postingan kreator mengikuti filter visibilitas server: publik, followers yang sudah mengikuti, dan privat hanya pemilik.
 - [ ] CI dan tes dua akun untuk profil kreator masih menunggu.
+
+## Feed sosial — stabilisasi interaksi (27 Nov 2026)
+- [x] Kartu postingan menyelaraskan ulang status Like dan jumlah Like/Komentar ketika data feed diperbarui setelah refresh.
+- [x] Pull-to-refresh tetap menyelesaikan indikator meskipun request feed gagal; error ditampilkan oleh FutureBuilder dan pengguna tetap dapat mencoba lagi.
+- [ ] Tunggu hasil Flutter CI dan uji runtime Like/Unlike serta komentar dua akun pada APK gabungan.
+- [ ] Tab For You/Following/Live/Explore masih perlu dihubungkan ke sumber data/filter yang sesuai; saat ini jangan dianggap sebagai filter aktif.
