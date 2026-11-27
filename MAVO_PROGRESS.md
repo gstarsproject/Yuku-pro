@@ -291,3 +291,10 @@ Status awal tahap 1:
 - [ ] Backend CI run `46002417782` menyelesaikan Prisma Client generation dan NestJS build; menunggu status akhir job.
 - Catatan: tidak ada perubahan production.
 
+### Status akhir CI commit fdf9d87
+- [x] Backend CI run `46002417782`: Prisma Client generation dan NestJS build PASS.
+- [x] Worker CI run `46002417682`: TypeScript typecheck dan kedua Wrangler dry-run PASS.
+- [ ] Worker preview deploy job SKIPPED pada run ini. Perubahan belum diklaim aktif di preview.
+- [ ] Runtime test 400/413 belum bisa dilakukan melalui pemeriksa endpoint yang tersedia di sesi ini.
+- [ ] Flutter Mobile CI tidak menghasilkan job pada commit ini; tidak ada APK baru yang dibangun dari perubahan ini.
+
