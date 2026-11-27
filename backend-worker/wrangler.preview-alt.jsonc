@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "mavo-api-preview",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "618629c1266146b5b4f898761552d004"
+    }
+  ],
+  "vars": { "APP_ENV": "preview" },
+  "observability": { "enabled": true, "traces": { "enabled": true } }
+}
