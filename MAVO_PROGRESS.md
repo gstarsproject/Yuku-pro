@@ -18,12 +18,13 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] Hubungkan Home ke feed postingan dari API.
 - [x] Feed membatasi postingan PUBLIC untuk semua pengguna login, FOLLOWERS hanya untuk pengikut, dan PRIVATE hanya untuk pemilik.
 - [x] Pengujian pengguna melalui APK: postingan PRIVATE berhasil dibuat dan tetap tampil di Home akun pemilik.
-- [ ] Uji privasi lintas akun: pastikan PRIVATE tidak terlihat oleh akun lain dan FOLLOWERS hanya terlihat oleh akun yang benar-benar mengikuti pembuat.
+- [x] Uji privasi PRIVATE lintas akun: postingan PRIVATE tidak muncul di Home akun kedua.
+- [ ] Uji FOLLOWERS lintas akun: pastikan postingan hanya terlihat oleh akun yang mengikuti pembuat.
 - [x] Perbaiki widget test Inbox agar dirender di dalam Scaffold seperti struktur aplikasi sebenarnya.
 - [x] GitHub CI pada commit `69b8aafca472b451ac48c369c3a612848ad2f308`: Backend CI PASS, Flutter Mobile CI PASS, Cloudflare Worker CI PASS.
 - [x] APK preview Android berhasil dibangun. Artifact: `mavo-android-arm64-preview`, run `45972701723`, artifact `15185868757`.
 - [x] Deployment Worker preview `mavo-api-preview` dan `mavo-preview` terdaftar di Cloudflare pada 2026-11-27 sekitar 09:12 UTC.
-- [ ] Uji runtime health/database dan alur create/read serta privasi lintas akun secara end-to-end melalui APK Android.
+- [ ] Uji runtime health/database dan alur create/read serta seluruh privasi secara end-to-end melalui APK Android.
 
 ## Batasan saat ini
 - Fitur postingan pada tahap ini hanya teks maksimal 2.000 karakter.
