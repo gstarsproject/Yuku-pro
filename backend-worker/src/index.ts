@@ -269,9 +269,13 @@ export default {
       const avatarMedia = body.avatarMedia && typeof body.avatarMedia === "object" ? body.avatarMedia as Record<string, unknown> : null;
 if (avatarMedia) {
   const key = typeof avatarMedia.objectKey === "string" ? avatarMedia.objectKey : "";
-  const type = typeof avatarMedia.contentType === "string" ? avatarMedia.contentType : "";
+  const type = typeof avatarMedia.contentType === "string" ? avatarMedia.contentType.toLowerCase() : "";
   const size = Number(avatarMedia.byteSize || 0);
-  if (!key.startsWith("users/" + viewer.id + "/") || !["image/jpeg","image/png","image/webp","image/gif"].includes(type) || !Number.isSafeInteger(size) || size < 1 || size > 20*1024*1024) return json({success:false,message:"Foto profil tidak valid."},400);
+  const imageExtensions: Record<string,string> = {"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"};
+  const extension = imageExtensions[type];
+  const prefix = "users/" + viewer.id + "/";
+  const filename = key.startsWith(prefix) ? key.slice(prefix.length) : "";
+  if (!extension || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp|gif)$/i.test(filename) || !filename.toLowerCase().endsWith("." + extension) || !Number.isSafeInteger(size) || size < 1 || size > 20*1024*1024) return json({success:false,message:"Foto profil tidak valid."},400);
   avatarUrl = key;
   await c.query('INSERT INTO "MediaAsset" ("id","ownerId","mediaType","objectKey","contentType","byteSize","sortOrder","createdAt") VALUES ($1,$2,\'IMAGE\',$3,$4,$5,0,NOW()) ON CONFLICT ("objectKey") DO NOTHING', [crypto.randomUUID(),viewer.id,key,type,size]);
 } else if (avatarUrl && (!/^https:\/\//i.test(avatarUrl) || avatarUrl.length > 2000)) return json({success:false,message:"URL foto harus menggunakan HTTPS."},400);
