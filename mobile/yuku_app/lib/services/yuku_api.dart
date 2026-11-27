@@ -154,6 +154,38 @@ class YukuApi {
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
 
+  static Future<Map<String, dynamic>> setPostLike(String postId, {required bool liked}) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final uri = Uri.parse('$baseUrl/api/v1/posts/$postId/like');
+    final response = liked
+        ? await _client.post(uri, headers: {'Authorization': 'Bearer $token'})
+        : await _client.delete(uri, headers: {'Authorization': 'Bearer $token'});
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
+  static Future<List<Map<String, dynamic>>> postComments(String postId) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.get(
+      Uri.parse('$baseUrl/api/v1/posts/$postId/comments'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> addPostComment(String postId, String content) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/posts/$postId/comments'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'content': content.trim()}),
+    );
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
   static Future<List<Map<String, dynamic>>> posts() async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
