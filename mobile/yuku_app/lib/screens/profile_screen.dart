@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
+import '../services/mavo_api.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -10,8 +11,29 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   int _tab = 0;
-  String _name = 'Nama Pengguna';
-  String _bio = 'Mulai ceritakan perjalananmu bersama MAVO.';
+  bool _loading = true;
+  String? _error;
+  Map<String, dynamic> _profile = {};
+
+  @override
+  void initState() { super.initState(); _loadProfile(); }
+
+  Future<void> _loadProfile() async {
+    try {
+      final me = await MavoApi.me();
+      final id = me['id']?.toString() ?? '';
+      if (id.isEmpty) throw Exception('ID akun tidak ditemukan.');
+      final profile = await MavoApi.profile(id);
+      if (!mounted) return;
+      setState(() { _profile = profile; _loading = false; _error = null; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = e.toString().replaceFirst('Exception: ', ''); });
+    }
+  }
+
+  String get _name => _profile['displayName']?.toString() ?? 'Nama Pengguna';
+  String get _bio => _profile['bio']?.toString() ?? 'Mulai ceritakan perjalananmu bersama MAVO.';
 
   Future<void> _editProfile() async {
     final nameController = TextEditingController(text: _name);
@@ -32,10 +54,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (saved == true && mounted) {
-      setState(() {
-        _name = nameController.text.trim().isEmpty ? 'Nama Pengguna' : nameController.text.trim();
-        _bio = bioController.text.trim();
-      });
+      try {
+        setState(() => _loading = true);
+        final updated = await MavoApi.updateProfile(displayName: nameController.text, bio: bioController.text);
+        if (mounted) setState(() { _profile = {..._profile, ...updated}; _loading = false; });
+      } catch (e) {
+        if (mounted) { setState(() => _loading = false); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
+      }
     }
     nameController.dispose();
     bioController.dispose();
@@ -66,9 +91,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(width: 22),
-          const Expanded(child: _ProfileStat(value: '0', label: 'Postingan')),
-          const Expanded(child: _ProfileStat(value: '0', label: 'Pengikut')),
-          const Expanded(child: _ProfileStat(value: '0', label: 'Mengikuti')),
+          const Expanded(child: _ProfileStat(value: (_profile['postsCount'] ?? 0).toString(), label: 'Postingan')),
+          const Expanded(child: _ProfileStat(value: (_profile['followers'] ?? 0).toString(), label: 'Pengikut')),
+          const Expanded(child: _ProfileStat(value: (_profile['followingCount'] ?? 0).toString(), label: 'Mengikuti')),
         ]),
         const SizedBox(height: 16),
         Text(_name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: MavoColors.midnight)),
