@@ -97,6 +97,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(child: _ProfileStat(value: (_profile['followers'] ?? 0).toString(), label: 'Pengikut')),
           Expanded(child: _ProfileStat(value: (_profile['followingCount'] ?? 0).toString(), label: 'Mengikuti')),
         ]),
+        if (_loading) const LinearProgressIndicator(minHeight: 2),
+        if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Profil belum bisa dimuat: $_error', style: const TextStyle(color: Colors.redAccent, fontSize: 11))),
         const SizedBox(height: 16),
         Text(_name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: MavoColors.midnight)),
         const SizedBox(height: 5),
