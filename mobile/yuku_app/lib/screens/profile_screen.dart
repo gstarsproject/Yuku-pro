@@ -77,6 +77,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     body: ListView(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 30),
       children: [
+        if (_loading) const LinearProgressIndicator(minHeight: 2),
+        if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(children: [Expanded(child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12))), TextButton(onPressed: _loadProfile, child: const Text('Coba lagi'))])),
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Container(
             padding: const EdgeInsets.all(3),
@@ -91,9 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(width: 22),
-          const Expanded(child: _ProfileStat(value: (_profile['postsCount'] ?? 0).toString(), label: 'Postingan')),
-          const Expanded(child: _ProfileStat(value: (_profile['followers'] ?? 0).toString(), label: 'Pengikut')),
-          const Expanded(child: _ProfileStat(value: (_profile['followingCount'] ?? 0).toString(), label: 'Mengikuti')),
+          Expanded(child: _ProfileStat(value: (_profile['postsCount'] ?? 0).toString(), label: 'Postingan')),
+          Expanded(child: _ProfileStat(value: (_profile['followers'] ?? 0).toString(), label: 'Pengikut')),
+          Expanded(child: _ProfileStat(value: (_profile['followingCount'] ?? 0).toString(), label: 'Mengikuti')),
         ]),
         const SizedBox(height: 16),
         Text(_name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: MavoColors.midnight)),
