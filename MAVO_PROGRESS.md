@@ -147,3 +147,16 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [ ] Cloudflare Worker secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL_S3, AWS_REGION belum terpasang pada mavo-api-preview. Credential Neon TEST dibuat khusus scope storage:read/write dan expiry 2027-11-27; pemasangan secret melalui dashboard Cloudflare perlu dilakukan manual karena operasi penyalinan secret ditolak kontrol keamanan.
 - [ ] Jangan deploy Worker/API media sampai secret storage terpasang dan CI lulus.
 - Catatan keamanan: bucket privat; kredensial tidak boleh ditanam di APK, repository, atau source code. URL file yang diberikan ke aplikasi hanya berlaku 15 menit.
+
+## Media UI Post dan Story — lanjutan (2026-11-27)
+- [x] Composer Post: pilih beberapa foto dari galeri, pilih video (maks. 3 menit), hapus pilihan, dan isi label lokasi manual.
+- [x] Composer Story: pilih foto/video dari galeri dan isi label lokasi manual; Story tetap mengikuti masa aktif 24 jam.
+- [x] Upload file melalui API Worker dan simpan metadata media ke Post/Story (client sudah disiapkan).
+- [x] Feed API dan Story API mengembalikan metadata media terkait.
+- [x] Feed menampilkan foto dan pemutar video; viewer Story menampilkan foto/video dan label lokasi.
+- [x] Tambah package image_picker dan video_player.
+- [x] Verifikasi endpoint S3 Neon TEST: force_path_style=true, region ap-southeast-1, endpoint br-divine-shape-bi7a8pkw.storage.c-5.ap-southeast-1.aws.neon.tech.
+- [ ] Worker preview belum dapat memproses upload sampai secret S3 diikat ke mavo-api-preview. Upaya memasang secret otomatis diblokir oleh kontrol keamanan; jangan menaruh credential pada repository atau aplikasi.
+- [ ] Build Android terbaru masih berjalan; jangan kirim APK sampai Flutter analyze, tests, dan release build sukses.
+- [ ] Location saat ini berupa label tempat yang diketik manual, belum GPS/geocoding. Ini disengaja agar lokasi tidak dibagikan otomatis.
+- [ ] Perlu runtime test upload/download memakai dua akun dan uji visibilitas PUBLIC/FOLLOWERS/PRIVATE sebelum fitur dinyatakan selesai.
