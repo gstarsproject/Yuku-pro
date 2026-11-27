@@ -1,5 +1,5 @@
 import { Client } from "pg";
-interface Env { HYPERDRIVE: Hyperdrive; }
+interface Env { HYPERDRIVE: Hyperdrive; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; }
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
 async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
@@ -14,7 +14,36 @@ const toHex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padSt
 async function sha256(value: string) {
   return toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value))));
 }
-const PASSWORD_HASH_ITERATIONS = 100000; // Cloudflare Workers WebCrypto supports at most 100,000 PBKDF2 iterations.
+
+const awsEncode = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+const hexBytes = (value: ArrayBuffer) => toHex(new Uint8Array(value));
+async function hmacBytes(key: ArrayBuffer | Uint8Array, value: string) {
+  const imported = await crypto.subtle.importKey("raw", key instanceof Uint8Array ? key : new Uint8Array(key), {name:"HMAC",hash:"SHA-256"}, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", imported, encoder.encode(value)));
+}
+async function presignMedia(env: Env, method: "GET"|"PUT", objectKey: string, expires = 900) {
+  const now = new Date(), stamp = now.toISOString().replace(/[:-]|\.\d{3}/g,""), date = stamp.slice(0,8);
+  const endpoint = new URL(env.AWS_ENDPOINT_URL_S3);
+  const canonicalUri = "/" + ["mavo-media", ...objectKey.split("/")].map(awsEncode).join("/");
+  const scope = date + "/" + env.AWS_REGION + "/s3/aws4_request";
+  const params: [string,string][] = [
+    ["X-Amz-Algorithm","AWS4-HMAC-SHA256"],
+    ["X-Amz-Credential",env.AWS_ACCESS_KEY_ID + "/" + scope],
+    ["X-Amz-Date",stamp],
+    ["X-Amz-Expires",String(expires)],
+    ["X-Amz-SignedHeaders","host"]
+  ];
+  const canonicalQuery = params.map(([k,v])=>[awsEncode(k),awsEncode(v)] as const).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>k+"="+v).join("&");
+  const canonicalRequest = method+"\n"+canonicalUri+"\n"+canonicalQuery+"\nhost:"+endpoint.host+"\n\nhost\nUNSIGNED-PAYLOAD";
+  const stringToSign = "AWS4-HMAC-SHA256\n"+stamp+"\n"+scope+"\n"+await sha256(canonicalRequest);
+  const kDate = await hmacBytes(encoder.encode("AWS4"+env.AWS_SECRET_ACCESS_KEY),date);
+  const kRegion = await hmacBytes(kDate,env.AWS_REGION);
+  const kService = await hmacBytes(kRegion,"s3");
+  const kSigning = await hmacBytes(kService,"aws4_request");
+  const signature = hexBytes(await crypto.subtle.sign("HMAC",await crypto.subtle.importKey("raw",kSigning,{name:"HMAC",hash:"SHA-256"},false,["sign"]),encoder.encode(stringToSign)));
+  return endpoint.origin+canonicalUri+"?"+canonicalQuery+"&X-Amz-Signature="+signature;
+}
+\nconst PASSWORD_HASH_ITERATIONS = 100000; // Cloudflare Workers WebCrypto supports at most 100,000 PBKDF2 iterations.
 async function makePasswordHash(password: string) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -192,7 +221,46 @@ export default {
     });
    } catch(e) { console.error("User relations request failed",e); return json({success:false,message:"Daftar pengikut gagal dimuat."},503); }
   }
-  if (path === "/api/v1/posts" && request.method === "POST") {
+
+  if (path === "/api/v1/media/upload-url" && request.method === "POST") {
+   try {
+    const body = await readRequestBody(request);
+    const contentType = typeof body.contentType === "string" ? body.contentType.toLowerCase() : "";
+    const mediaType = typeof body.mediaType === "string" ? body.mediaType.toUpperCase() : "";
+    const byteSize = Number(body.byteSize || 0);
+    const allowed = mediaType === "IMAGE" ? ["image/jpeg","image/png","image/webp","image/gif"] : mediaType === "VIDEO" ? ["video/mp4","video/quicktime"] : [];
+    const maxBytes = mediaType === "VIDEO" ? 100*1024*1024 : 20*1024*1024;
+    if (!allowed.includes(contentType) || !Number.isSafeInteger(byteSize) || byteSize < 1 || byteSize > maxBytes)
+      return json({success:false,message:"Format atau ukuran file tidak didukung (foto maks. 20 MB, video maks. 100 MB)."},400);
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const extension = contentType.split("/")[1].replace("jpeg","jpg").replace("quicktime","mov");
+      const objectKey = "users/"+user.id+"/"+crypto.randomUUID()+"."+extension;
+      const uploadUrl = await presignMedia(env,"PUT",objectKey,900);
+      return json({success:true,data:{objectKey,uploadUrl,method:"PUT",headers:{"Content-Type":contentType},expiresIn:900}});
+    });
+   } catch(e) { console.error("Media upload URL failed",e); return json({success:false,message:"Tidak dapat menyiapkan upload media."},503); }
+  }
+  const mediaUrlMatch = path.match(/^\/api\/v1\/media\/([0-9a-f-]{36})\/url$/i);
+  if (mediaUrlMatch && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const result = await c.query(`SELECT m."objectKey",m."contentType",m."mediaType",m."ownerId",p."audience" AS "postAudience",p."authorId" AS "postAuthor",s."audience" AS "storyAudience",s."userId" AS "storyAuthor",s."expiresAt" AS "storyExpires" FROM "MediaAsset" m LEFT JOIN "Post" p ON p."id"=m."postId" LEFT JOIN "Story" s ON s."id"=m."storyId" WHERE m."id"=$1 LIMIT 1`,[mediaUrlMatch[1]]);
+      const media = result.rows[0];
+      if (!media) return json({success:false,message:"Media tidak ditemukan."},404);
+      let visible = media.ownerId === user.id;
+      if (media.postAuthor) visible = visible || media.postAudience === "PUBLIC" || (media.postAudience === "FOLLOWERS" && !!(await c.query('SELECT 1 FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2',[user.id,media.postAuthor])).rows[0]);
+      if (media.storyAuthor && new Date(media.storyExpires).getTime() > Date.now()) visible = visible || media.storyAudience === "PUBLIC" || (media.storyAudience === "FOLLOWERS" && !!(await c.query('SELECT 1 FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2',[user.id,media.storyAuthor])).rows[0]);
+      if (!visible) return json({success:false,message:"Kamu tidak memiliki akses ke media ini."},403);
+      const downloadUrl = await presignMedia(env,"GET",media.objectKey,900);
+      return json({success:true,data:{downloadUrl,contentType:media.contentType,mediaType:media.mediaType,expiresIn:900}});
+    });
+   } catch(e) { console.error("Media download URL failed",e); return json({success:false,message:"Media gagal dimuat."},503); }
+  }
+\n  if (path === "/api/v1/posts" && request.method === "POST") {
    try {
     const body = await readRequestBody(request);
     const content = typeof body.content === "string" ? body.content.trim() : "";
