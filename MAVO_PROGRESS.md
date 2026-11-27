@@ -386,3 +386,12 @@ Status awal tahap 1:
 - [x] Branding cleanup extended to the archived transaction reference pack and its example database name; legacy YUKU path names for the Flutter app, API/theme files, blueprint, OpenAPI contract, and transaction pack were renamed to MAVO.
 - [x] CI verified on branding migration commit `c18a31c54c7aa6e0a3fe6655ba2c30157b7b5a52`: Admin CI, Backend CI, and Cloudflare Worker CI passed. Flutter Mobile CI was still pending at the last status check; rerun/confirm it before treating the rename as fully validated.
 - [ ] Remaining legacy binary ZIP `YUKU_All_In_One_v1.zip` is retained unchanged as an archive; its internal contents were not rewritten. Production was not deployed.
+
+
+## MAVO rename validation follow-up (2026-11-27)
+- [x] Confirmed current feature branch tree has no legacy YUKU-named source/document paths; the only remaining path match is the retained historical archive `YUKU_All_In_One_v1.zip`.
+- [x] Fixed Flutter CI working-directory and artifact/cache paths from incorrect `mobile/MAVO_app` casing to the actual `mobile/mavo_app` directory.
+- [x] Corrected Dart package identifier to valid lowercase `mavo_app` and updated test imports from `package:MAVO_app/...` to `package:mavo_app/...`.
+- [x] Admin, Backend, and Cloudflare Worker CI passed on the previous branding commit `93abc4e8dc37593f309ad1d4ebc2395ca9d85d58`.
+- [ ] Flutter Mobile CI for the latest follow-up was created as a pull_request run but still reported `pending` with no job records at last check; its build/test result is not yet verified.
+- [ ] Do not merge or deploy production until Flutter CI and device smoke tests pass.
