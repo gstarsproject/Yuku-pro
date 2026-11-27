@@ -129,8 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ]),
             ),
           ),
-          const SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: 18),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             sliver: SliverToBoxAdapter(child: _PostsFeed(key: _postsFeedKey)),
           ),
           SliverPadding(
