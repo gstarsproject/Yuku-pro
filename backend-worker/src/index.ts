@@ -62,7 +62,7 @@ function isValidMediaItem(item: unknown, userId: string): item is { objectKey: s
     Number.isSafeInteger(byteSize) && byteSize >= 1 && byteSize <= maxBytes;
 }
 async function presignMedia(env: Env, method: "GET"|"PUT", objectKey: string, expires = 900, contentType?: string) {
-  const now = new Date(), stamp = now.toISOString().replace(/[:-]|\\.\\d{3}/g,""), date = stamp.slice(0,8);
+  const now = new Date(), stamp = now.toISOString().replace(/[:-]|\.\d{3}/g,""), date = stamp.slice(0,8);
   const endpoint = new URL(env.AWS_ENDPOINT_URL_S3);
   const canonicalUri = "/" + ["mavo-media", ...objectKey.split("/")].map(awsEncode).join("/");
   const scope = date + "/" + env.AWS_REGION + "/s3/aws4_request";
