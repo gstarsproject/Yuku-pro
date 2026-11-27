@@ -388,10 +388,27 @@ export default {
         const body = await readRequestBody(request);
         const content = typeof body.content === "string" ? body.content.trim() : "";
         const audience = typeof body.audience === "string" ? body.audience.toUpperCase() : "PUBLIC";
-        if (!content || content.length > 500) return json({success:false,message:"Story wajib diisi (maksimal 500 karakter)."},400);
+        const media = Array.isArray(body.media) ? body.media : [];
+        const locationName = typeof body.locationName === "string" ? body.locationName.trim().slice(0,200) : null;
+        const latitude = typeof body.latitude === "number" ? body.latitude : null;
+        const longitude = typeof body.longitude === "number" ? body.longitude : null;
+        if ((!content && media.length === 0) || content.length > 500 || media.length > 10) return json({success:false,message:"Story harus berisi teks atau media (maksimal 10 file)."},400);
         if (!["PUBLIC","FOLLOWERS"].includes(audience)) return json({success:false,message:"Pilihan privasi story tidak valid."},400);
-        const result = await c.query('INSERT INTO "Story" ("id","userId","content","audience","createdAt","expiresAt") VALUES ($1,$2,$3,$4,NOW(),NOW()+INTERVAL \'24 hours\') RETURNING "id","userId","content","audience","createdAt","expiresAt"',[crypto.randomUUID(),user.id,content,audience]);
-        return json({success:true,data:{...result.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
+        if ((latitude === null) !== (longitude === null) || (latitude !== null && (Math.abs(latitude)>90 || Math.abs(longitude!)>180))) return json({success:false,message:"Koordinat lokasi tidak valid."},400);
+        for (const item of media) {
+          if (!item || typeof item.objectKey !== "string" || !item.objectKey.startsWith("users/"+user.id+"/") || !["IMAGE","VIDEO"].includes(item.mediaType) || typeof item.contentType !== "string" || !Number.isSafeInteger(Number(item.byteSize)) || Number(item.byteSize)<1) return json({success:false,message:"Data media tidak valid."},400);
+        }
+        const id = crypto.randomUUID();
+        await c.query("BEGIN");
+        try {
+          const result = await c.query('INSERT INTO "Story" ("id","userId","content","audience","locationName","latitude","longitude","createdAt","expiresAt") VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()+INTERVAL \'24 hours\') RETURNING "id","userId","content","audience","locationName","latitude","longitude","createdAt","expiresAt"',[id,user.id,content,audience,locationName,latitude,longitude]);
+          for (let i=0;i<media.length;i++) {
+            const item=media[i];
+            await c.query('INSERT INTO "MediaAsset" ("id","ownerId","storyId","mediaType","objectKey","contentType","byteSize","sortOrder","createdAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())',[crypto.randomUUID(),user.id,id,item.mediaType,item.objectKey,item.contentType,Number(item.byteSize),i]);
+          }
+          await c.query("COMMIT");
+          return json({success:true,data:{...result.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
+        } catch(e) { await c.query("ROLLBACK"); throw e; }
       }
       const result = await c.query('SELECT s."id",s."userId",s."content",s."audience",s."createdAt",s."expiresAt",p."displayName" AS "authorName",p."avatarUrl" AS "authorAvatar" FROM "Story" s JOIN "User" u ON u."id"=s."userId" LEFT JOIN "Profile" p ON p."userId"=s."userId" WHERE s."expiresAt">NOW() AND u."status"=\'ACTIVE\' AND (s."audience"=\'PUBLIC\' OR s."userId"=$1 OR (s."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$1 AND f."followingId"=s."userId"))) ORDER BY s."createdAt" DESC LIMIT 100',[user.id]);
       return json({success:true,count:result.rowCount,data:result.rows});
