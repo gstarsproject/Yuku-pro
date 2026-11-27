@@ -50,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ],
     ),
     body: ListView(
-      padding: const EdgeInsets.fromLTRB(18, 4, 18, 28),
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 30),
       children: [
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Container(
@@ -86,8 +86,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: const LinearGradient(colors: [MavoColors.midnight, MavoColors.violet]),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: MavoColors.violet.withValues(alpha: .16), blurRadius: 16, offset: const Offset(0, 6))],
+            gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [MavoColors.midnight, MavoColors.violet]),
           ),
           child: const Row(children: [
             Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD77A), size: 25),
@@ -147,7 +148,7 @@ class _ProfileTab extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: selected ? MavoColors.violet : Colors.transparent, width: 2))),
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: selected ? MavoColors.violet : const Color(0xFFEDEBF3), width: selected ? 2.5 : 1))),
         child: Icon(icon, color: selected ? MavoColors.violet : MavoColors.muted),
       ),
     ),
