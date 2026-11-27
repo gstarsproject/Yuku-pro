@@ -2,7 +2,7 @@ name: Flutter Mobile CI
 
 on:
   push:
-    branches: [main, feature/mavo-user-auth]
+    branches: [main]
     paths:
       - "mobile/yuku_app/**"
       - ".github/workflows/flutter-ci.yml"
@@ -12,10 +12,14 @@ on:
       - "mobile/yuku_app/**"
       - ".github/workflows/flutter-ci.yml"
 
+concurrency:
+  group: flutter-mobile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: mobile/yuku_app
@@ -24,6 +28,16 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('mobile/yuku_app/**/gradle-wrapper.properties', 'mobile/yuku_app/**/build.gradle*', 'mobile/yuku_app/**/settings.gradle*') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
       - name: Install Flutter dependencies
         run: flutter pub get
       - name: Analyze Flutter code
@@ -32,12 +46,12 @@ jobs:
         run: flutter test
       - name: Generate Android platform files
         run: flutter create --platforms=android --project-name yuku .
-      - name: Build optimized Android release APKs
-        run: flutter build apk --release --split-per-abi
+      - name: Build Samsung-compatible Android release APK
+        run: flutter build apk --release --target-platform android-arm64
       - name: Upload Samsung-compatible arm64 APK
         uses: actions/upload-artifact@v5
         with:
           name: mavo-android-arm64-preview
-          path: mobile/yuku_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          path: mobile/yuku_app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 7
