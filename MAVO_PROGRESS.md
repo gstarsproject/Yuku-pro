@@ -316,11 +316,11 @@ Status awal tahap 1:
 - [x] Kedua preview Worker kini memuat binding rate limiter; ini memverifikasi konfigurasi terpasang, bukan pengujian beban/429 end-to-end.
 - [ ] Uji runtime respons 429 dengan aman dan verifikasi batas per-IP/per-email tanpa mengunci pengguna sungguhan.
 - [ ] Rate limit belum diterapkan ke production.
-## Pembaruan 2026-11-27 — Throttling aktivitas pengguna (menunggu deployment preview)
+## Pembaruan 2026-11-27 — Throttling aktivitas pengguna (preview deployed)
 - [x] Tambah USER_ACTION_LIMITER dengan batas 30 request per menit per user dan per jenis aktivitas.
 - [x] Terapkan throttling untuk update profil, follow/unfollow, pembuatan URL upload media, pembuatan post, pembuatan percakapan, pengiriman pesan, pembuatan story, like/comment, pencarian pengguna, akses URL media, dan penandaan notifikasi dibaca.
 - [x] Tambah binding USER_ACTION_LIMITER pada kedua konfigurasi Worker preview.
-- [ ] Menunggu GitHub Actions validate dan deployment preview untuk commit perubahan ini. Deployment Cloudflare yang diperiksa masih menunjukkan versi lama; binding USER_ACTION_LIMITER belum aktif.
-- [ ] Verifikasi binding USER_ACTION_LIMITER pada kedua Worker setelah deployment.
-- [ ] Uji runtime HTTP 429; belum ada klaim bahwa pembatasan aktivitas sudah aktif di server.
+- [x] GitHub Actions berhasil: TypeScript typecheck dan kedua Wrangler dry-run lulus; kedua Worker preview berhasil dideploy pada 2026-11-27.
+- [x] Verifikasi binding USER_ACTION_LIMITER pada mavo-preview dan mavo-api-preview setelah deployment.
+- [ ] Uji runtime HTTP 429 dengan sesi pengguna valid; deployment dan binding sudah aktif, tetapi perilaku limit belum diuji end-to-end.
 - Catatan: rate limit aktivitas bersifat per user dan per jenis aksi; pembatas Cloudflare bersifat approximate. Production tidak disentuh.
