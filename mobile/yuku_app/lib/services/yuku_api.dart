@@ -169,16 +169,37 @@ class YukuApi {
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
 
+  static Future<Map<String, dynamic>> uploadMediaFile({
+    required File file, required String mediaType, required String contentType,
+  }) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final size = await file.length();
+    final prepare = await _client.post(Uri.parse('$baseUrl/api/v1/media/upload-url'),
+      headers: {'Content-Type':'application/json','Authorization':'Bearer $token'},
+      body: jsonEncode({'mediaType':mediaType,'contentType':contentType,'byteSize':size}))
+      .timeout(const Duration(seconds:25));
+    final data = (await _decode(prepare))['data'] as Map<String,dynamic>;
+    final upload = await _client.put(Uri.parse(data['uploadUrl'] as String),
+      headers: {'Content-Type':contentType}, body: await file.readAsBytes())
+      .timeout(const Duration(minutes:3));
+    if (upload.statusCode < 200 || upload.statusCode >= 300) {
+      throw Exception('Upload media gagal (' + upload.statusCode.toString() + ').');
+    }
+    return {'objectKey':data['objectKey'],'mediaType':mediaType,'contentType':contentType,'byteSize':size};
+  }
+
   static Future<Map<String, dynamic>> createPost({
     required String content,
     required String audience,
+    List<Map<String,dynamic>> media = const [], String locationName = "",
   }) async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
     final response = await _client.post(
       Uri.parse('$baseUrl/api/v1/posts'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode({'content': content.trim(), 'audience': audience}),
+      body: jsonEncode({'content': content.trim(), 'audience': audience, 'media':media, if (locationName.trim().isNotEmpty) 'locationName':locationName.trim()}),
     ).timeout(const Duration(seconds: 25));
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
@@ -298,13 +319,14 @@ class YukuApi {
   static Future<Map<String, dynamic>> createStory({
     required String content,
     required String audience,
+    List<Map<String,dynamic>> media = const [], String locationName = "",
   }) async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
     final response = await _client.post(
       Uri.parse('$baseUrl/api/v1/stories'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode({'content': content.trim(), 'audience': audience}),
+      body: jsonEncode({'content': content.trim(), 'audience': audience, 'media':media, if (locationName.trim().isNotEmpty) 'locationName':locationName.trim()}),
     ).timeout(const Duration(seconds: 25));
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
