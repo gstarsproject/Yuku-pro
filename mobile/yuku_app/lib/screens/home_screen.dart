@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
-            sliver: SliverToBoxAdapter(child: _PostsFeed(key: _postsFeedKey)),
+            sliver: SliverToBoxAdapter(child: _PostsFeed(key: _postsFeedKey, feedMode: _selectedFeed)),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
@@ -163,18 +163,33 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _PostsFeed extends StatefulWidget {
-  const _PostsFeed({super.key});
+  final int feedMode;
+  const _PostsFeed({super.key, required this.feedMode});
   @override
   State<_PostsFeed> createState() => _PostsFeedState();
 }
 
 class _PostsFeedState extends State<_PostsFeed> {
   late Future<List<Map<String, dynamic>>> _future;
+
+  Future<List<Map<String, dynamic>>> _loadPosts() {
+    if (widget.feedMode == 1) return YukuApi.posts(followingOnly: true);
+    if (widget.feedMode == 3) return YukuApi.posts(publicOnly: true);
+    return YukuApi.posts();
+  }
+
   @override
-  void initState() { super.initState(); _future = YukuApi.posts(); }
+  void initState() { super.initState(); _future = _loadPosts(); }
+
+  @override
+  void didUpdateWidget(covariant _PostsFeed oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.feedMode != widget.feedMode) _future = _loadPosts();
+  }
 
   Future<void> refresh() async {
-    final request = YukuApi.posts();
+    if (widget.feedMode == 2) return;
+    final request = _loadPosts();
     setState(() => _future = request);
     try {
       await request;
@@ -184,7 +199,21 @@ class _PostsFeedState extends State<_PostsFeed> {
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
+  Widget build(BuildContext context) {
+    if (widget.feedMode == 2) {
+      return Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+        child: const Column(children: [
+          Icon(Icons.live_tv_rounded, size: 38, color: MavoColors.violet),
+          SizedBox(height: 10),
+          Text('MAVO LIVE segera hadir', style: TextStyle(color: MavoColors.midnight, fontWeight: FontWeight.w800)),
+          SizedBox(height: 5),
+          Text('Fitur siaran langsung belum dibuka. Tab ini belum menampilkan siaran aktif.', textAlign: TextAlign.center, style: TextStyle(color: MavoColors.muted, fontSize: 12)),
+        ]),
+      );
+    }
+    return FutureBuilder<List<Map<String, dynamic>>>(
     future: _future,
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -202,6 +231,7 @@ class _PostsFeedState extends State<_PostsFeed> {
       return Column(children: posts.map((post) => _PostCard(post: post, onChanged: refresh)).toList());
     },
   );
+  }
 }
 class _PostCard extends StatefulWidget {
   final Map<String, dynamic> post;
