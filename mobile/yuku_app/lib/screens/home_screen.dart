@@ -195,6 +195,7 @@ class _PostsFeedState extends State<_PostsFeed> {
       final posts = snapshot.data ?? [];
       if (posts.isEmpty) return Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: const Center(child: Text("Belum ada postingan. Jadilah yang pertama berbagi cerita!", textAlign: TextAlign.center, style: TextStyle(color: MavoColors.muted))));
       return Column(children: posts.map((post) => _PostCard(post: post, onChanged: refresh)).toList());
+    },
   );
 }
 class _PostCard extends StatefulWidget {
