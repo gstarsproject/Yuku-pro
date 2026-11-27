@@ -14,14 +14,26 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedFeed = 0;
+  late Future<List<Map<String, dynamic>>> _storiesFuture;
   final GlobalKey<_PostsFeedState> _postsFeedKey = GlobalKey<_PostsFeedState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _storiesFuture = YukuApi.stories();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async {
-          await _postsFeedKey.currentState?.refresh();
+          final storiesRequest = YukuApi.stories();
+          setState(() => _storiesFuture = storiesRequest);
+          await Future.wait([
+            _postsFeedKey.currentState?.refresh() ?? Future<void>.value(),
+            storiesRequest.then<void>((_) {}, onError: (_) {}),
+          ]);
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -100,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Text('Stories', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
                 const SizedBox(height: 12),
                 FutureBuilder<List<Map<String, dynamic>>>(
-                  future: YukuApi.stories(),
+                  future: _storiesFuture,
                   builder: (context, snapshot) {
                     final stories = snapshot.data ?? const <Map<String, dynamic>>[];
                     final seen = <String>{};
