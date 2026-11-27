@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import '../services/MAVO_api.dart';
-import '../theme/MAVO_theme.dart';
+import '../services/mavo_api.dart';
+import '../theme/mavo_theme.dart';
 
 class StoriesScreen extends StatefulWidget {
   final String initialStory;
