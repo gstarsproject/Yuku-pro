@@ -21,6 +21,24 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void dispose() { _name.dispose(); _email.dispose(); _password.dispose(); super.dispose(); }
 
+  void _showPasswordResetInfo() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lupa Password?'),
+        content: const Text(
+          'Fitur reset password sedang disiapkan. Pengiriman kode verifikasi email akan diaktifkan setelah domain email resmi MAVO tersedia. Akun dan password kamu tetap aman.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Mengerti'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _busy = true; _error = null; });
@@ -75,6 +93,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   validator: (v) => _register
                     ? ((v == null || v.length < 10) ? 'Password minimal 10 karakter' : null)
                     : ((v == null || v.isEmpty) ? 'Masukkan password' : null)),
+                if (!_register)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _busy ? null : _showPasswordResetInfo,
+                      child: const Text('Lupa password?'),
+                    ),
+                  ),
                 if (_error != null) ...[
                   const SizedBox(height: 14),
                   Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
