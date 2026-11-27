@@ -309,3 +309,10 @@ Status awal tahap 1:
 - Catatan: Cloudflare Rate Limiting API bersifat approximate per lokasi Cloudflare; bukan pembatas global yang strict. Pembatas IP dapat memengaruhi beberapa pengguna yang berbagi IP jaringan seluler.
 - CORS masih menggunakan wildcard. Perlu menentukan domain web resmi sebelum mengubah allowlist; aplikasi Flutter native tidak bergantung pada CORS browser.
 - Tidak ada perubahan pada production Worker atau database production.
+## Pembaruan 2026-11-27 — Rate limit autentikasi aktif di preview
+- [x] GitHub Actions dipicu ulang melalui commit cd4e38136ec75bd3d9526270fdf3b496b24a5284 pada branch feature/mavo-user-auth.
+- [x] Cloudflare deployment terbaru mavo-preview pada 2026-11-27 12:58:01 UTC memiliki binding AUTH_IP_LIMITER dan AUTH_ID_LIMITER.
+- [x] Cloudflare deployment terbaru mavo-api-preview pada 2026-11-27 12:58:06 UTC memiliki binding AUTH_IP_LIMITER dan AUTH_ID_LIMITER.
+- [x] Kedua preview Worker kini memuat binding rate limiter; ini memverifikasi konfigurasi terpasang, bukan pengujian beban/429 end-to-end.
+- [ ] Uji runtime respons 429 dengan aman dan verifikasi batas per-IP/per-email tanpa mengunci pengguna sungguhan.
+- [ ] Rate limit belum diterapkan ke production.
