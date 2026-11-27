@@ -13,7 +13,8 @@ const toHex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padSt
 async function sha256(value: string) {
   return toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value))));
 }
-const PASSWORD_HASH_ITERATIONS = 100000; // Cloudflare Workers WebCrypto supports at most 100,000 PBKDF2 iterations.\nasync function makePasswordHash(password: string) {
+const PASSWORD_HASH_ITERATIONS = 100000; // Cloudflare Workers WebCrypto supports at most 100,000 PBKDF2 iterations.
+async function makePasswordHash(password: string) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: PASSWORD_HASH_ITERATIONS, hash: "SHA-256" }, key, 256));
