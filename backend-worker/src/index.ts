@@ -1,7 +1,17 @@
 import { Client } from "pg";
-interface Env { HYPERDRIVE: Hyperdrive; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; }
+interface Env { HYPERDRIVE: Hyperdrive; AUTH_IP_LIMITER: RateLimit; AUTH_ID_LIMITER: RateLimit; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; }
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
+async function authRateLimit(env: Env, request: Request, scope: "register" | "login", identifier?: string) {
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const ipResult = await env.AUTH_IP_LIMITER.limit({ key: ip });
+  if (!ipResult.success) return json({ success: false, message: "Terlalu banyak percobaan. Coba lagi sebentar." }, 429);
+  if (identifier) {
+    const idResult = await env.AUTH_ID_LIMITER.limit({ key: scope + ":" + identifier });
+    if (!idResult.success) return json({ success: false, message: "Terlalu banyak percobaan untuk akun ini. Coba lagi sebentar." }, 429);
+  }
+  return null;
+}
 async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
   const c = new Client({ connectionString: env.HYPERDRIVE.connectionString });
   try { await c.connect(); return await fn(c); } finally { await c.end().catch(() => undefined); }
@@ -132,10 +142,17 @@ export default {
 
   if (path === "/api/v1/auth/register" && request.method === "POST") {
    try {
+    const ipLimit = await authRateLimit(env, request, "register");
+    if (ipLimit) return ipLimit;
+   try {
     const body = await readRequestBody(request);
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
+    const identityLimit = await authRateLimit(env, request, "register", email);
+    if (identityLimit) return identityLimit;
     const password = typeof body.password === "string" ? body.password : "";
+    const identityLimit = await authRateLimit(env, request, "login", email);
+    if (identityLimit) return identityLimit;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 10 || password.length > 128 || displayName.length < 2 || displayName.length > 40)
       return json({success:false,message:"Email, password (10–128 karakter), atau nama tidak valid"},400);
     const passwordHash = await makePasswordHash(password);
@@ -157,6 +174,9 @@ export default {
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Registration failed",e); return json({success:false,message:"Pendaftaran gagal. Periksa data dan coba lagi."},400); }
   }
   if (path === "/api/v1/auth/user/login" && request.method === "POST") {
+   try {
+    const ipLimit = await authRateLimit(env, request, "login");
+    if (ipLimit) return ipLimit;
    try {
     const body = await readRequestBody(request);
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
