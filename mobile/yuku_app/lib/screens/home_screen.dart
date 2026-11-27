@@ -99,19 +99,39 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('Stories', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 94,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: const [
-                      _StoryItem(label: 'Your story', color: MavoColors.violet, isAdd: true),
-                      _StoryItem(label: 'Discover', color: MavoColors.coral),
-                      _StoryItem(label: 'Travel', color: MavoColors.aqua),
-                      _StoryItem(label: 'Lifestyle', color: Color(0xFFFFB84D)),
-                      _StoryItem(label: 'Creators', color: Color(0xFF8A6BFF)),
-                      _StoryItem(label: 'Community', color: Color(0xFFEF70B5)),
-                    ],
-                  ),
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: YukuApi.stories(),
+                  builder: (context, snapshot) {
+                    final stories = snapshot.data ?? const <Map<String, dynamic>>[];
+                    final seen = <String>{};
+                    final visibleStories = stories.where((story) {
+                      final id = (story['authorId'] ?? story['userId'] ?? '').toString();
+                      if (id.isEmpty || seen.contains(id)) return false;
+                      seen.add(id);
+                      return true;
+                    }).take(12).toList();
+                    return SizedBox(
+                      height: 94,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          const _StoryItem(label: 'Story kamu', color: MavoColors.violet, isAdd: true),
+                          if (snapshot.connectionState == ConnectionState.waiting && stories.isEmpty)
+                            const SizedBox(width: 65, child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))),
+                          ...visibleStories.asMap().entries.map((entry) {
+                            final story = entry.value;
+                            final name = (story['authorName'] ?? 'Creator').toString();
+                            final colors = [MavoColors.coral, MavoColors.aqua, Color(0xFFFFB84D), Color(0xFF8A6BFF), Color(0xFFEF70B5)];
+                            return _StoryItem(label: name, color: colors[entry.key % colors.length]);
+                          }),
+                          if (snapshot.hasError)
+                            const SizedBox(width: 105, child: Center(child: Text('Story gagal dimuat', style: TextStyle(fontSize: 10, color: MavoColors.muted)))),
+                          if (snapshot.hasData && stories.isEmpty)
+                            const SizedBox(width: 125, child: Center(child: Text('Belum ada Story', style: TextStyle(fontSize: 10, color: MavoColors.muted)))),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ]),
             ),
