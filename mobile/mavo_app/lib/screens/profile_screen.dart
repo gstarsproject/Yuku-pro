@@ -118,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Expanded(child: OutlinedButton(onPressed: _editProfile, child: const Text('Edit Profil'))),
             const SizedBox(width: 9),
             Expanded(child: OutlinedButton(onPressed: () async {
-              final shareText = 'Kenali saya di MAVO!\\n$name\\n$bio';
+              final shareText = 'Kenali saya di MAVO!\n$name\n$bio';
               await Clipboard.setData(ClipboardData(text: shareText));
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Info profil disalin. Kamu bisa membagikannya lewat aplikasi lain.')));
             }, child: const Text('Salin Profil'))),
