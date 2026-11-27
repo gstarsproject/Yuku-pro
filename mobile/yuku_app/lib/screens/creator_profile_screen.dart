@@ -19,7 +19,7 @@ class CreatorProfileScreen extends StatefulWidget {
 
 class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   bool _following = false;
-  int _followers = 1280;
+  int _followers = 0;
   int _followingCount = 0;
   bool _loadingFollow = false;
   String? _followError;
@@ -66,6 +66,63 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     }
   }
 
+  Future<void> _showRelations(String type) async {
+    final id = widget.creatorUserId;
+    if (id == null || id.isEmpty) return;
+    final title = type == 'followers' ? 'Pengikut' : 'Mengikuti';
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => SizedBox(
+        height: MediaQuery.of(sheetContext).size.height * .72,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+          child: Column(
+            children: [
+              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+              const SizedBox(height: 12),
+              Expanded(
+                child: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: YukuApi.userRelations(id, type: type),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                    if (snapshot.hasError) return Center(child: Text('Gagal memuat $title: ${snapshot.error}'));
+                    final users = snapshot.data ?? [];
+                    if (users.isEmpty) return Center(child: Text(type == 'followers' ? 'Belum ada pengikut.' : 'Belum mengikuti siapa pun.'));
+                    return ListView.separated(
+                      itemCount: users.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final user = users[index];
+                        final name = (user['displayName'] ?? 'Pengguna MAVO').toString();
+                        final userId = (user['id'] ?? '').toString();
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: MavoColors.violetSoft,
+                            child: Text(name.isEmpty ? 'M' : name.substring(0, 1).toUpperCase(), style: const TextStyle(color: MavoColors.violet, fontWeight: FontWeight.w800)),
+                          ),
+                          title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          subtitle: Text(user['following'] == true ? 'Mengikuti kamu juga' : 'Pengguna MAVO'),
+                          onTap: userId.isEmpty ? null : () {
+                            Navigator.pop(sheetContext);
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => CreatorProfileScreen(creatorName: name, creatorUserId: userId),
+                            ));
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -104,9 +161,9 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           _Metric(value: '24', label: 'Postingan'),
           const SizedBox(width: 34),
-          _Metric(value: _followers.toString(), label: 'Pengikut'),
+          InkWell(onTap: widget.creatorUserId == null ? null : () => _showRelations('followers'), child: _Metric(value: _followers.toString(), label: 'Pengikut')),
           const SizedBox(width: 34),
-          _Metric(value: _followingCount.toString(), label: 'Mengikuti'),
+          InkWell(onTap: widget.creatorUserId == null ? null : () => _showRelations('following'), child: _Metric(value: _followingCount.toString(), label: 'Mengikuti')),
         ]),
         const SizedBox(height: 20),
         Row(children: [
