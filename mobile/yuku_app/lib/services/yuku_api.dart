@@ -3,7 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class YukuApi {
-  static const String baseUrl = 'https://mavo-preview.gstars-business.workers.dev';
+  static const String baseUrl = 'https://mavo-api-preview.gstars-business.workers.dev';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
   static const String _tokenKey = 'mavo_access_token';
 
