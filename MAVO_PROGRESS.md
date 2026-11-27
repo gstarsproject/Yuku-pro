@@ -450,3 +450,11 @@ Status awal tahap 1:
 - [x] Found and corrected the timestamp formatter's escaped regex so SigV4 `X-Amz-Date` removes milliseconds correctly (commit `23d4f51977280f18b169fc446d9d1bfd9ffd4455`).
 - [ ] Latest Preview Worker CI/deploy run `46022757977` is still running; wait for success before asking for another device test.
 - Production remains untouched.
+
+
+## Third Neon 403 correction deployed — 2026-11-27
+- [x] Latest Worker commit `23d4f51977280f18b169fc446d9d1bfd9ffd4455` passed Preview validation.
+- [x] GitHub Actions run `46022757977` completed successfully; both `mavo-preview` and alternate Preview hostname deployments succeeded.
+- [x] Rechecked Neon TEST storage after deployment; no successful upload/object exists yet. No new storage log records in the last hour.
+- [ ] Await a fresh real-device upload attempt to determine whether 403 is resolved. If it persists, capture the exact failing stage and S3 response body/request ID from the app/Worker rather than guessing further.
+- Production remains untouched.
