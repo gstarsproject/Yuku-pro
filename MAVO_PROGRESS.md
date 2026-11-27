@@ -276,3 +276,11 @@ Status awal tahap 1:
 - [ ] Rate limiting autentikasi/interaksi dan pembatasan CORS ke domain aplikasi masih menjadi pekerjaan keamanan sebelum rilis publik.
 - [ ] Secret Object Storage tetap harus dikonfigurasi manual di Cloudflare; upload media belum dinyatakan berfungsi sampai uji runtime berhasil.
 - Catatan: CI dan deploy preview sukses bukan pengganti pengujian end-to-end dari aplikasi Android.
+
+## Pembaruan validasi request API — 2026-11-27 (commit fdf9d87)
+- [x] Request JSON terlalu besar sekarang menghasilkan HTTP 413 dengan pesan yang konsisten.
+- [x] JSON rusak, UTF-8 tidak valid, body kosong, dan payload non-object menghasilkan HTTP 400 dengan pesan yang aman.
+- [x] Penanganan error request body dipasang pada route-route yang memiliki blok catch agar tidak tertelan sebagai error umum.
+- [ ] Tetap perlu validasi runtime di preview untuk status 400/413; pemeriksaan TypeScript dan Wrangler CI menunggu hasil workflow.
+- [ ] Rate limiting autentikasi dan pembatasan CORS belum diterapkan; jangan anggap API siap rilis publik.
+
