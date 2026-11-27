@@ -433,3 +433,11 @@ Status awal tahap 1:
 - [x] Compared Neon's own presigned upload URL format with the Worker implementation. Neon signs both `content-type` and `host`; the custom Worker signer had signed only `host`.
 - [x] Updated Worker presigning to sign `content-type;host` for PUT requests and use deterministic bytewise ordering for canonical query parameters (commit `8679a35d4cbada49d90cc307d301db81b95473dd`).
 - [ ] Await preview CI validation/deployment and then retest a real photo upload + readback. Production remains untouched.
+
+
+## MAVO Neon upload signature fix — Preview deployment — 2026-11-27
+- [x] Worker CI run `46021309637` passed validation and completed isolated Preview deployment.
+- [x] `Deploy mavo-preview only` succeeded.
+- [x] `Deploy alternate preview hostname` succeeded.
+- [ ] Mobile photo upload and readback still need real-device verification. A successful deploy is not proof that Neon accepts the PUT or that the image renders after reload.
+- Production remains untouched.
