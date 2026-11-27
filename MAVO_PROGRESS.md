@@ -41,6 +41,18 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] APK arm64 preview berhasil dibangun dan diunggah sebagai artifact `mavo-android-arm64-preview` (run `45982722585`, artifact `15189528598`, dibuat 2026-11-27 10:34 UTC).
 - [ ] Uji di perangkat Samsung: akun kedua Unfollow akun pertama, kembali ke Home, tarik layar ke bawah, lalu pastikan postingan FOLLOWERS tidak lagi terlihat.
 
+## Pembaruan 2026-11-27 — Like dan Komentar (implementasi awal)
+- [x] Tambah model Prisma `PostLike` dan `PostComment` beserta relasi ke User dan Post.
+- [x] Tambah migration SQL `20261127040000_add_post_likes_comments`.
+- [x] Terapkan tabel dan indeks Like/Komentar pada Neon branch pengujian `mavo-test` (project `lucky-truth-84216061`, branch `br-divine-shape-bi7a8pkw`); produksi tidak disentuh.
+- [x] Tambah Worker API untuk Like/Unlike, daftar komentar, dan kirim komentar; endpoint memeriksa sesi dan hak akses audience postingan.
+- [x] Feed API mengembalikan `likesCount`, `commentsCount`, dan `likedByMe`.
+- [x] Sambungkan tombol Like dan panel Komentar di Flutter ke API.
+- [x] Worker preview berhasil typecheck dan dry-run; deploy preview `mavo-preview` dan `mavo-api-preview` selesai pada run `45985452828`.
+- [ ] Tunggu Flutter analyze/test dan build APK arm64 untuk commit `287db1902788615e03462cd96d63cebffc7d01d3`.
+- [ ] Uji Like/Unlike dan kirim/baca komentar dari dua akun di APK; pastikan hitungan konsisten setelah refresh.
+- Catatan: fitur belum dinyatakan selesai sampai APK lolos CI dan diuji langsung di perangkat.
+ 
 ## Batasan saat ini
 - Fitur postingan pada tahap ini hanya teks maksimal 2.000 karakter.
 - Foto/video, like server-side, komentar, share, story, hashtag, dan trending belum diaktifkan.
