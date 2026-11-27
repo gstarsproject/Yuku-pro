@@ -84,3 +84,22 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - CI PASS dan catatan deployment belum membuktikan semua alur end-to-end sudah berfungsi dari APK.
 - Database pengujian adalah branch Neon `mavo-test`, bukan database produksi.
 - Jangan deploy ke produksi atau merge PR tanpa persetujuan.
+
+
+## Pembaruan 2026-11-27 — Chat pribadi dan Notifikasi (implementasi awal)
+- [x] Tambah `Conversation.directKey` unik untuk memastikan satu percakapan langsung per pasangan pengguna.
+- [x] Tambah model `ConversationParticipant` untuk membatasi akses percakapan hanya kepada anggota.
+- [x] Tambah `Message.readAt` untuk status pesan dibaca.
+- [x] Tambah model `Notification` dengan penerima, aktor, tipe, entitas, waktu, dan status dibaca.
+- [x] Buat migration `20261127080000_add_direct_chat_notifications`.
+- [x] Terapkan migration pada Neon TEST branch `mavo-test`; tabel `ConversationParticipant`, `Notification`, kolom `Conversation.directKey`, dan `Message.readAt` terverifikasi. Produksi tidak disentuh.
+- [x] Tambah Worker API pencarian pengguna, buat/daftar percakapan 1:1, baca/kirim pesan, tandai percakapan dibaca, daftar notifikasi, dan tandai notifikasi dibaca.
+- [x] Semua route chat memerlukan sesi login dan keanggotaan percakapan sebelum membaca/mengirim pesan.
+- [x] Notifikasi in-app dibuat untuk pesan baru, follow baru, Like, dan komentar.
+- [x] Tambah metode API Flutter untuk pencarian pengguna, percakapan, pesan, dan notifikasi.
+- [x] Ganti Inbox demo menjadi daftar percakapan server, dialog Chat Baru, layar chat, dan layar notifikasi.
+- [x] Backend CI PASS dan Cloudflare Worker CI PASS pada commit `9495f226bd16d3888b8743f52eb5002b097b5721`.
+- [ ] Flutter Analyze, Flutter Tests, dan build APK pada commit `9495f226bd16d3888b8743f52eb5002b097b5721` masih berjalan saat catatan ini dibuat.
+- [ ] Deploy Worker preview terbaru setelah seluruh CI lulus.
+- [ ] Uji chat dua akun (buat percakapan, kirim/baca pesan, unread/read) dan notifikasi dua akun melalui APK batch.
+- Catatan batasan: notifikasi saat ini adalah notifikasi dalam aplikasi (in-app), belum push notification OS; chat saat ini teks 1:1, belum grup, gambar, file, audio, atau panggilan.
