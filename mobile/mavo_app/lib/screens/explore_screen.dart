@@ -42,10 +42,38 @@ class _ServiceCard extends StatelessWidget {
  Widget build(BuildContext context){
   final price=item['priceAmount']??0;
   final verified=item['verificationStatus']=='VERIFIED';
-  return Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(17)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+  return Material(color:Colors.white,borderRadius:BorderRadius.circular(17),child:InkWell(borderRadius:BorderRadius.circular(17),onTap:()=>showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,builder:(context)=>_ServiceDetails(item:item)),child:Container(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
    Row(children:[CircleAvatar(backgroundColor:const Color(0xFFEAF1FF),child:Text((item['providerName']??'Y').toString().substring(0,1).toUpperCase(),style:const TextStyle(color:MAVOColors.navy,fontWeight:FontWeight.bold))),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(item['providerName']??'MAVO Provider',style:const TextStyle(fontWeight:FontWeight.bold)),Text(item['categoryName']??'Layanan',style:const TextStyle(fontSize:12,color:MAVOColors.muted))])),if(verified)const Icon(Icons.verified,color:MAVOColors.blue,size:19)]),
    const SizedBox(height:14),Text(item['title']??'Layanan',style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold)),const SizedBox(height:5),Text(item['description']??'',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:MAVOColors.muted)),const SizedBox(height:12),
    Row(children:[Expanded(child:Text('${item['city']??'Online'} · ${item['priceUnit']??''}',style:const TextStyle(fontSize:12,color:MAVOColors.muted))),Text('Rp ${price.toString()}',style:const TextStyle(color:MAVOColors.blue,fontWeight:FontWeight.w800))]),
-  ]));
+  ]))));
+ }
+}
+
+class _ServiceDetails extends StatelessWidget {
+ final Map<String,dynamic> item;
+ const _ServiceDetails({required this.item});
+ @override
+ Widget build(BuildContext context) {
+  final name=(item['providerName']??'MAVO Provider').toString();
+  final title=(item['title']??'Layanan').toString();
+  final description=(item['description']??'Belum ada deskripsi.').toString();
+  final price=item['priceAmount']??0;
+  final verified=item['verificationStatus']=='VERIFIED';
+  return SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(22,8,22,28),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Text(title,style:Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.w800,color:MAVOColors.navy)),
+   const SizedBox(height:12),
+   Row(children:[CircleAvatar(backgroundColor:const Color(0xFFEAF1FF),child:Text(name.isEmpty?'M':name.substring(0,1).toUpperCase(),style:const TextStyle(color:MAVOColors.navy,fontWeight:FontWeight.bold))),const SizedBox(width:10),Expanded(child:Text(name,style:const TextStyle(fontWeight:FontWeight.w700))),if(verified)const Icon(Icons.verified,color:MAVOColors.blue)]),
+   const SizedBox(height:16),
+   Text(description,style:const TextStyle(height:1.5,color:MAVOColors.ink)),
+   const SizedBox(height:14),
+   Text('Kategori: ${item['categoryName']??'Layanan'}'),
+   Text('Lokasi: ${item['city']??'Online'}'),
+   Text('Harga: Rp ${price.toString()} ${item['priceUnit']??''}',style:const TextStyle(fontWeight:FontWeight.w800,color:MAVOColors.blue)),
+   const SizedBox(height:18),
+   const Text('Pemesanan melalui aplikasi sedang disiapkan. Jangan melakukan pembayaran di luar alur resmi MAVO.',style:TextStyle(fontSize:12,color:MAVOColors.muted,height:1.4)),
+   const SizedBox(height:14),
+   SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>Navigator.pop(context),child:const Text('Tutup'))),
+  ])));
  }
 }
