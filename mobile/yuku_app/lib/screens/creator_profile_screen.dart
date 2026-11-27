@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/yuku_theme.dart';
-import '../services/yuku_api.dart';
+import '../theme/MAVO_theme.dart';
+import '../services/MAVO_api.dart';
 import 'inbox_screen.dart';
 
 class CreatorProfileScreen extends StatefulWidget {
@@ -34,14 +34,14 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     _loadFollowStatus();
     _loadCreatorProfile();
     final id = widget.creatorUserId;
-    _postsFuture = id == null || id.isEmpty ? Future.value([]) : YukuApi.posts(authorId: id);
+    _postsFuture = id == null || id.isEmpty ? Future.value([]) : MAVOApi.posts(authorId: id);
   }
 
   Future<void> _loadCreatorProfile() async {
     final id = widget.creatorUserId;
     if (id == null || id.isEmpty) { if (mounted) setState(() => _profileLoading = false); return; }
     try {
-      final data = await YukuApi.userProfile(id);
+      final data = await MAVOApi.userProfile(id);
       if (mounted) setState(() { _profile = data; _profileLoading = false; });
     } catch (_) { if (mounted) setState(() => _profileLoading = false); }
   }
@@ -50,7 +50,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     final id = widget.creatorUserId;
     if (id == null || id.isEmpty) return;
     try {
-      final data = await YukuApi.followStatus(id);
+      final data = await MAVOApi.followStatus(id);
       if (!mounted) return;
       setState(() {
         _following = data['following'] == true;
@@ -67,7 +67,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     if (id == null || id.isEmpty || _loadingFollow) return;
     setState(() => _loadingFollow = true);
     try {
-      final data = await YukuApi.setFollow(id, follow: !_following);
+      final data = await MAVOApi.setFollow(id, follow: !_following);
       if (!mounted) return;
       setState(() {
         _following = data['following'] == true;
@@ -100,7 +100,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
               const SizedBox(height: 12),
               Expanded(
                 child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: YukuApi.userRelations(id, type: type),
+                  future: MAVOApi.userRelations(id, type: type),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
                     if (snapshot.hasError) return Center(child: Text('Gagal memuat $title: ${snapshot.error}'));
