@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/yuku_api.dart';
-import '../theme/yuku_theme.dart';
+import '../services/MAVO_api.dart';
+import '../theme/MAVO_theme.dart';
 
 class AuthScreen extends StatefulWidget {
   final ValueChanged<Map<String, dynamic>> onAuthenticated;
@@ -44,8 +44,8 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() { _busy = true; _error = null; });
     try {
       final user = _register
-        ? await YukuApi.register(email: _email.text, password: _password.text, displayName: _name.text)
-        : await YukuApi.login(email: _email.text, password: _password.text);
+        ? await MAVOApi.register(email: _email.text, password: _password.text, displayName: _name.text)
+        : await MAVOApi.login(email: _email.text, password: _password.text);
       if (mounted) widget.onAuthenticated(user);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
