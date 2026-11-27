@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/yuku_api.dart';
-import '../theme/yuku_theme.dart';
+import '../services/MAVO_api.dart';
+import '../theme/MAVO_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Future<void> Function()? onLogout;
@@ -24,14 +24,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _loadProfile();
     final id = widget.user?['id']?.toString() ?? '';
-    _postsFuture = id.isEmpty ? Future.value([]) : YukuApi.posts(authorId: id);
+    _postsFuture = id.isEmpty ? Future.value([]) : MAVOApi.posts(authorId: id);
   }
 
   Future<void> _loadProfile() async {
     final id = widget.user?['id']?.toString() ?? '';
     if (id.isEmpty) { if (mounted) setState(() { _loading = false; _error = 'Akun tidak ditemukan.'; }); return; }
     try {
-      final data = await YukuApi.userProfile(id);
+      final data = await MAVOApi.userProfile(id);
       if (mounted) setState(() { _profile = data; _loading = false; _error = null; });
     } catch (e) {
       if (mounted) setState(() { _loading = false; _error = e.toString().replaceFirst('Exception: ', ''); });
@@ -71,9 +71,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (selectedPhoto != null) {
           final ext = selectedPhoto!.name.toLowerCase().split('.').last;
           final mime = switch (ext) { 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', _ => 'image/jpeg' };
-          avatarMedia = await YukuApi.uploadMediaFile(file: File(selectedPhoto!.path), mediaType: 'IMAGE', contentType: mime);
+          avatarMedia = await MAVOApi.uploadMediaFile(file: File(selectedPhoto!.path), mediaType: 'IMAGE', contentType: mime);
         }
-        final result = await YukuApi.updateProfile(displayName: name.text, bio: bio.text, avatarMedia: avatarMedia);
+        final result = await MAVOApi.updateProfile(displayName: name.text, bio: bio.text, avatarMedia: avatarMedia);
         if (mounted) setState(() => _profile = {..._profile, ...result});
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil berhasil diperbarui.')));
       } catch (e) {
