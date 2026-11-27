@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 import 'stories_screen.dart';
@@ -271,7 +272,12 @@ class _PostCardState extends State<_PostCard> {
           const Icon(Icons.more_horiz, color: MavoColors.muted),
         ]),
         const SizedBox(height: 13),
-        Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
+        if (content.isNotEmpty) Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
+        if ((widget.post['locationName'] ?? '').toString().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Row(children: [const Icon(Icons.location_on_outlined, size: 15, color: MavoColors.violet), const SizedBox(width: 4), Text(widget.post['locationName'].toString(), style: const TextStyle(fontSize: 11, color: MavoColors.violet))])),
+        if (widget.post['media'] is List && (widget.post['media'] as List).isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Column(children: (widget.post['media'] as List).whereType<Map<String,dynamic>>().map((item) => _MavoPostMedia(mediaId: item['id'].toString(), mediaType: item['mediaType'].toString())).toList()),
+        ],
         const Divider(height: 22),
         Row(children: [
           IconButton(
@@ -524,4 +530,41 @@ class _PillarCard extends StatelessWidget {
       Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9, color: MavoColors.muted)),
     ]),
   );
+}
+
+
+class _MavoPostMedia extends StatelessWidget {
+  final String mediaId;
+  final String mediaType;
+  const _MavoPostMedia({required this.mediaId, required this.mediaType});
+  @override
+  Widget build(BuildContext context) => FutureBuilder<String>(
+    future: YukuApi.mediaDownloadUrl(mediaId),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
+      if (snapshot.hasError || !snapshot.hasData) return const SizedBox(height: 80, child: Center(child: Icon(Icons.broken_image_outlined, color: MavoColors.muted)));
+      final url = snapshot.data!;
+      if (mediaType == 'VIDEO') return _MavoNetworkVideo(url: url);
+      return ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(url, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox(height: 80, child: Center(child: Icon(Icons.broken_image_outlined)))));
+    },
+  );
+}
+
+class _MavoNetworkVideo extends StatefulWidget {
+  final String url;
+  const _MavoNetworkVideo({required this.url});
+  @override
+  State<_MavoNetworkVideo> createState() => _MavoNetworkVideoState();
+}
+class _MavoNetworkVideoState extends State<_MavoNetworkVideo> {
+  late final VideoPlayerController _controller;
+  @override
+  void initState() { super.initState(); _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))..initialize().then((_) { if (mounted) setState(() {}); }); }
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    if (!_controller.value.isInitialized) return const SizedBox(height: 180, child: Center(child: CircularProgressIndicator()));
+    return ClipRRect(borderRadius: BorderRadius.circular(12), child: AspectRatio(aspectRatio: _controller.value.aspectRatio, child: Stack(alignment: Alignment.center, children: [VideoPlayer(_controller), IconButton(onPressed: () => setState(() => _controller.value.isPlaying ? _controller.pause() : _controller.play()), iconSize: 48, color: Colors.white, icon: Icon(_controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill))])));
+  }
 }
