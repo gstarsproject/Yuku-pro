@@ -161,6 +161,18 @@ export default {
     });
    } catch(e) { console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
   }
+  if (path === "/api/v1/users/search" && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const query = (url.searchParams.get("q") || "").trim();
+      if (query.length < 2 || query.length > 60) return json({success:true,count:0,data:[]});
+      const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\\'ACTIVE\\' AND u."role"<>\\'ADMIN\\' AND u."id"<>$1 AND p."displayName" ILIKE $2 ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query.replace(/[\\%_]/g,"\\  if (path === "/api/v1/conversations" && ["GET","POST"].includes(request.method)) {") + '%']);
+      return json({success:true,count:result.rowCount,data:result.rows});
+    });
+   } catch(e) { console.error("User search failed",e); return json({success:false,message:"Pencarian pengguna gagal."},503); }
+  }
   if (path === "/api/v1/conversations" && ["GET","POST"].includes(request.method)) {
    try {
     return await db(env, async c => {
