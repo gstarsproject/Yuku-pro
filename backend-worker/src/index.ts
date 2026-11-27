@@ -146,6 +146,21 @@ export default {
     });
    } catch(e) { console.error("Follow operation failed",e); return json({success:false,message:"Tidak dapat memperbarui pengikut."},503); }
   }
+  const relationMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/relations$/i);
+  if (relationMatch && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const viewer = await getSessionUser(c,request);
+      if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const targetId = relationMatch[1];
+      const type = url.searchParams.get("type") === "following" ? "following" : "followers";
+      const result = type === "followers"
+        ? await c.query('SELECT u."id",p."displayName",p."avatarUrl",EXISTS(SELECT 1 FROM "Follow" mine WHERE mine."followerId"=$1 AND mine."followingId"=u."id") AS "following" FROM "Follow" f JOIN "User" u ON u."id"=f."followerId" JOIN "Profile" p ON p."userId"=u."id" WHERE f."followingId"=$2 AND u."status"=\'ACTIVE\' ORDER BY f."createdAt" DESC LIMIT 200',[viewer.id,targetId])
+        : await c.query('SELECT u."id",p."displayName",p."avatarUrl",EXISTS(SELECT 1 FROM "Follow" mine WHERE mine."followerId"=$1 AND mine."followingId"=u."id") AS "following" FROM "Follow" f JOIN "User" u ON u."id"=f."followingId" JOIN "Profile" p ON p."userId"=u."id" WHERE f."followerId"=$2 AND u."status"=\'ACTIVE\' ORDER BY f."createdAt" DESC LIMIT 200',[viewer.id,targetId]);
+      return json({success:true,count:result.rowCount,data:result.rows});
+    });
+   } catch(e) { console.error("User relations request failed",e); return json({success:false,message:"Daftar pengikut gagal dimuat."},503); }
+  }
   if (path === "/api/v1/posts" && request.method === "POST") {
    try {
     const body = await readRequestBody(request);
