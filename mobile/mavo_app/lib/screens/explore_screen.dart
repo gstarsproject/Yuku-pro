@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/MAVO_api.dart';
-import '../theme/MAVO_theme.dart';
+import '../services/mavo_api.dart';
+import '../theme/mavo_theme.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
