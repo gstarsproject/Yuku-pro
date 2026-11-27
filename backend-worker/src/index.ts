@@ -161,7 +161,7 @@ export default {
     return await db(env, async c => {
       const viewer = await getSessionUser(c,request);
       if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
-      const result = await c.query(`SELECT u."id",pr."displayName",pr."avatarUrl",pr."bio",(SELECT COUNT(*)::int FROM "Post" p WHERE p."authorId"=u."id") AS "postsCount",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followingId"=u."id") AS "followers",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followerId"=u."id") AS "followingCount",COALESCE(pp."verificationStatus"='VERIFIED',FALSE) AS "isVerified" FROM "User" u LEFT JOIN "Profile" pr ON pr."userId"=u."id" LEFT JOIN "ProviderProfile" pp ON pp."userId"=u."id" WHERE u."id"=$1 AND u."status"='ACTIVE' AND u."role"<>'ADMIN' LIMIT 1`,[profileMatch[1]]);
+      const result = await c.query(`SELECT u."id",pr."displayName",pr."avatarUrl",(SELECT ma."id" FROM "MediaAsset" ma WHERE ma."ownerId"=u."id" AND ma."objectKey"=pr."avatarUrl" LIMIT 1) AS "avatarMediaId",pr."bio",(SELECT COUNT(*)::int FROM "Post" p WHERE p."authorId"=u."id") AS "postsCount",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followingId"=u."id") AS "followers",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followerId"=u."id") AS "followingCount",COALESCE(pp."verificationStatus"='VERIFIED',FALSE) AS "isVerified" FROM "User" u LEFT JOIN "Profile" pr ON pr."userId"=u."id" LEFT JOIN "ProviderProfile" pp ON pp."userId"=u."id" WHERE u."id"=$1 AND u."status"='ACTIVE' AND u."role"<>'ADMIN' LIMIT 1`,[profileMatch[1]]);
       if (!result.rows[0]) return json({success:false,message:"Profil tidak ditemukan."},404);
       return json({success:true,data:result.rows[0]});
     });
@@ -180,9 +180,19 @@ export default {
       const avatarUrl = typeof body.avatarUrl === "string" ? body.avatarUrl.trim() : current.rows[0].avatarUrl;
       if (displayName.length < 2 || displayName.length > 40) return json({success:false,message:"Nama harus 2–40 karakter."},400);
       if (typeof bio === "string" && bio.length > 1000) return json({success:false,message:"Bio maksimal 1.000 karakter."},400);
-      if (avatarUrl && (!/^https:\/\//i.test(avatarUrl) || avatarUrl.length > 2000)) return json({success:false,message:"URL foto harus menggunakan HTTPS."},400);
+      const avatarMedia = body.avatarMedia && typeof body.avatarMedia === "object" ? body.avatarMedia as Record<string, unknown> : null;
+if (avatarMedia) {
+  const key = typeof avatarMedia.objectKey === "string" ? avatarMedia.objectKey : "";
+  const type = typeof avatarMedia.contentType === "string" ? avatarMedia.contentType : "";
+  const size = Number(avatarMedia.byteSize || 0);
+  if (!key.startsWith("users/" + viewer.id + "/") || !["image/jpeg","image/png","image/webp","image/gif"].includes(type) || !Number.isSafeInteger(size) || size < 1 || size > 20*1024*1024) return json({success:false,message:"Foto profil tidak valid."},400);
+  avatarUrl = key;
+  await c.query('INSERT INTO "MediaAsset" ("id","ownerId","mediaType","objectKey","contentType","byteSize","sortOrder","createdAt") VALUES ($1,$2,\'IMAGE\',$3,$4,$5,0,NOW()) ON CONFLICT ("objectKey") DO NOTHING', [crypto.randomUUID(),viewer.id,key,type,size]);
+} else if (avatarUrl && (!/^https:\/\//i.test(avatarUrl) || avatarUrl.length > 2000)) return json({success:false,message:"URL foto harus menggunakan HTTPS."},400);
       const result = await c.query('UPDATE "Profile" SET "displayName"=$2,"bio"=$3,"avatarUrl"=$4,"updatedAt"=NOW() WHERE "userId"=$1 RETURNING "userId","displayName","avatarUrl","bio"',[viewer.id,displayName,bio || null,avatarUrl || null]);
-      return json({success:true,data:result.rows[0]});
+      const saved = result.rows[0];
+      const media = await c.query('SELECT "id" FROM "MediaAsset" WHERE "ownerId"=$1 AND "objectKey"=$2 LIMIT 1', [viewer.id,saved.avatarUrl]);
+      return json({success:true,data:{...saved,avatarMediaId:media.rows[0]?.id || null}});
     });
    } catch(e) { console.error("Profile update failed",e); return json({success:false,message:"Profil gagal disimpan."},503); }
   }
