@@ -257,8 +257,10 @@ model VerificationDocument {
 model Conversation {
   id         String @id @default(uuid()) @db.Uuid
   bookingId  String? @db.Uuid
+  directKey  String? @unique
   createdAt  DateTime @default(now())
   messages   Message[]
+  participants ConversationParticipant[]
 }
 
 model Message {
