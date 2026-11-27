@@ -26,12 +26,15 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   String? _followError;
   Map<String, dynamic> _profile = {};
   bool _profileLoading = true;
+  late Future<List<Map<String, dynamic>>> _postsFuture;
 
   @override
   void initState() {
     super.initState();
     _loadFollowStatus();
     _loadCreatorProfile();
+    final id = widget.creatorUserId;
+    _postsFuture = id == null || id.isEmpty ? Future.value([]) : YukuApi.posts(authorId: id);
   }
 
   Future<void> _loadCreatorProfile() async {
@@ -216,20 +219,68 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
         const SizedBox(height: 14),
         const Text('Postingan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: MavoColors.midnight)),
         const SizedBox(height: 12),
-        Container(
-          height: 190,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: const LinearGradient(colors: [MavoColors.midnight, MavoColors.violet, MavoColors.coral]),
+        if (widget.creatorUserId == null)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: Text('Profil contoh', style: TextStyle(color: MavoColors.muted))),
+          )
+        else
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _postsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
+              }
+              if (snapshot.hasError) {
+                return Padding(padding: const EdgeInsets.all(18), child: Center(child: Text('Postingan gagal dimuat.', style: TextStyle(color: MavoColors.muted))));
+              }
+              final posts = snapshot.data ?? [];
+              if (posts.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: Column(children: [
+                    Icon(Icons.photo_library_outlined, size: 38, color: MavoColors.violet),
+                    SizedBox(height: 8),
+                    Text('Belum ada postingan yang bisa dilihat.', textAlign: TextAlign.center,
+                      style: TextStyle(color: MavoColors.muted)),
+                  ])),
+                );
+              }
+              return Column(children: posts.map((post) => Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: MavoColors.violetSoft),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(post['content']?.toString() ?? '', style: const TextStyle(color: MavoColors.midnight, height: 1.45)),
+                  if ((post['locationName'] ?? '').toString().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      const Icon(Icons.location_on_outlined, size: 14, color: MavoColors.muted),
+                      const SizedBox(width: 4),
+                      Text(post['locationName'].toString(), style: const TextStyle(fontSize: 11, color: MavoColors.muted)),
+                    ]),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    const Icon(Icons.favorite_border, size: 16, color: MavoColors.violet),
+                    const SizedBox(width: 5),
+                    Text('${post['likesCount'] ?? 0}', style: const TextStyle(fontSize: 12)),
+                    const SizedBox(width: 16),
+                    const Icon(Icons.chat_bubble_outline, size: 16, color: MavoColors.violet),
+                    const SizedBox(width: 5),
+                    Text('${post['commentsCount'] ?? 0}', style: const TextStyle(fontSize: 12)),
+                    const Spacer(),
+                    Text(post['audience']?.toString() ?? 'PUBLIC', style: const TextStyle(fontSize: 10, color: MavoColors.muted)),
+                  ]),
+                ]),
+              )).toList());
+            },
           ),
-          child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.photo_library_outlined, size: 38, color: Colors.white),
-            SizedBox(height: 9),
-            Text('Creator moments', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
-            SizedBox(height: 4),
-            Text('Konten demo MAVO', style: TextStyle(color: Colors.white70, fontSize: 11)),
-          ])),
-        ),
       ],
     ),
   );
