@@ -13,8 +13,8 @@ async function bootstrap() {
   app.enableCors({ origin: allowedOrigins, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   const config = new DocumentBuilder()
-    .setTitle('YUKU API')
-    .setDescription('YUKU marketplace API - development foundation')
+    .setTitle('MAVO API')
+    .setDescription('MAVO marketplace API - development foundation')
     .setVersion('1.0.0')
     .addBearerAuth()
     .build();
