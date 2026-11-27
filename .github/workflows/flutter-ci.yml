@@ -53,7 +53,21 @@ jobs:
       - name: Run Flutter tests
         run: flutter test
       - name: Generate Android platform files
-        run: flutter create --platforms=android --project-name yuku .
+        run: flutter create --platforms=android --project-name mavo .
+      - name: Set MAVO Android app display name
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+          content = content.replace('android:label="yuku"', 'android:label="MAVO"')
+          content = content.replace('android:label="mavo"', 'android:label="MAVO"')
+          if 'android:label="MAVO"' not in content:
+              content = content.replace("<application", '<application android:label="MAVO"', 1)
+          manifest.write_text(content)
+          if 'android:label="MAVO"' not in manifest.read_text():
+              raise SystemExit("MAVO app label was not set")
+          PY
       - name: Generate MAVO Android launcher icons
         run: dart run flutter_launcher_icons
       - name: Ensure Android internet permission for release
