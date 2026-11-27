@@ -365,15 +365,9 @@ class _StoryItem extends StatelessWidget {
     child: InkWell(
       borderRadius: BorderRadius.circular(35),
       onTap: () {
-        if (isAdd) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Upload story akan aktif setelah integrasi media.')),
-          );
-        } else {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => StoriesScreen(initialStory: label),
-          ));
-        }
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => StoriesScreen(initialStory: label),
+        ));
       },
       child: Column(children: [
         Container(
