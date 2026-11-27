@@ -197,11 +197,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     controller.dispose();
     if (value != null && mounted) setState(()=>_locationController.text=value);
   }
-  void _showUnavailable(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature akan aktif setelah fitur media terhubung.')),
-    );
-  }
 }
 
 class _AttachAction extends StatelessWidget {
