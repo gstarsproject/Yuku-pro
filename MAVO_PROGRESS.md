@@ -168,3 +168,11 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [ ] Validasi GitHub Actions Flutter/Worker dan build APK untuk batch berikutnya masih berjalan.
 - [ ] Upload foto profil belum dapat diuji runtime sampai secret S3 tersedia pada Cloudflare Worker preview.
 - Catatan: nama tampilan dan bio tetap dapat diedit tanpa memilih foto. Produksi tidak disentuh.
+
+## Perbaikan Inbox Chat — 2026-11-27
+- [x] Konfirmasi database TEST: dua akun aktif (Mavodev dan yuku) terdaftar sebagai peserta percakapan yang sama; percakapan berisi 4 pesan.
+- [x] Jalankan query daftar percakapan yang sama dengan Worker untuk kedua userId; masing-masing akun memperoleh tepat satu baris percakapan dengan nama akun lawan.
+- [x] Flutter Inbox diperbaiki: tombol refresh eksplisit, empty state kini bisa ditarik untuk refresh, dan refresh indicator menunggu request selesai.
+- [x] Inbox otomatis meminta daftar terbaru setiap 12 detik agar pesan/percakapan dari HP kedua ikut muncul tanpa harus keluar-masuk menu.
+- [ ] Build APK dan Flutter CI untuk commit perbaikan Inbox masih harus divalidasi sebelum instalasi.
+- Catatan: belum ada bukti bahwa versi APK yang terpasang di dua HP memuat commit terbaru; jangan anggap perbaikan sudah teruji di perangkat sampai APK baru diuji.
