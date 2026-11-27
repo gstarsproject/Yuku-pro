@@ -113,3 +113,14 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [ ] Deploy Worker preview otomatis perlu dijalankan pada event push; run sebelumnya dipicu oleh pull_request sehingga job deploy ter-skip. Commit ini menyentuh Worker dan akan memicu validasi serta deploy preview pada push branch fitur.
 - [ ] Uji runtime Chat 1:1, notifikasi, Like/Komentar, Story, dan privasi feed memakai dua akun setelah APK gabungan siap.
 - Database yang digunakan tetap Neon TEST `mavo-test`; tidak ada deploy produksi atau merge PR.
+
+
+## Pembaruan 2026-11-27 — Deploy preview Chat/Notifikasi dan build APK batch
+- [x] Cloudflare Worker validation PASS pada push commit `17d3e14dd802b0b2511bc6bd31752f5ed953dcae` (run `45989373429`).
+- [x] Deploy `mavo-preview` dan alternate preview hostname PASS pada run `45989373429`; deployment hanya ke lingkungan preview.
+- [x] Verifikasi konfigurasi Flutter: `YukuApi.baseUrl` mengarah ke `https://mavo-api-preview.gstars-business.workers.dev`, bukan production API.
+- [x] Flutter Analyze PASS pada run `45989381702` (commit `17d3e14dd802b0b2511bc6bd31752f5ed953dcae`).
+- [ ] Flutter Tests dan build APK pada run `45989381702` masih berjalan saat catatan ini diperbarui.
+- [ ] Health endpoint preview belum dapat diverifikasi melalui pemeriksaan HTTP eksternal; jangan anggap deploy sukses sebagai bukti runtime end-to-end.
+- [ ] Setelah artifact APK berhasil diunggah, jalankan uji runtime dua akun untuk Chat, Notifikasi, Like/Komentar, Story, Follow/Unfollow, dan audience feed.
+- Database tetap Neon TEST `mavo-test`; produksi belum disentuh dan PR belum di-merge.
