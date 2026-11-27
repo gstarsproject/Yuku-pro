@@ -193,7 +193,12 @@ class MAVOApi {
       headers: {'Content-Type':contentType}, body: await file.readAsBytes())
       .timeout(const Duration(minutes:3));
     if (upload.statusCode < 200 || upload.statusCode >= 300) {
-      throw Exception('Upload media gagal (' + upload.statusCode.toString() + ').');
+      final responseText = upload.body.trim();
+      final safeBody = responseText.length > 1200 ? responseText.substring(0, 1200) : responseText;
+      final requestId = upload.headers['x-amz-request-id'] ?? upload.headers['x-neon-request-id'] ?? '';
+      throw Exception('Upload media gagal (' + upload.statusCode.toString() + '). ' +
+        (safeBody.isNotEmpty ? safeBody : 'Storage tidak memberikan detail error.') +
+        (requestId.isNotEmpty ? ' Request ID: ' + requestId : ''));
     }
     return {'objectKey':data['objectKey'],'mediaType':mediaType,'contentType':contentType,'byteSize':size};
   }
