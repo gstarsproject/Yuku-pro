@@ -37,6 +37,30 @@ async function hmacBytes(key: ArrayBuffer | Uint8Array, value: string) {
   const imported = await crypto.subtle.importKey("raw", key instanceof Uint8Array ? key.slice().buffer as ArrayBuffer : key, {name:"HMAC",hash:"SHA-256"}, false, ["sign"]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", imported, encoder.encode(value)));
 }
+function isValidMediaItem(item: unknown, userId: string): item is { objectKey: string; mediaType: "IMAGE" | "VIDEO"; contentType: string; byteSize: number | string } {
+  if (!item || typeof item !== "object") return false;
+  const media = item as Record<string, unknown>;
+  const contentType = typeof media.contentType === "string" ? media.contentType.toLowerCase() : "";
+  const mediaType = media.mediaType;
+  const extensionByType: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "video/mp4": "mp4",
+    "video/quicktime": "mov",
+  };
+  const extension = extensionByType[contentType];
+  const expectedMediaType = contentType.startsWith("image/") ? "IMAGE" : contentType.startsWith("video/") ? "VIDEO" : "";
+  const byteSize = Number(media.byteSize);
+  const key = typeof media.objectKey === "string" ? media.objectKey : "";
+  const filename = key.startsWith("users/" + userId + "/") ? key.slice(("users/" + userId + "/").length) : "";
+  const maxBytes = expectedMediaType === "VIDEO" ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
+  return !!extension && mediaType === expectedMediaType &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp|gif|mp4|mov)$/i.test(filename) &&
+    filename.toLowerCase().endsWith("." + extension) &&
+    Number.isSafeInteger(byteSize) && byteSize >= 1 && byteSize <= maxBytes;
+}
 async function presignMedia(env: Env, method: "GET"|"PUT", objectKey: string, expires = 900) {
   const now = new Date(), stamp = now.toISOString().replace(/[:-]|\.\d{3}/g,""), date = stamp.slice(0,8);
   const endpoint = new URL(env.AWS_ENDPOINT_URL_S3);
@@ -354,9 +378,7 @@ if (avatarMedia) {
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
       const limited = await userActionRateLimit(env, user.id, "post-create"); if (limited) return limited;
       for (const item of media) {
-        if (!item || typeof item.objectKey !== "string" || !item.objectKey.startsWith("users/"+user.id+"/") ||
-            !["IMAGE","VIDEO"].includes(item.mediaType) || typeof item.contentType !== "string" ||
-            !Number.isSafeInteger(Number(item.byteSize)) || Number(item.byteSize)<1) return json({success:false,message:"Data media tidak valid."},400);
+        if (!isValidMediaItem(item,user.id)) return json({success:false,message:"Data media tidak valid (format atau ukuran file tidak sesuai)."},400);
       }
       const id = crypto.randomUUID();
       await c.query("BEGIN");
@@ -487,7 +509,7 @@ if (avatarMedia) {
         if (!["PUBLIC","FOLLOWERS"].includes(audience)) return json({success:false,message:"Pilihan privasi story tidak valid."},400);
         if ((latitude === null) !== (longitude === null) || (latitude !== null && (Math.abs(latitude)>90 || Math.abs(longitude!)>180))) return json({success:false,message:"Koordinat lokasi tidak valid."},400);
         for (const item of media) {
-          if (!item || typeof item.objectKey !== "string" || !item.objectKey.startsWith("users/"+user.id+"/") || !["IMAGE","VIDEO"].includes(item.mediaType) || typeof item.contentType !== "string" || !Number.isSafeInteger(Number(item.byteSize)) || Number(item.byteSize)<1) return json({success:false,message:"Data media tidak valid."},400);
+          if (!isValidMediaItem(item,user.id)) return json({success:false,message:"Data media tidak valid (format atau ukuran file tidak sesuai)."},400);
         }
         const id = crypto.randomUUID();
         await c.query("BEGIN");
