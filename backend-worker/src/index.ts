@@ -1,5 +1,5 @@
 import { Client } from "pg";
-interface Env { HYPERDRIVE: Hyperdrive; AUTH_IP_LIMITER: RateLimit; AUTH_ID_LIMITER: RateLimit; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; }
+interface Env { HYPERDRIVE: Hyperdrive; AUTH_IP_LIMITER: RateLimit; AUTH_ID_LIMITER: RateLimit; USER_ACTION_LIMITER: RateLimit; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; }
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
 // Preview auth throttling: approximate IP and per-identifier limits; production remains unchanged.\nasync function authRateLimit(env: Env, request: Request, scope: "register" | "login", identifier?: string) {
@@ -12,6 +12,10 @@ const json = (data: unknown, status = 200) => new Response(JSON.stringify(data),
     if (!idResult.success) return json({ success: false, message: "Terlalu banyak percobaan untuk akun ini. Coba lagi sebentar." }, 429);
   }
   return null;
+}
+async function userActionRateLimit(env: Env, userId: string, action: string) {
+  const result = await env.USER_ACTION_LIMITER.limit({ key: action + ":" + userId });
+  return result.success ? null : json({ success: false, message: "Aktivitas terlalu cepat. Coba lagi sebentar." }, 429);
 }
 async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
   const c = new Client({ connectionString: env.HYPERDRIVE.connectionString });
@@ -229,6 +233,7 @@ export default {
     return await db(env, async c => {
       const viewer = await getSessionUser(c,request);
       if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const limited = await userActionRateLimit(env, viewer.id, "profile-update"); if (limited) return limited;
       const current = await c.query('SELECT "displayName","avatarUrl","bio" FROM "Profile" WHERE "userId"=$1 LIMIT 1',[viewer.id]);
       if (!current.rows[0]) return json({success:false,message:"Profil tidak ditemukan."},404);
       const displayName = typeof body.displayName === "string" ? body.displayName.trim() : current.rows[0].displayName;
@@ -258,6 +263,7 @@ if (avatarMedia) {
     return await db(env, async c => {
       const viewer = await getSessionUser(c,request);
       if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      if (request.method !== "GET") { const limited = await userActionRateLimit(env, viewer.id, "follow-change"); if (limited) return limited; }
       const targetId = followMatch[1];
       if (viewer.id === targetId) return json({success:false,message:"Kamu tidak bisa mengikuti akun sendiri."},400);
       const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[targetId]);
@@ -302,6 +308,7 @@ if (avatarMedia) {
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const limited = await userActionRateLimit(env, user.id, "media-upload-url"); if (limited) return limited;
       const extension = contentType.split("/")[1].replace("jpeg","jpg").replace("quicktime","mov");
       const objectKey = "users/"+user.id+"/"+crypto.randomUUID()+"."+extension;
       const uploadUrl = await presignMedia(env,"PUT",objectKey,900);
@@ -343,6 +350,7 @@ if (avatarMedia) {
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const limited = await userActionRateLimit(env, user.id, "post-create"); if (limited) return limited;
       for (const item of media) {
         if (!item || typeof item.objectKey !== "string" || !item.objectKey.startsWith("users/"+user.id+"/") ||
             !["IMAGE","VIDEO"].includes(item.mediaType) || typeof item.contentType !== "string" ||
@@ -382,6 +390,7 @@ if (avatarMedia) {
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
       if (request.method === "POST") {
         const body = await readRequestBody(request);
+        const limited = await userActionRateLimit(env, user.id, "conversation-create"); if (limited) return limited;
         const recipientId = typeof body.recipientId === "string" ? body.recipientId : "";
         if (!/^[0-9a-f-]{36}$/i.test(recipientId) || recipientId === user.id) return json({success:false,message:"Pengguna tujuan tidak valid."},400);
         const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[recipientId]);
@@ -430,6 +439,7 @@ if (avatarMedia) {
         return json({success:true,count:result.rowCount,data:result.rows});
       }
       const body = await readRequestBody(request), content = typeof body.content === "string" ? body.content.trim() : "";
+      const limited = await userActionRateLimit(env, user.id, "message-send"); if (limited) return limited;
       if (!content || content.length > 5000) return json({success:false,message:"Pesan wajib diisi (maksimal 5.000 karakter)."},400);
       const inserted = await c.query('INSERT INTO "Message" ("id","conversationId","senderId","body","createdAt") VALUES ($1,$2,$3,$4,NOW()) RETURNING "id","conversationId","senderId","body","createdAt","readAt"',[crypto.randomUUID(),conversationId,user.id,content]);
       const peers = await c.query('SELECT "userId" FROM "ConversationParticipant" WHERE "conversationId"=$1 AND "userId"<>$2',[conversationId,user.id]);
@@ -463,6 +473,7 @@ if (avatarMedia) {
       if (request.method === "POST") {
         const body = await readRequestBody(request);
         const content = typeof body.content === "string" ? body.content.trim() : "";
+        const limited = await userActionRateLimit(env, user.id, "story-create"); if (limited) return limited;
         const audience = typeof body.audience === "string" ? body.audience.toUpperCase() : "PUBLIC";
         const media = Array.isArray(body.media) ? body.media : [];
         const locationName = typeof body.locationName === "string" ? body.locationName.trim().slice(0,200) : null;
@@ -500,6 +511,7 @@ if (avatarMedia) {
       const postId = postInteractionMatch[1], action = postInteractionMatch[2].toLowerCase();
       const visible = await c.query('SELECT p."id",p."authorId" FROM "Post" p JOIN "User" u ON u."id"=p."authorId" WHERE p."id"=$1 AND u."status"=\'ACTIVE\' AND (p."audience"=\'PUBLIC\' OR p."authorId"=$2 OR (p."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$2 AND f."followingId"=p."authorId"))) LIMIT 1',[postId,user.id]);
       if (!visible.rows[0]) return json({success:false,message:"Postingan tidak ditemukan atau tidak dapat diakses."},404);
+      if (request.method !== "GET") { const limited = await userActionRateLimit(env, user.id, "post-interaction"); if (limited) return limited; }
       if (action === "like") {
         if (request.method === "GET") {
           const state = await c.query('SELECT EXISTS(SELECT 1 FROM "PostLike" WHERE "postId"=$1 AND "userId"=$2) AS "likedByMe",(SELECT COUNT(*)::int FROM "PostLike" WHERE "postId"=$1) AS "likesCount"',[postId,user.id]);
