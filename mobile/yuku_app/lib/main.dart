@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'screens/auth_gate.dart';
-import 'theme/yuku_theme.dart';
+import 'theme/MAVO_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const YukuApp());
+  runApp(const MAVOApp());
 }
 
-class YukuApp extends StatelessWidget {
-  const YukuApp({super.key});
+class MAVOApp extends StatelessWidget {
+  const MAVOApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'MAVO',
     debugShowCheckedModeBanner: false,
-    theme: YukuTheme.light,
+    theme: MAVOTheme.light,
     home: const AuthGate(),
   );
 }
