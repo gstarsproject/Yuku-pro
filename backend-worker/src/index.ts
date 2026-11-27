@@ -150,7 +150,7 @@ export default {
     const identityLimit = await authRateLimit(env, request, "register", email);
     if (identityLimit) return identityLimit;
     const password = typeof body.password === "string" ? body.password : "";
-    if (!/^[^\s@]+@[\s@]+\.[^\s@]+$/.test(email) || password.length < 10 || password.length > 128 || displayName.length < 2 || displayName.length > 40)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 10 || password.length > 128 || displayName.length < 2 || displayName.length > 40)
       return json({success:false,message:"Email, password (10–128 karakter), atau nama tidak valid"},400);
     const passwordHash = await makePasswordHash(password);
     return await db(env, async c => {
