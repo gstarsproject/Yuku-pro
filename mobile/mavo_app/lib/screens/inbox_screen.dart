@@ -285,7 +285,7 @@ class _ChatScreenState extends State<_ChatScreen> {
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen();
   @override
-  State<_NotificationsScreen> createState() => _NotificationsScreenState();
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<_NotificationsScreen> {
