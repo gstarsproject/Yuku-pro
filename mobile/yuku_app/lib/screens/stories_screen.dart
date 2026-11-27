@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import '../services/yuku_api.dart';
-import '../theme/yuku_theme.dart';
+import '../services/MAVO_api.dart';
+import '../theme/MAVO_theme.dart';
 
 class StoriesScreen extends StatefulWidget {
   final String initialStory;
@@ -20,11 +20,11 @@ class _StoriesScreenState extends State<StoriesScreen> {
   @override
   void initState() {
     super.initState();
-    _storiesFuture = YukuApi.stories();
+    _storiesFuture = MAVOApi.stories();
   }
 
   Future<void> _refresh() async {
-    final request = YukuApi.stories();
+    final request = MAVOApi.stories();
     setState(() => _storiesFuture = request);
     try {
       await request;
@@ -94,9 +94,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
                     final ext = item.name.toLowerCase().split('.').last;
                     final isVideo = ['mp4','mov'].contains(ext);
                     final mime = switch (ext) { 'jpg' || 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', 'mov' => 'video/quicktime', _ => 'video/mp4' };
-                    uploaded.add(await YukuApi.uploadMediaFile(file: File(item.path), mediaType: isVideo ? 'VIDEO' : 'IMAGE', contentType: mime));
+                    uploaded.add(await MAVOApi.uploadMediaFile(file: File(item.path), mediaType: isVideo ? 'VIDEO' : 'IMAGE', contentType: mime));
                   }
-                  await YukuApi.createStory(content: content, audience: audience, media: uploaded, locationName: locationController.text);
+                  await MAVOApi.createStory(content: content, audience: audience, media: uploaded, locationName: locationController.text);
                   if (sheetContext.mounted) Navigator.pop(sheetContext, true);
                 } catch (e) {
                   if (sheetContext.mounted) {
@@ -239,7 +239,7 @@ class _StoryMedia extends StatelessWidget {
   const _StoryMedia({required this.mediaId, required this.mediaType});
   @override
   Widget build(BuildContext context) => FutureBuilder<String>(
-    future: YukuApi.mediaDownloadUrl(mediaId),
+    future: MAVOApi.mediaDownloadUrl(mediaId),
     builder: (context, snapshot) {
       if (!snapshot.hasData) return const SizedBox(height: 70, child: Center(child: CircularProgressIndicator(color: Colors.white)));
       if (mediaType == 'VIDEO') return _StoryVideo(url: snapshot.data!);
