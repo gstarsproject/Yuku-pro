@@ -92,6 +92,7 @@ model User {
   posts          Post[]
   postLikes      PostLike[]
   postComments   PostComment[]
+  stories        Story[]
   sessions       UserSession[]
   following      Follow[] @relation("UserFollowing")
   followers      Follow[] @relation("UserFollowers")
@@ -383,5 +384,17 @@ model PostComment {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([postId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Story {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  content   String   @db.VarChar(500)
+  audience  String   @default("PUBLIC") // PUBLIC, FOLLOWERS
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
   @@index([userId, createdAt])
 }
