@@ -1,6 +1,6 @@
 import { Client } from "pg";
 interface Env { HYPERDRIVE: Hyperdrive; }
-const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
+const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
 async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
   const c = new Client({ connectionString: env.HYPERDRIVE.connectionString });
@@ -125,6 +125,37 @@ export default {
    } catch(e) { console.error("Session lookup failed",e); return json({success:false,message:"Tidak dapat memeriksa sesi"},503); }
   }
 
+  const profileMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/profile$/i);
+  if (profileMatch && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const viewer = await getSessionUser(c,request);
+      if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const result = await c.query('SELECT u."id",pr."displayName",pr."avatarUrl",pr."bio",(SELECT COUNT(*)::int FROM "Post" p WHERE p."authorId"=u."id") AS "postsCount",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followingId"=u."id") AS "followers",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followerId"=u."id") AS "followingCount",COALESCE(pp."verificationStatus"=\\'VERIFIED\\',FALSE) AS "isVerified" FROM "User" u LEFT JOIN "Profile" pr ON pr."userId"=u."id" LEFT JOIN "ProviderProfile" pp ON pp."userId"=u."id" WHERE u."id"=$1 AND u."status"=\\'ACTIVE\\' AND u."role"<>\\'ADMIN\\' LIMIT 1',[profileMatch[1]]);
+      if (!result.rows[0]) return json({success:false,message:"Profil tidak ditemukan."},404);
+      return json({success:true,data:result.rows[0]});
+    });
+   } catch(e) { console.error("Profile lookup failed",e); return json({success:false,message:"Profil gagal dimuat."},503); }
+  }
+  if (path === "/api/v1/profile" && request.method === "PATCH") {
+   try {
+    const body = await readRequestBody(request);
+    return await db(env, async c => {
+      const viewer = await getSessionUser(c,request);
+      if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const current = await c.query('SELECT "displayName","avatarUrl","bio" FROM "Profile" WHERE "userId"=$1 LIMIT 1',[viewer.id]);
+      if (!current.rows[0]) return json({success:false,message:"Profil tidak ditemukan."},404);
+      const displayName = typeof body.displayName === "string" ? body.displayName.trim() : current.rows[0].displayName;
+      const bio = typeof body.bio === "string" ? body.bio.trim() : current.rows[0].bio;
+      const avatarUrl = typeof body.avatarUrl === "string" ? body.avatarUrl.trim() : current.rows[0].avatarUrl;
+      if (displayName.length < 2 || displayName.length > 40) return json({success:false,message:"Nama harus 2–40 karakter."},400);
+      if (typeof bio === "string" && bio.length > 1000) return json({success:false,message:"Bio maksimal 1.000 karakter."},400);
+      if (avatarUrl && (!/^https:\/\//i.test(avatarUrl) || avatarUrl.length > 2000)) return json({success:false,message:"URL foto harus menggunakan HTTPS."},400);
+      const result = await c.query('UPDATE "Profile" SET "displayName"=$2,"bio"=$3,"avatarUrl"=$4,"updatedAt"=NOW() WHERE "userId"=$1 RETURNING "userId","displayName","avatarUrl","bio"',[viewer.id,displayName,bio || null,avatarUrl || null]);
+      return json({success:true,data:result.rows[0]});
+    });
+   } catch(e) { console.error("Profile update failed",e); return json({success:false,message:"Profil gagal disimpan."},503); }
+  }
   const followMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/follow$/i);
   if (followMatch && ["GET","POST","DELETE"].includes(request.method)) {
    try {
