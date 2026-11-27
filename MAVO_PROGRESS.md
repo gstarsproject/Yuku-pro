@@ -414,3 +414,5 @@ Status awal tahap 1:
 - [x] Re-read Cloudflare metadata and confirmed both secret names and both plain-text binding names are present. Secret values were not read back or exposed.
 - [ ] Runtime presigned-upload + object readback from the MAVO app is still pending; this configuration check alone does not prove end-to-end upload success or byte-level validation.
 - [ ] GitHub Worker deploy job is skipped on pull_request events by design; a push to `feature/mavo-user-auth` is required to run the preview-only deployment workflow. Production remains untouched.
+
+- [x] Persisted the Neon TEST endpoint and region in `backend-worker/wrangler.preview-alt.jsonc` for `mavo-api-preview` (commit `2825d75dc300040e81b8cc2219b45db2f8dae735`) so future Wrangler preview deploys retain the non-secret storage configuration.
