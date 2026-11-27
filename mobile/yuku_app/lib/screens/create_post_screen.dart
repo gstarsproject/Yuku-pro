@@ -143,6 +143,34 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     ),
   );
 
+  Future<void> _pickImages() async {
+    final picked = await _picker.pickMultiImage(imageQuality: 88);
+    if (!mounted || picked.isEmpty) return;
+    setState(() {
+      _media.addAll(picked.where((x) => !['mp4','mov'].contains(x.name.toLowerCase().split('.').last)));
+      if (_media.length > 10) _media.removeRange(10, _media.length);
+    });
+  }
+
+  Future<void> _pickVideo() async {
+    final picked = await _picker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(minutes: 3));
+    if (!mounted || picked == null) return;
+    setState(() {
+      _media.removeWhere((x) => ['mp4','mov'].contains(x.name.toLowerCase().split('.').last));
+      if (_media.length < 10) _media.add(picked);
+    });
+  }
+
+  Future<void> _editLocation() async {
+    final controller = TextEditingController(text: _locationController.text);
+    final value = await showDialog<String>(context: context, builder: (context) => AlertDialog(
+      title: const Text('Tambahkan lokasi'),
+      content: TextField(controller:controller,maxLength:200,decoration:const InputDecoration(hintText:'Contoh: Bogor, Jawa Barat')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Batal')),FilledButton(onPressed:()=>Navigator.pop(context,controller.text.trim()),child:const Text('Simpan'))],
+    ));
+    controller.dispose();
+    if (value != null && mounted) setState(()=>_locationController.text=value);
+  }
   void _showUnavailable(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$feature akan aktif setelah fitur media terhubung.')),
