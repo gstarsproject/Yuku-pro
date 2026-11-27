@@ -161,7 +161,7 @@ export default {
     });
    } catch(e) { console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
   }
-  const postInteractionMatch = path.match(/^\\/api\\/v1\\/posts\\/([0-9a-f-]{36})\\/(like|comments)$/i);
+  const postInteractionMatch = path.match(/^\/api\/v1\/posts\/([0-9a-f-]{36})\/(like|comments)$/i);
   if (postInteractionMatch && ["GET","POST","DELETE"].includes(request.method)) {
    try {
     return await db(env, async c => {
