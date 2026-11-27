@@ -161,6 +161,25 @@ export default {
     });
    } catch(e) { console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
   }
+  if (path === "/api/v1/stories" && ["GET","POST"].includes(request.method)) {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      if (request.method === "POST") {
+        const body = await readRequestBody(request);
+        const content = typeof body.content === "string" ? body.content.trim() : "";
+        const audience = typeof body.audience === "string" ? body.audience.toUpperCase() : "PUBLIC";
+        if (!content || content.length > 500) return json({success:false,message:"Story wajib diisi (maksimal 500 karakter)."},400);
+        if (!["PUBLIC","FOLLOWERS"].includes(audience)) return json({success:false,message:"Pilihan privasi story tidak valid."},400);
+        const result = await c.query('INSERT INTO "Story" ("id","userId","content","audience","createdAt","expiresAt") VALUES ($1,$2,$3,$4,NOW(),NOW()+INTERVAL \'24 hours\') RETURNING "id","userId","content","audience","createdAt","expiresAt"',[crypto.randomUUID(),user.id,content,audience]);
+        return json({success:true,data:{...result.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
+      }
+      const result = await c.query('SELECT s."id",s."userId",s."content",s."audience",s."createdAt",s."expiresAt",p."displayName" AS "authorName",p."avatarUrl" AS "authorAvatar" FROM "Story" s JOIN "User" u ON u."id"=s."userId" LEFT JOIN "Profile" p ON p."userId"=s."userId" WHERE s."expiresAt">NOW() AND u."status"=\'ACTIVE\' AND (s."audience"=\'PUBLIC\' OR s."userId"=$1 OR (s."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$1 AND f."followingId"=s."userId"))) ORDER BY s."createdAt" DESC LIMIT 100',[user.id]);
+      return json({success:true,count:result.rowCount,data:result.rows});
+    });
+   } catch(e) { console.error("Stories request failed",e); return json({success:false,message:"Story gagal diproses."},503); }
+  }
   const postInteractionMatch = path.match(/^\/api\/v1\/posts\/([0-9a-f-]{36})\/(like|comments)$/i);
   if (postInteractionMatch && ["GET","POST","DELETE"].includes(request.method)) {
    try {
