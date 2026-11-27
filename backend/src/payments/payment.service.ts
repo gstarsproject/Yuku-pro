@@ -14,11 +14,11 @@ export class PaymentService {
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     if (!serverKey || serverKey === 'replace_me') throw new BadRequestException('Konfigurasi Midtrans Sandbox belum diisi.');
     const base = process.env.MIDTRANS_IS_PRODUCTION === 'true' ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
-    const orderId = `YUKU-${booking.id}`;
+    const orderId = `MAVO-${booking.id}`;
     const response = await axios.post(`${base}/v2/charge`, {
       payment_type: 'bank_transfer',
       transaction_details: { order_id: orderId, gross_amount: booking.totalAmount },
-      customer_details: { first_name: booking.customer.profile?.displayName ?? 'YUKU Customer', email: booking.customer.email ?? undefined, phone: booking.customer.phone ?? undefined },
+      customer_details: { first_name: booking.customer.profile?.displayName ?? 'MAVO Customer', email: booking.customer.email ?? undefined, phone: booking.customer.phone ?? undefined },
       bank_transfer: { bank: 'bca' },
     }, { auth: { username: serverKey, password: '' } });
 
