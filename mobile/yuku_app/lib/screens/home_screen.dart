@@ -112,9 +112,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ]),
             ),
           ),
-          const SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: 18),
-            sliver: SliverToBoxAdapter(child: _CommunityPost()),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            sliver: SliverToBoxAdapter(
+              child: _selectedFeed == 2
+                ? const _FeedNotice(message: 'Siaran Live akan tampil di sini saat fitur Live aktif.')
+                : _selectedFeed == 3
+                  ? const _FeedNotice(message: 'Jelajahi kreator dan konten MAVO.')
+                  : _PostsFeed(followingOnly: _selectedFeed == 1),
+            ),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
@@ -139,6 +145,107 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+class _FeedNotice extends StatelessWidget {
+  final String message;
+  const _FeedNotice({required this.message});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(22),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+    child: Center(child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: MavoColors.muted))),
+  );
+}
+
+class _PostsFeed extends StatefulWidget {
+  final bool followingOnly;
+  const _PostsFeed({required this.followingOnly});
+  @override
+  State<_PostsFeed> createState() => _PostsFeedState();
+}
+
+class _PostsFeedState extends State<_PostsFeed> {
+  late Future<List<Map<String, dynamic>>> _future;
+  @override
+  void initState() { super.initState(); _future = MavoApi.posts(followingOnly: widget.followingOnly); }
+  @override
+  void didUpdateWidget(covariant _PostsFeed oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.followingOnly != widget.followingOnly) {
+      _future = MavoApi.posts(followingOnly: widget.followingOnly);
+    }
+  }
+  void _reload() => setState(() => _future = MavoApi.posts(followingOnly: widget.followingOnly));
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
+    future: _future,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Padding(padding: EdgeInsets.all(28), child: Center(child: CircularProgressIndicator()));
+      }
+      if (snapshot.hasError) {
+        return _FeedNotice(message: 'Feed belum bisa dimuat. Periksa koneksi lalu coba lagi.\n\n' + snapshot.error.toString().replaceFirst('Exception: ', ''));
+      }
+      final posts = snapshot.data ?? const <Map<String, dynamic>>[];
+      if (posts.isEmpty) return const _FeedNotice(message: 'Belum ada postingan. Jadilah yang pertama berbagi cerita di MAVO.');
+      return Column(children: [
+        for (final post in posts) Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _PostCard(post: post),
+        ),
+        TextButton.icon(onPressed: _reload, icon: const Icon(Icons.refresh), label: const Text('Muat ulang feed')),
+      ]);
+    },
+  );
+}
+
+class _PostCard extends StatelessWidget {
+  final Map<String, dynamic> post;
+  const _PostCard({required this.post});
+  @override
+  Widget build(BuildContext context) {
+    final author = post['authorName']?.toString() ?? 'Pengguna MAVO';
+    final content = post['content']?.toString() ?? '';
+    final likes = post['likesCount'] ?? 0;
+    final comments = post['commentsCount'] ?? 0;
+    final created = post['createdAt']?.toString() ?? '';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEDEBF3)),
+        boxShadow: [BoxShadow(color: MavoColors.midnight.withValues(alpha: .035), blurRadius: 14, offset: const Offset(0, 4))]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)),
+          const SizedBox(width: 9),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(author, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight, fontSize: 13)),
+            Text(created.isEmpty ? 'MAVO' : created.replaceFirst('T', ' ').split('.').first,
+              style: const TextStyle(color: MavoColors.muted, fontSize: 10)),
+          ])),
+          const Icon(Icons.more_horiz, color: MavoColors.muted),
+        ]),
+        if (content.isNotEmpty) Padding(
+          padding: const EdgeInsets.only(top: 13),
+          child: Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
+        ),
+        const Divider(height: 25),
+        Row(children: [
+          const Icon(Icons.favorite_border_rounded, color: MavoColors.muted, size: 19),
+          const SizedBox(width: 5),
+          Text('$likes', style: const TextStyle(color: MavoColors.muted, fontSize: 11)),
+          const SizedBox(width: 18),
+          const Icon(Icons.mode_comment_outlined, color: MavoColors.muted, size: 18),
+          const SizedBox(width: 5),
+          Text('$comments', style: const TextStyle(color: MavoColors.muted, fontSize: 11)),
+        ]),
+      ]),
     );
   }
 }
