@@ -354,3 +354,12 @@ Status awal tahap 1:
 - [ ] Batas ukuran di sini memvalidasi metadata yang dikirim aplikasi, bukan ukuran byte objek aktual di R2. Pemeriksaan objek aktual tetap perlu saat Object Storage secrets tersedia.
 - [ ] CORS wildcard dan uji runtime HTTP 413/429 masih menjadi pekerjaan sebelum rilis publik.
 - Catatan: hanya preview yang diperbarui; production tidak disentuh.
+
+
+### Penguatan validasi avatar profil — 2026-11-27 (commit 8610c12)
+- [x] Avatar upload sekarang harus berupa key milik pengguna, nama file UUID, ekstensi harus cocok dengan MIME JPEG/PNG/WebP/GIF, dan ukuran metadata 1 byte–20 MB.
+- [x] Worker CI run `46005154719`: TypeScript typecheck dan dua Wrangler dry-run PASS; deploy job berjalan dan kedua deployment sudah diverifikasi melalui versi Cloudflare terbaru.
+- [x] Backend CI run `46005163292` PASS.
+- [x] Cloudflare preview versions: `mavo-preview` `4e07670f-7468-4715-89ed-250fb815ed29`; `mavo-api-preview` `5e2019c4-c3bb-493c-81bd-84ed9d0e8c4b`; semua binding rate limiter dan HYPERDRIVE terpasang.
+- [ ] Uji upload aktual dan validasi byte objek tetap tertunda sampai Object Storage credentials dikonfigurasi.
+- Catatan: production tidak disentuh.
