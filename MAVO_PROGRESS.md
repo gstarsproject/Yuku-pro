@@ -60,9 +60,23 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - Pengguna meminta agar tidak perlu instal APK bergantian untuk setiap fitur. Karena itu, build preview per fitur disimpan sebagai artefak internal; pengguna akan diminta instal saat satu batch fitur lebih lengkap sudah siap.
 - Perubahan backend dapat diperbarui tanpa instal ulang APK; perubahan Flutter memerlukan APK baru.
 
+
+## Pembaruan 2026-11-27 — Story teks (implementasi awal)
+- [x] Tambah model Prisma `Story` dengan audience PUBLIC/FOLLOWERS, masa aktif 24 jam, dan indeks expiry/pemilik.
+- [x] Buat migration `20261127060000_add_stories`.
+- [x] Terapkan tabel `Story` dan indeks pada Neon TEST branch `mavo-test`; tabel terverifikasi tersedia. Database produksi tidak disentuh.
+- [x] Tambah Worker API GET/POST `/api/v1/stories`; hanya story yang belum kedaluwarsa ditampilkan, dengan pemeriksaan sesi dan audience (publik/pengikut).
+- [x] Tambah metode API Flutter untuk membaca dan membuat story.
+- [x] Ganti layar Stories demo menjadi daftar story nyata, viewer, dan form buat story teks maksimal 500 karakter; audience Publik/Pengikut.
+- [x] Tombol Your Story dan kategori Story di Home membuka layar Stories.
+- [ ] Jalankan dan luluskan GitHub CI (Backend, Worker, Flutter) untuk implementasi Story.
+- [ ] Deploy Worker preview terbaru setelah CI lulus.
+- [ ] Uji buat/baca story lintas dua akun, audience FOLLOWERS, dan expiry 24 jam pada APK gabungan.
+- Catatan batasan: tahap Story ini berbasis teks; upload foto/video belum dibuat karena memerlukan alur penyimpanan media dan URL aman.
+
 ## Batasan saat ini
 - Fitur postingan pada tahap ini hanya teks maksimal 2.000 karakter.
-- Foto/video, share, story, hashtag, dan trending belum diaktifkan.
+- Story teks sudah diimplementasikan (belum lolos CI/uji perangkat); upload foto/video, share, hashtag, dan trending belum diaktifkan.
 - Like/Unlike dan komentar sudah diimplementasikan di backend/Flutter, tetapi belum diuji runtime pada perangkat karena APK ditahan untuk batch pengujian berikutnya.
 - Follow/Unfollow dan filter FOLLOWERS sudah diimplementasikan; visibilitas setelah Follow sudah dikonfirmasi pengguna. Uji Unfollow + pull-to-refresh masih menunggu.
 - CI PASS dan catatan deployment belum membuktikan semua alur end-to-end sudah berfungsi dari APK.
