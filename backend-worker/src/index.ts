@@ -136,7 +136,8 @@ export default {
       const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[targetId]);
       if (!target.rows[0]) return json({success:false,message:"Akun tidak ditemukan."},404);
       if (request.method === "POST") {
-        await c.query('INSERT INTO "Follow" ("id","followerId","followingId","createdAt") VALUES ($1,$2,$3,NOW()) ON CONFLICT ("followerId","followingId") DO NOTHING',[crypto.randomUUID(),viewer.id,targetId]);
+        const created = await c.query('INSERT INTO "Follow" ("id","followerId","followingId","createdAt") VALUES ($1,$2,$3,NOW()) ON CONFLICT ("followerId","followingId") DO NOTHING RETURNING "id"',[crypto.randomUUID(),viewer.id,targetId]);
+        if (created.rows[0]) await c.query('INSERT INTO "Notification" ("id","recipientId","actorId","type","entityId","message","createdAt") VALUES ($1,$2,$3,\'FOLLOW\',$4,$5,NOW())',[crypto.randomUUID(),targetId,viewer.id,targetId,(viewer.displayName || "Seseorang") + " mulai mengikuti kamu."]);
       } else if (request.method === "DELETE") {
         await c.query('DELETE FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2',[viewer.id,targetId]);
       }
@@ -278,7 +279,10 @@ export default {
           const state = await c.query('SELECT EXISTS(SELECT 1 FROM "PostLike" WHERE "postId"=$1 AND "userId"=$2) AS "likedByMe",(SELECT COUNT(*)::int FROM "PostLike" WHERE "postId"=$1) AS "likesCount"',[postId,user.id]);
           return json({success:true,data:state.rows[0]});
         }
-        if (request.method === "POST") await c.query('INSERT INTO "PostLike" ("id","postId","userId","createdAt") VALUES ($1,$2,$3,NOW()) ON CONFLICT ("postId","userId") DO NOTHING',[crypto.randomUUID(),postId,user.id]);
+        if (request.method === "POST") {
+          const liked = await c.query('INSERT INTO "PostLike" ("id","postId","userId","createdAt") VALUES ($1,$2,$3,NOW()) ON CONFLICT ("postId","userId") DO NOTHING RETURNING "id"',[crypto.randomUUID(),postId,user.id]);
+          if (liked.rows[0] && visible.rows[0].authorId !== user.id) await c.query('INSERT INTO "Notification" ("id","recipientId","actorId","type","entityId","message","createdAt") VALUES ($1,$2,$3,\'LIKE\',$4,$5,NOW())',[crypto.randomUUID(),visible.rows[0].authorId,user.id,postId,(user.displayName || "Seseorang") + " menyukai postinganmu."]);
+        }
         else await c.query('DELETE FROM "PostLike" WHERE "postId"=$1 AND "userId"=$2',[postId,user.id]);
         const state = await c.query('SELECT EXISTS(SELECT 1 FROM "PostLike" WHERE "postId"=$1 AND "userId"=$2) AS "likedByMe",(SELECT COUNT(*)::int FROM "PostLike" WHERE "postId"=$1) AS "likesCount"',[postId,user.id]);
         return json({success:true,data:state.rows[0]});
@@ -291,6 +295,7 @@ export default {
       const body = await readRequestBody(request), content = typeof body.content === "string" ? body.content.trim() : "";
       if (!content || content.length > 1000) return json({success:false,message:"Komentar wajib diisi (maksimal 1.000 karakter)."},400);
       const inserted = await c.query('INSERT INTO "PostComment" ("id","postId","userId","content","createdAt") VALUES ($1,$2,$3,$4,NOW()) RETURNING "id","postId","userId","content","createdAt"',[crypto.randomUUID(),postId,user.id,content]);
+      if (visible.rows[0].authorId !== user.id) await c.query('INSERT INTO "Notification" ("id","recipientId","actorId","type","entityId","message","createdAt") VALUES ($1,$2,$3,\'COMMENT\',$4,$5,NOW())',[crypto.randomUUID(),visible.rows[0].authorId,user.id,postId,(user.displayName || "Seseorang") + " mengomentari postinganmu."]);
       return json({success:true,data:{...inserted.rows[0],authorName:user.displayName,authorAvatar:user.avatarUrl}},201);
     });
    } catch(e) { console.error("Post interaction failed",e); return json({success:false,message:"Interaksi postingan gagal diproses."},503); }
