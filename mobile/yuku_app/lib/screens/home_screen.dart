@@ -13,12 +13,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedFeed = 0;
+  final GlobalKey<_PostsFeedState> _postsFeedKey = GlobalKey<_PostsFeedState>();
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: CustomScrollView(
-        slivers: [
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await _postsFeedKey.currentState?.refresh();
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
             sliver: SliverToBoxAdapter(
@@ -125,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: 18),
-            sliver: SliverToBoxAdapter(child: _PostsFeed()),
+            sliver: SliverToBoxAdapter(child: _PostsFeed(key: _postsFeedKey)),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
@@ -148,14 +154,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ]),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _PostsFeed extends StatefulWidget {
-  const _PostsFeed();
+  const _PostsFeed({super.key});
   @override
   State<_PostsFeed> createState() => _PostsFeedState();
 }
@@ -164,6 +171,13 @@ class _PostsFeedState extends State<_PostsFeed> {
   late Future<List<Map<String, dynamic>>> _future;
   @override
   void initState() { super.initState(); _future = YukuApi.posts(); }
+
+  Future<void> refresh() async {
+    final request = YukuApi.posts();
+    setState(() => _future = request);
+    await request;
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
     future: _future,
