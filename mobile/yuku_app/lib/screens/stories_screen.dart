@@ -51,6 +51,22 @@ class _StoriesScreenState extends State<StoriesScreen> {
               minLines: 3,
               decoration: const InputDecoration(hintText: 'Apa cerita kamu hari ini?', border: OutlineInputBorder()),
             ),
+            Wrap(spacing: 8, children: [
+              OutlinedButton.icon(onPressed: () async {
+                final files = await picker.pickMultiImage(imageQuality: 88);
+                if (files.isNotEmpty) setSheetState(() { media.addAll(files); if (media.length > 10) media.removeRange(10, media.length); });
+              }, icon: const Icon(Icons.photo_library_outlined), label: const Text('Foto')),
+              OutlinedButton.icon(onPressed: () async {
+                final file = await picker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(minutes: 3));
+                if (file != null) setSheetState(() { media.removeWhere((x) => ['mp4','mov'].contains(x.name.toLowerCase().split('.').last)); if (media.length < 10) media.add(file); });
+              }, icon: const Icon(Icons.videocam_outlined), label: const Text('Video')),
+              OutlinedButton.icon(onPressed: () async {
+                final loc = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(title: const Text('Lokasi Story'), content: TextField(controller: locationController, maxLength: 200, decoration: const InputDecoration(hintText: 'Contoh: Bogor, Jawa Barat')), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(ctx, locationController.text.trim()), child: const Text('Simpan'))]));
+                if (loc != null) setSheetState(() {});
+              }, icon: const Icon(Icons.location_on_outlined), label: const Text('Lokasi')),
+            ]),
+            if (media.isNotEmpty) Text('${media.length} file dipilih', style: const TextStyle(color: MavoColors.violet, fontSize: 12)),
+            if (locationController.text.isNotEmpty) Text('Lokasi: ${locationController.text}', style: const TextStyle(color: MavoColors.violet, fontSize: 12)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               initialValue: audience,
