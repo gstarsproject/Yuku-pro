@@ -88,6 +88,47 @@ class MavoApi {
     final body = await _decode(response);
     return Map<String, dynamic>.from(body['data'] as Map);
   }
+
+  static Future<List<Map<String, dynamic>>> conversations() async {
+    final response = await http.get(Uri.parse('$baseUrl/api/v1/conversations'), headers: await _headers()).timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  static Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    final uri = Uri.parse('$baseUrl/api/v1/users/search').replace(queryParameters: {'q': query.trim()});
+    final response = await http.get(uri, headers: await _headers()).timeout(const Duration(seconds: 15));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  static Future<String> createConversation(String recipientId) async {
+    final response = await http.post(Uri.parse('$baseUrl/api/v1/conversations'),
+      headers: await _headers(), body: jsonEncode({'recipientId': recipientId})).timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return body['data']['id'] as String;
+  }
+
+  static Future<List<Map<String, dynamic>>> messages(String conversationId) async {
+    final response = await http.get(Uri.parse('$baseUrl/api/v1/conversations/$conversationId/messages'),
+      headers: await _headers()).timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> sendMessage(String conversationId, String content) async {
+    final response = await http.post(Uri.parse('$baseUrl/api/v1/conversations/$conversationId/messages'),
+      headers: await _headers(), body: jsonEncode({'content': content.trim()})).timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return Map<String, dynamic>.from(body['data'] as Map);
+  }
+
+  static Future<void> markConversationRead(String conversationId) async {
+    final response = await http.post(Uri.parse('$baseUrl/api/v1/conversations/$conversationId/read'),
+      headers: await _headers(), body: jsonEncode({})).timeout(const Duration(seconds: 15));
+    await _decode(response);
+  }
+
   static Future<void> logout() async {
     try {
       await http.post(Uri.parse('$baseUrl/api/v1/auth/logout'), headers: await _headers());
