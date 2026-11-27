@@ -265,3 +265,14 @@ Status awal tahap 1:
 - [ ] Audit marketplace menemukan model Prisma Booking, Payment, LedgerEntry, CommissionRule, ProviderPayout, PaymentWebhookEvent, Review, dan Dispute sudah tersedia, tetapi Worker belum memiliki route booking/payment/ledger/commission/payout/dispute. Endpoint layanan hanya untuk discovery/detail. Karena itu transaksi marketplace belum dapat digunakan end-to-end.
 - [ ] Belum ada integrasi payment gateway sandbox maupun verifikasi signature webhook yang bisa diaudit di Worker.
 - [ ] Tidak ada perubahan kode, database, deploy, atau merge pada pemeriksaan ini; catatan ini hanya merekam hasil audit source di branch pengembangan.
+
+## Pembaruan keamanan Worker — 2026-11-27 (commit fce05c2)
+- [x] Batasi ukuran JSON request maksimal 8 KiB dengan memeriksa Content-Length bila tersedia sekaligus menghitung byte stream aktual; request yang melewati batas dibatalkan.
+- [x] Validasi UTF-8 dan pastikan payload JSON berupa object, bukan array atau nilai primitif.
+- [x] Sederhanakan `/health/db`: hanya mengembalikan status koneksi tanpa membocorkan nama database atau waktu server.
+- [x] GitHub Actions run `46001395155`: validasi Worker, TypeScript, Wrangler dry-run, dan alternate hostname dry-run PASS.
+- [x] Deploy `mavo-preview` dan alternate preview hostname PASS pada run `46001395155`; production tidak disentuh.
+- [ ] Pemeriksaan lanjutan: pemetaan error body agar payload terlalu besar konsisten mendapat HTTP 413 dan JSON tidak valid mendapat HTTP 400 pada semua route yang menerima body.
+- [ ] Rate limiting autentikasi/interaksi dan pembatasan CORS ke domain aplikasi masih menjadi pekerjaan keamanan sebelum rilis publik.
+- [ ] Secret Object Storage tetap harus dikonfigurasi manual di Cloudflare; upload media belum dinyatakan berfungsi sampai uji runtime berhasil.
+- Catatan: CI dan deploy preview sukses bukan pengganti pengujian end-to-end dari aplikasi Android.
