@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/yuku_api.dart';
+import '../services/MAVO_api.dart';
 import 'app_shell.dart';
 import 'auth_screen.dart';
 
@@ -14,12 +14,12 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() { super.initState(); _restore(); }
   Future<void> _restore() async {
-    try { _user = await YukuApi.currentUser(); } catch (_) { _user = null; }
+    try { _user = await MAVOApi.currentUser(); } catch (_) { _user = null; }
     if (mounted) setState(() => _checking = false);
   }
   void _authenticated(Map<String, dynamic> user) => setState(() => _user = user);
   Future<void> _logout() async {
-    await YukuApi.logout();
+    await MAVOApi.logout();
     if (mounted) setState(() => _user = null);
   }
   @override
