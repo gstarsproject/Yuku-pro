@@ -174,7 +174,8 @@ export default {
     });
    } catch(e) { console.error("User search failed",e); return json({success:false,message:"Pencarian pengguna gagal."},503); }
   }
-  // Direct chat endpoints are participant-scoped; keep this check before message access.\n  if (path === "/api/v1/conversations" && ["GET","POST"].includes(request.method)) {
+  // Direct chat endpoints are participant-scoped; keep this check before message access.
+  if (path === "/api/v1/conversations" && ["GET","POST"].includes(request.method)) {
    try {
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
