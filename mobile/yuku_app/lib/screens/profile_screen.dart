@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 
@@ -33,33 +35,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _editProfile() async {
     final name = TextEditingController(text: (_profile['displayName'] ?? widget.user?['displayName'] ?? '').toString());
     final bio = TextEditingController(text: (_profile['bio'] ?? '').toString());
-    final avatar = TextEditingController(text: (_profile['avatarUrl'] ?? '').toString());
-    final saved = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+    final picker = ImagePicker();
+    XFile? selectedPhoto;
+    final saved = await showDialog<bool>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
       title: const Text('Edit profil'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        GestureDetector(
+          onTap: () async {
+            final photo = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1200);
+            if (photo != null) setDialogState(() => selectedPhoto = photo);
+          },
+          child: CircleAvatar(radius: 42, backgroundColor: MavoColors.violet.withValues(alpha: .12),
+            backgroundImage: selectedPhoto != null ? FileImage(File(selectedPhoto!.path)) : ((_profile['avatarUrl'] ?? '').toString().startsWith('https://') ? NetworkImage(_profile['avatarUrl'].toString()) : null) as ImageProvider?,
+            child: selectedPhoto == null && !(_profile['avatarUrl'] ?? '').toString().startsWith('https://') ? const Icon(Icons.add_a_photo_outlined, size: 30, color: MavoColors.violet) : null),
+        ),
+        const SizedBox(height: 6),
+        TextButton.icon(onPressed: () async { final photo = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1200); if (photo != null) setDialogState(() => selectedPhoto = photo); }, icon: const Icon(Icons.photo_library_outlined), label: const Text('Ganti foto profil')),
         TextField(controller: name, maxLength: 40, decoration: const InputDecoration(labelText: 'Nama tampilan')),
         TextField(controller: bio, maxLength: 1000, maxLines: 3, decoration: const InputDecoration(labelText: 'Bio')),
-        TextField(controller: avatar, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'URL foto profil (HTTPS)', hintText: 'https://...')),
-        const SizedBox(height: 6),
-        const Text('Gunakan tautan gambar HTTPS untuk foto profil.', style: TextStyle(fontSize: 11, color: MavoColors.muted)),
       ])),
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')),
         FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Simpan')),
       ],
-    ));
+    )));
     if (saved == true) {
       try {
-        final result = await YukuApi.updateProfile(displayName: name.text, bio: bio.text, avatarUrl: avatar.text);
+        Map<String,dynamic>? avatarMedia;
+        if (selectedPhoto != null) {
+          final ext = selectedPhoto!.name.toLowerCase().split('.').last;
+          final mime = switch (ext) { 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', _ => 'image/jpeg' };
+          avatarMedia = await YukuApi.uploadMediaFile(file: File(selectedPhoto!.path), mediaType: 'IMAGE', contentType: mime);
+        }
+        final result = await YukuApi.updateProfile(displayName: name.text, bio: bio.text, avatarMedia: avatarMedia);
         if (mounted) setState(() => _profile = {..._profile, ...result});
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil berhasil diperbarui.')));
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
       }
     }
-    name.dispose(); bio.dispose(); avatar.dispose();
+    name.dispose(); bio.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     final avatarUrl = (_profile['avatarUrl'] ?? '').toString();
