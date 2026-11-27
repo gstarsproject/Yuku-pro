@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 
@@ -27,6 +29,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   Future<void> _composeStory() async {
     final controller = TextEditingController();
+    final locationController = TextEditingController();
+    final picker = ImagePicker();
+    final media = <XFile>[];
     String audience = 'PUBLIC';
     final created = await showModalBottomSheet<bool>(
       context: context,
@@ -79,6 +84,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
       ),
     );
     controller.dispose();
+    locationController.dispose();
     if (created == true && mounted) {
       await _refresh();
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Story berhasil dibagikan. Berlaku selama 24 jam.')));
