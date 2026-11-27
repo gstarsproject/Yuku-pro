@@ -125,6 +125,26 @@ export default {
    } catch(e) { console.error("Session lookup failed",e); return json({success:false,message:"Tidak dapat memeriksa sesi"},503); }
   }
 
+  const followMatch = path.match(/^\\/api\\/v1\\/users\\/([0-9a-f-]{36})\\/follow$/i);
+  if (followMatch && ["GET","POST","DELETE"].includes(request.method)) {
+   try {
+    return await db(env, async c => {
+      const viewer = await getSessionUser(c,request);
+      if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const targetId = followMatch[1];
+      if (viewer.id === targetId) return json({success:false,message:"Kamu tidak bisa mengikuti akun sendiri."},400);
+      const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[targetId]);
+      if (!target.rows[0]) return json({success:false,message:"Akun tidak ditemukan."},404);
+      if (request.method === "POST") {
+        await c.query('INSERT INTO "Follow" ("id","followerId","followingId","createdAt") VALUES ($1,$2,$3,NOW()) ON CONFLICT ("followerId","followingId") DO NOTHING',[crypto.randomUUID(),viewer.id,targetId]);
+      } else if (request.method === "DELETE") {
+        await c.query('DELETE FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2',[viewer.id,targetId]);
+      }
+      const result = await c.query('SELECT EXISTS(SELECT 1 FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2) AS following, (SELECT COUNT(*)::int FROM "Follow" WHERE "followingId"=$2) AS followers, (SELECT COUNT(*)::int FROM "Follow" WHERE "followerId"=$2) AS followingCount',[viewer.id,targetId]);
+      return json({success:true,data:result.rows[0]});
+    });
+   } catch(e) { console.error("Follow operation failed",e); return json({success:false,message:"Tidak dapat memperbarui pengikut."},503); }
+  }
   if (path === "/api/v1/posts" && request.method === "POST") {
    try {
     const body = await readRequestBody(request);
