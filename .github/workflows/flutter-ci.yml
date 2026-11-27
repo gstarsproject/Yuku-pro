@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - "mobile/yuku_app/**"
+      - "mobile/MAVO_app/**"
       - ".github/workflows/flutter-ci.yml"
   pull_request:
     branches: [main]
     paths:
-      - "mobile/yuku_app/**"
+      - "mobile/MAVO_app/**"
       - ".github/workflows/flutter-ci.yml"
 
 concurrency:
@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 35
     defaults:
       run:
-        working-directory: mobile/yuku_app
+        working-directory: mobile/MAVO_app
     steps:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
@@ -35,7 +35,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('mobile/yuku_app/**/gradle-wrapper.properties', 'mobile/yuku_app/**/build.gradle*', 'mobile/yuku_app/**/settings.gradle*') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('mobile/MAVO_app/**/gradle-wrapper.properties', 'mobile/MAVO_app/**/build.gradle*', 'mobile/MAVO_app/**/settings.gradle*') }}
           restore-keys: |
             gradle-${{ runner.os }}-
       - name: Install SVG converter
@@ -60,7 +60,7 @@ jobs:
           from pathlib import Path
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           content = manifest.read_text()
-          content = content.replace('android:label="yuku"', 'android:label="MAVO"')
+          content = content.replace('android:label="MAVO"', 'android:label="MAVO"')
           content = content.replace('android:label="mavo"', 'android:label="MAVO"')
           if 'android:label="MAVO"' not in content:
               content = content.replace("<application", '<application android:label="MAVO"', 1)
@@ -89,6 +89,6 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: mavo-android-arm64-preview
-          path: mobile/yuku_app/build/app/outputs/flutter-apk/app-release.apk
+          path: mobile/MAVO_app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 7
