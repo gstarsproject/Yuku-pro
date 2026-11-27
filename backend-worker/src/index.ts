@@ -2,7 +2,8 @@ import { Client } from "pg";
 interface Env { HYPERDRIVE: Hyperdrive; AUTH_IP_LIMITER: RateLimit; AUTH_ID_LIMITER: RateLimit; USER_ACTION_LIMITER: RateLimit; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; }
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
-// Preview auth throttling: approximate IP and per-identifier limits; production remains unchanged.\nasync function authRateLimit(env: Env, request: Request, scope: "register" | "login", identifier?: string) {
+// Preview auth throttling: approximate IP and per-identifier limits; production remains unchanged.
+async function authRateLimit(env: Env, request: Request, scope: "register" | "login", identifier?: string) {
   if (!identifier) {
     const ip = request.headers.get("cf-connecting-ip") || "unknown";
     const ipResult = await env.AUTH_IP_LIMITER.limit({ key: ip });
