@@ -402,3 +402,5 @@ Status awal tahap 1:
 - Preview logs enabled with head sampling 1, invocation logs enabled, and persistence enabled.
 - Preview traces disabled (head sampling 1; persistence setting retained) and issue detection disabled.
 - This is a Wrangler configuration sync only. It does not install Neon S3 credentials or prove media upload works; Worker secret configuration and upload E2E remain pending.
+
+- CI verification for commit `410b3b5c00557de614e8c355c86895fb522f8f44`: Cloudflare Worker CI passed. Jobs `Typecheck`, `Wrangler dry run`, and `Alternate hostname dry run` all succeeded. Isolated preview deployment job was skipped by workflow conditions; no Worker deployment was performed.
