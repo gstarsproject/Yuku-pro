@@ -89,6 +89,7 @@ model User {
   reviews        Review[]   @relation("ReviewAuthor")
   documents      VerificationDocument[]
   messages       Message[]
+  posts          Post[]
   sessions       UserSession[]
   following      Follow[] @relation("UserFollowing")
   followers      Follow[] @relation("UserFollowers")
@@ -323,6 +324,18 @@ model PaymentWebhookEvent {
 }
 
 
+model Post {
+  id        String   @id @default(uuid()) @db.Uuid
+  authorId  String   @db.Uuid
+  content   String   @db.VarChar(2000)
+  audience  String   @default("PUBLIC") // PUBLIC, FOLLOWERS, PRIVATE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([authorId, createdAt])
+}
 model Follow {
   id          String   @id @default(uuid()) @db.Uuid
   followerId  String   @db.Uuid
