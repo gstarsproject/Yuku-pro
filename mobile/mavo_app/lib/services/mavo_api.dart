@@ -189,9 +189,16 @@ class MAVOApi {
       body: jsonEncode({'mediaType':mediaType,'contentType':contentType,'byteSize':size}))
       .timeout(const Duration(seconds:25));
     final data = (await _decode(prepare))['data'] as Map<String,dynamic>;
-    final upload = await _client.put(Uri.parse(data['uploadUrl'] as String),
-      headers: {'Content-Type':contentType}, body: await file.readAsBytes())
+    // Stream large photos/videos directly from disk instead of buffering the
+    // entire file in RAM (important for Android devices with limited memory).
+    final uploadRequest = http.StreamedRequest('PUT', Uri.parse(data['uploadUrl'] as String))
+      ..headers['Content-Type'] = contentType
+      ..contentLength = size;
+    final uploadFuture = _client.send(uploadRequest)
       .timeout(const Duration(minutes:3));
+    await uploadRequest.sink.addStream(file.openRead());
+    await uploadRequest.sink.close();
+    final upload = await http.Response.fromStream(await uploadFuture);
     if (upload.statusCode < 200 || upload.statusCode >= 300) {
       final responseText = upload.body.trim();
       final safeBody = responseText.length > 1200 ? responseText.substring(0, 1200) : responseText;
