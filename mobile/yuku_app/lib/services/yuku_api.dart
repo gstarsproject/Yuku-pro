@@ -120,6 +120,26 @@ class YukuApi {
     return (body['data'] as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
+  static Future<Map<String, dynamic>> followStatus(String userId) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.get(
+      Uri.parse('$baseUrl/api/v1/users/$userId/follow'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 20));
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> setFollow(String userId, {required bool follow}) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final uri = Uri.parse('$baseUrl/api/v1/users/$userId/follow');
+    final response = follow
+        ? await _client.post(uri, headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 20))
+        : await _client.delete(uri, headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 20));
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> createPost({
     required String content,
     required String audience,
