@@ -103,3 +103,13 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [ ] Deploy Worker preview terbaru setelah seluruh CI lulus.
 - [ ] Uji chat dua akun (buat percakapan, kirim/baca pesan, unread/read) dan notifikasi dua akun melalui APK batch.
 - Catatan batasan: notifikasi saat ini adalah notifikasi dalam aplikasi (in-app), belum push notification OS; chat saat ini teks 1:1, belum grup, gambar, file, audio, atau panggilan.
+
+
+## Pembaruan 2026-11-27 — Verifikasi batch Chat/Notifikasi dan CI
+- [x] Flutter Analyze PASS pada commit `10ba8d04e127cf3679385584bad85f83a6ab7eaf` (run `45988986637`).
+- [x] Flutter Tests PASS pada commit yang sama; tes Inbox dan Story telah diselaraskan dengan layar aktif.
+- [x] Backend CI PASS dan Cloudflare Worker validation PASS pada commit tersebut.
+- [ ] Build APK arm64 pada run `45988986637` masih berjalan; belum ada artefak baru yang bisa dibagikan.
+- [ ] Deploy Worker preview otomatis perlu dijalankan pada event push; run sebelumnya dipicu oleh pull_request sehingga job deploy ter-skip. Commit ini menyentuh Worker dan akan memicu validasi serta deploy preview pada push branch fitur.
+- [ ] Uji runtime Chat 1:1, notifikasi, Like/Komentar, Story, dan privasi feed memakai dua akun setelah APK gabungan siap.
+- Database yang digunakan tetap Neon TEST `mavo-test`; tidak ada deploy produksi atau merge PR.
