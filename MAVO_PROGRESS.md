@@ -22,8 +22,9 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] Tambah endpoint autentikasi GET/POST/DELETE untuk relasi Follow di Worker preview API; insert aman memakai ON CONFLICT, cegah follow diri sendiri, dan kembalikan status serta jumlah pengikut/mengikuti.
 - [x] Tambah metode followStatus dan setFollow pada klien API Flutter.
 - [x] Ganti tombol Follow demo pada CreatorProfileScreen menjadi pemanggilan API bila creatorUserId tersedia.
-- [ ] Sambungkan navigasi profil kreator nyata dengan creatorUserId dari akun/postingan; profil komunitas yang sekarang masih demo tidak memiliki ID akun sehingga tombol follow-nya nonaktif.
-- [ ] Tunggu hasil GitHub CI untuk perubahan Follow (Worker, Backend, Flutter) pada commit `00ab126772c7f628dba28302ef686604081055b1`.
+- [x] Sambungkan nama/identitas penulis postingan di Home ke CreatorProfileScreen dengan creatorUserId dari API feed; profil dapat dibuka untuk mengikuti penulis postingan.
+- [x] Perbaiki matcher route Follow yang sempat gagal TypeScript; Worker CI dan Backend CI lulus pada commit `fe53f0ead914d43eba8606b3edd7972f3787899b`.
+- [ ] Tunggu hasil GitHub CI Backend, Flutter, dan Worker untuk integrasi profil dari feed pada commit `6d2a2af98c008fe290b507f00bed935527a3dd88`.
 - [ ] Uji Follow/Unfollow dari dua akun melalui APK dan pastikan jumlah pengikut konsisten.
 - [ ] Uji FOLLOWERS lintas akun setelah Follow tersimpan.
 - [x] Perbaiki widget test Inbox agar dirender di dalam Scaffold seperti struktur aplikasi sebenarnya.
