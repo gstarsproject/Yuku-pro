@@ -72,9 +72,38 @@ async function createUserSession(c: Client, user: {id:string;email:string;role:s
   return { accessToken: token, tokenType: "Bearer", expiresIn: TOKEN_TTL_SECONDS, user };
 }
 async function readRequestBody(request: Request) {
-  const size = Number(request.headers.get("content-length") || 0);
-  if (size > 8192) throw new Error("Payload too large");
-  return await request.json() as Record<string, unknown>;
+  const declaredLength = request.headers.get("content-length");
+  if (declaredLength !== null) {
+    const size = Number(declaredLength);
+    if (!Number.isSafeInteger(size) || size < 0 || size > 8192) throw new Error("Payload too large");
+  }
+  if (!request.body) throw new Error("Request body is required");
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > 8192) {
+        await reader.cancel();
+        throw new Error("Payload too large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid JSON object");
+  return parsed as Record<string, unknown>;
 }
 async function getSessionUser(c: Client, request: Request) {
   const header = request.headers.get("authorization") || "";
@@ -508,9 +537,12 @@ if (avatarMedia) {
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "yuku-api-worker", status: "ok" });
   if (path === "/health/db" || path === "/api/health/db") {
    try {
-    const r = await db(env, c => c.query("SELECT current_database() AS database, NOW() AS server_time"));
-    return json({ success: true, service: "yuku-api-worker", database: "connected", databaseName: r.rows[0]?.database, checkedAt: r.rows[0]?.server_time });
-   } catch (e) { console.error("DB health failed", e); return json({ success: false, database: "disconnected", message: "Database connection failed" }, 503); }
+    await db(env, c => c.query("SELECT 1"));
+    return json({ success: true, database: "connected" });
+   } catch (e) {
+    console.error("DB health failed", e);
+    return json({ success: false, database: "disconnected", message: "Database connection failed" }, 503);
+   }
   }
   if (path === "/api/v1/categories") {
    try {
