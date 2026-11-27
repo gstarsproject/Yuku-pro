@@ -347,11 +347,17 @@ class YukuApi {
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
 
-  static Future<List<Map<String, dynamic>>> posts({String? authorId}) async {
+  static Future<List<Map<String, dynamic>>> posts({
+    String? authorId,
+    bool followingOnly = false,
+    bool publicOnly = false,
+  }) async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
     final uri = Uri.parse('$baseUrl/api/v1/posts').replace(queryParameters: {
       if (authorId != null && authorId.isNotEmpty) 'authorId': authorId,
+      if (followingOnly) 'following': 'true',
+      if (publicOnly) 'publicOnly': 'true',
     });
     final response = await _client.get(
       uri,
