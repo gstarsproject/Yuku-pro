@@ -82,7 +82,7 @@ export class BookingService {
       });
       await tx.ledgerEntry.createMany({ data: [
         { accountRef: `provider:${providerUserId}`, bookingId, entryType: 'CREDIT', amount: net, description: 'Pendapatan provider setelah booking selesai' },
-        { accountRef: 'platform:revenue', bookingId, entryType: 'CREDIT', amount: booking.platformFee, description: 'Komisi platform YUKU' },
+        { accountRef: 'platform:revenue', bookingId, entryType: 'CREDIT', amount: booking.platformFee, description: 'Komisi platform MAVO' },
       ]});
       return completed;
     });
