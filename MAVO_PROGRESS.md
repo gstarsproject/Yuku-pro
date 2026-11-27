@@ -404,3 +404,13 @@ Status awal tahap 1:
 - This is a Wrangler configuration sync only. It does not install Neon S3 credentials or prove media upload works; Worker secret configuration and upload E2E remain pending.
 
 - CI verification for commit `410b3b5c00557de614e8c355c86895fb522f8f44`: Cloudflare Worker CI passed. Jobs `Typecheck`, `Wrangler dry run`, and `Alternate hostname dry run` all succeeded. Isolated preview deployment job was skipped by workflow conditions; no Worker deployment was performed.
+
+
+## Neon Object Storage credentials attached to MAVO Preview Worker — 2026-11-27
+- [x] Confirmed Neon TEST branch Object Storage is enabled in `ap-southeast-1` and bucket `mavo-media` is the target bucket used by Worker signing code.
+- [x] Issued a fresh, scoped Neon Object Storage credential for the MAVO preview Worker (storage:read + storage:write; expires 2027-11-27). Secret values were transferred directly to Cloudflare and were not written to this repository or chat.
+- [x] Attached Cloudflare Worker secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to `mavo-api-preview`.
+- [x] Added Worker plain-text bindings `AWS_ENDPOINT_URL_S3` and `AWS_REGION` for the Neon TEST storage endpoint and `ap-southeast-1`.
+- [x] Re-read Cloudflare metadata and confirmed both secret names and both plain-text binding names are present. Secret values were not read back or exposed.
+- [ ] Runtime presigned-upload + object readback from the MAVO app is still pending; this configuration check alone does not prove end-to-end upload success or byte-level validation.
+- [ ] GitHub Worker deploy job is skipped on pull_request events by design; a push to `feature/mavo-user-auth` is required to run the preview-only deployment workflow. Production remains untouched.
