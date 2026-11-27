@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
+import '../services/yuku_api.dart';
 
 class CreatorProfileScreen extends StatefulWidget {
   final String creatorName;
   final String bio;
+  final String? creatorUserId;
   const CreatorProfileScreen({
     super.key,
     this.creatorName = 'Nadia Putri',
     this.bio = 'Creator · Travel, lifestyle, and new experiences. Sharing little moments from everywhere.',
+    this.creatorUserId,
   });
 
   @override
@@ -17,6 +20,51 @@ class CreatorProfileScreen extends StatefulWidget {
 class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   bool _following = false;
   int _followers = 1280;
+  int _followingCount = 0;
+  bool _loadingFollow = false;
+  String? _followError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFollowStatus();
+  }
+
+  Future<void> _loadFollowStatus() async {
+    final id = widget.creatorUserId;
+    if (id == null || id.isEmpty) return;
+    try {
+      final data = await YukuApi.followStatus(id);
+      if (!mounted) return;
+      setState(() {
+        _following = data['following'] == true;
+        _followers = (data['followers'] as num?)?.toInt() ?? 0;
+        _followingCount = (data['followingCount'] as num?)?.toInt() ?? 0;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _followError = e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    final id = widget.creatorUserId;
+    if (id == null || id.isEmpty || _loadingFollow) return;
+    setState(() => _loadingFollow = true);
+    try {
+      final data = await YukuApi.setFollow(id, follow: !_following);
+      if (!mounted) return;
+      setState(() {
+        _following = data['following'] == true;
+        _followers = (data['followers'] as num?)?.toInt() ?? _followers;
+        _followingCount = (data['followingCount'] as num?)?.toInt() ?? _followingCount;
+        _followError = null;
+      });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => _loadingFollow = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -58,22 +106,19 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
           const SizedBox(width: 34),
           _Metric(value: _followers.toString(), label: 'Pengikut'),
           const SizedBox(width: 34),
-          const _Metric(value: '356', label: 'Mengikuti'),
+          _Metric(value: _followingCount.toString(), label: 'Mengikuti'),
         ]),
         const SizedBox(height: 20),
         Row(children: [
           Expanded(child: FilledButton.icon(
-            onPressed: () => setState(() {
-              _following = !_following;
-              _followers += _following ? 1 : -1;
-            }),
+            onPressed: widget.creatorUserId == null || _loadingFollow ? null : _toggleFollow,
             style: FilledButton.styleFrom(
               backgroundColor: _following ? MavoColors.violetSoft : MavoColors.violet,
               foregroundColor: _following ? MavoColors.violet : Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 13),
             ),
-            icon: Icon(_following ? Icons.check_rounded : Icons.person_add_alt_1_rounded),
-            label: Text(_following ? 'Mengikuti' : 'Ikuti'),
+            icon: _loadingFollow ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Icon(_following ? Icons.check_rounded : Icons.person_add_alt_1_rounded),
+            label: Text(widget.creatorUserId == null ? 'Profil demo' : (_following ? 'Mengikuti' : 'Ikuti')),
           )),
           const SizedBox(width: 10),
           Expanded(child: OutlinedButton.icon(
@@ -85,6 +130,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
             style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13)),
           )),
         ]),
+        if (_followError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_followError!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red, fontSize: 11))),
         const SizedBox(height: 24),
         const Divider(color: MavoColors.violetSoft),
         const SizedBox(height: 14),
