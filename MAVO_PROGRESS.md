@@ -42,7 +42,7 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [ ] Uji di perangkat Samsung: akun kedua Unfollow akun pertama, kembali ke Home, tarik layar ke bawah, lalu pastikan postingan FOLLOWERS tidak lagi terlihat.
 
 ## Pembaruan 2026-11-27 — Like dan Komentar (implementasi awal)
-- Perbaikan CI: analyzer menemukan koma ekstra pada builder feed; sudah diperbaiki pada commit `d91431cd50bfed3f52cd4bc20238d9d6f12c6eab`. Menunggu validasi ulang CI untuk commit perbaikan.
+- [x] Perbaikan CI Flutter: koma ekstra dan penutup callback builder feed diperbaiki; commit final `3f4dabcb925f6e3cbee91eeb3a450f0cd4fe82f0`.
 - [x] Tambah model Prisma `PostLike` dan `PostComment` beserta relasi ke User dan Post.
 - [x] Tambah migration SQL `20261127040000_add_post_likes_comments`.
 - [x] Terapkan tabel dan indeks Like/Komentar pada Neon branch pengujian `mavo-test` (project `lucky-truth-84216061`, branch `br-divine-shape-bi7a8pkw`); produksi tidak disentuh.
@@ -50,13 +50,20 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] Feed API mengembalikan `likesCount`, `commentsCount`, dan `likedByMe`.
 - [x] Sambungkan tombol Like dan panel Komentar di Flutter ke API.
 - [x] Worker preview berhasil typecheck dan dry-run; deploy preview `mavo-preview` dan `mavo-api-preview` selesai pada run `45985452828`.
-- [ ] Tunggu Flutter analyze/test dan build APK arm64 untuk commit `287db1902788615e03462cd96d63cebffc7d01d3`.
-- [ ] Uji Like/Unlike dan kirim/baca komentar dari dua akun di APK; pastikan hitungan konsisten setelah refresh.
+- [x] Flutter Analyze PASS dan Flutter Tests PASS pada run `45986283361`, commit `3f4dabcb925f6e3cbee91eeb3a450f0cd4fe82f0`.
+- [x] Build APK release Android arm64 kompatibel Samsung PASS; artifact `mavo-android-arm64-preview`, run `45986283361`, artifact `15191094300` (18,116,932 byte APK; ZIP artifact 8,756,503 byte).
+- [ ] APK ini ditahan untuk sementara sesuai keputusan: kumpulkan beberapa fitur sebelum meminta pengguna instal APK gabungan berikutnya.
+- [ ] Uji Like/Unlike dan kirim/baca komentar dari dua akun di APK gabungan berikutnya; pastikan hitungan konsisten setelah refresh.
 - Catatan: fitur belum dinyatakan selesai sampai APK lolos CI dan diuji langsung di perangkat.
  
+## Keputusan distribusi APK
+- Pengguna meminta agar tidak perlu instal APK bergantian untuk setiap fitur. Karena itu, build preview per fitur disimpan sebagai artefak internal; pengguna akan diminta instal saat satu batch fitur lebih lengkap sudah siap.
+- Perubahan backend dapat diperbarui tanpa instal ulang APK; perubahan Flutter memerlukan APK baru.
+
 ## Batasan saat ini
 - Fitur postingan pada tahap ini hanya teks maksimal 2.000 karakter.
-- Foto/video, like server-side, komentar, share, story, hashtag, dan trending belum diaktifkan.
+- Foto/video, share, story, hashtag, dan trending belum diaktifkan.
+- Like/Unlike dan komentar sudah diimplementasikan di backend/Flutter, tetapi belum diuji runtime pada perangkat karena APK ditahan untuk batch pengujian berikutnya.
 - Follow/Unfollow dan filter FOLLOWERS sudah diimplementasikan; visibilitas setelah Follow sudah dikonfirmasi pengguna. Uji Unfollow + pull-to-refresh masih menunggu.
 - CI PASS dan catatan deployment belum membuktikan semua alur end-to-end sudah berfungsi dari APK.
 - Database pengujian adalah branch Neon `mavo-test`, bukan database produksi.
