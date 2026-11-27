@@ -1,5 +1,5 @@
 import { Client } from "pg";
-interface Env { HYPERDRIVE: Hyperdrive; AUTH_IP_LIMITER: RateLimit; AUTH_ID_LIMITER: RateLimit; USER_ACTION_LIMITER: RateLimit; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; }
+interface Env { HYPERDRIVE: Hyperdrive; AUTH_IP_LIMITER: RateLimit; AUTH_ID_LIMITER: RateLimit; USER_ACTION_LIMITER: RateLimit; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; ADMIN_BOOTSTRAP_TOKEN?: string; }
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
 // Preview auth throttling: approximate IP and per-identifier limits; production remains unchanged.
@@ -220,6 +220,52 @@ export default {
       return json({success:true,data:await createUserSession(c,{id:user.id,email:user.email,role:user.role,displayName:user.displayName})});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User login failed",e); return json({success:false,message:"Login gagal. Coba lagi."},400); }
+  }
+
+  if (path === "/api/v1/admin/bootstrap" && request.method === "POST") {
+   try {
+    if (env.APP_ENV !== "preview" || !env.ADMIN_BOOTSTRAP_TOKEN || env.ADMIN_BOOTSTRAP_TOKEN.length < 32)
+      return json({success:false,message:"Provisioning admin tidak tersedia."},404);
+    const ipLimit = await authRateLimit(env, request, "login");
+    if (ipLimit) return ipLimit;
+    const supplied = request.headers.get("x-admin-bootstrap-token") || "";
+    const expectedHash = await sha256(env.ADMIN_BOOTSTRAP_TOKEN);
+    const suppliedHash = await sha256(supplied);
+    let mismatch = expectedHash.length ^ suppliedHash.length;
+    for (let i = 0; i < Math.min(expectedHash.length, suppliedHash.length); i++) mismatch |= expectedHash.charCodeAt(i) ^ suppliedHash.charCodeAt(i);
+    if (mismatch !== 0) return json({success:false,message:"Token provisioning tidak valid."},401);
+    const body = await readRequestBody(request);
+    const password = typeof body.password === "string" ? body.password : "";
+    const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "MAVO Super Admin";
+    const email = "mavoapp94@gmail.com";
+    if (password.length < 16 || password.length > 128 || displayName.length < 2 || displayName.length > 60)
+      return json({success:false,message:"Password minimal 16 karakter dan nama 2–60 karakter."},400);
+    const passwordHash = await makePasswordHash(password);
+    return await db(env, async c => {
+      await c.query("BEGIN");
+      try {
+       const existingAdmins = await c.query('SELECT COUNT(*)::int AS count FROM "User" WHERE "role"=\'ADMIN\'');
+       if (Number(existingAdmins.rows[0].count) > 0) {
+        await c.query("ROLLBACK");
+        return json({success:false,message:"Admin sudah ada. Bootstrap satu kali telah dikunci."},409);
+       }
+       const existingUser = await c.query('SELECT "id" FROM "User" WHERE lower("email")=$1 LIMIT 1',[email]);
+       if (existingUser.rows[0]) {
+        await c.query("ROLLBACK");
+        return json({success:false,message:"Email sudah terdaftar. Tidak ada perubahan akun."},409);
+       }
+       const id = crypto.randomUUID();
+       await c.query('INSERT INTO "User" ("id","email","passwordHash","role","status","updatedAt") VALUES ($1,$2,$3,\'ADMIN\',\'ACTIVE\',NOW())',[id,email,passwordHash]);
+       await c.query('INSERT INTO "Profile" ("id","userId","displayName","updatedAt") VALUES ($1,$2,$3,NOW())',[crypto.randomUUID(),id,displayName]);
+       await c.query("COMMIT");
+       return json({success:true,message:"Akun admin Preview berhasil dibuat.",data:{id,email,role:"ADMIN",status:"ACTIVE"}},201);
+      } catch(e) {
+       await c.query("ROLLBACK");
+       if ((e as {code?:string})?.code === "23505") return json({success:false,message:"Email sudah terdaftar."},409);
+       throw e;
+      }
+    });
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Admin bootstrap failed",e); return json({success:false,message:"Provisioning admin gagal."},503); }
   }
 
   if (path === "/api/v1/admin/login" && request.method === "POST") {
