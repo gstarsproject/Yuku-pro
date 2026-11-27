@@ -1,6 +1,7 @@
 name: Cloudflare Worker CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -39,7 +40,7 @@ jobs:
 
   deploy-preview:
     name: Deploy isolated MAVO preview Workers
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/mavo-user-auth'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/mavo-user-auth' || github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feature/mavo-user-auth'
     needs: validate
     runs-on: ubuntu-latest
     permissions:
