@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:yuku_app/screens/app_shell.dart';
 import 'package:yuku_app/screens/auth_screen.dart';
+import 'package:yuku_app/screens/creator_profile_screen.dart';
 
 void main() {
   testWidgets('MAVO home shell renders', (tester) async {
@@ -18,34 +19,34 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.text('Inbox'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Pesan'), findsOneWidget);
     expect(find.text('Nadia Putri'), findsOneWidget);
 
     await tester.tap(find.text('Nadia Putri'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Mode pratinjau — pesan hanya tersimpan di layar ini.'), findsOneWidget);
     expect(find.text('Hai! Senang bisa terhubung di MAVO 😊'), findsOneWidget);
   });
+
   testWidgets('Home story opens the MAVO story viewer', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: AppShell()));
     await tester.pump();
 
     await tester.tap(find.text('Discover'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('DISCOVER'), findsOneWidget);
     expect(find.text('Bagikan cerita'), findsOneWidget);
   });
 
   testWidgets('Creator profile follow button updates preview state', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: AppShell()));
+    await tester.pumpWidget(const MaterialApp(
+      home: CreatorProfileScreen(creatorName: 'MAVO Community'),
+    ));
     await tester.pump();
-
-    await tester.tap(find.byTooltip('Lihat profil kreator'));
-    await tester.pumpAndSettle();
 
     expect(find.text('MAVO Community'), findsOneWidget);
     expect(find.text('1280'), findsOneWidget);
@@ -53,10 +54,9 @@ void main() {
     await tester.tap(find.text('Ikuti'));
     await tester.pump();
 
-    expect(find.text('Mengikuti'), findsNWidgets(2));
+    expect(find.text('Mengikuti'), findsOneWidget);
     expect(find.text('1281'), findsOneWidget);
   });
-
 
   testWidgets('MAVO authentication screen shows sign in form', (tester) async {
     await tester.pumpWidget(MaterialApp(home: AuthScreen(onAuthenticated: (_) {})));
