@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "MAVO-pro",
+  "name": "mavo-pro",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-26",
   "preview_urls": true,
