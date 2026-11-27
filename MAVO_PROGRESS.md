@@ -69,7 +69,9 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] Tambah metode API Flutter untuk membaca dan membuat story.
 - [x] Ganti layar Stories demo menjadi daftar story nyata, viewer, dan form buat story teks maksimal 500 karakter; audience Publik/Pengikut.
 - [x] Tombol Your Story dan kategori Story di Home membuka layar Stories.
-- [ ] Jalankan dan luluskan GitHub CI (Backend, Worker, Flutter) untuk implementasi Story.
+- [x] Cloudflare Worker CI lulus pada commit perbaikan `7c02dbfccf233c6e021338706a30ab7a35087f69`.
+- [ ] Backend CI dan Flutter CI pada commit `7c02dbfccf233c6e021338706a30ab7a35087f69` masih berjalan saat catatan ini diperbarui.
+- [x] Perbaiki error analyzer Flutter: ganti `MavoColors.cloud` menjadi `MavoColors.background`; perbarui `DropdownButtonFormField.initialValue` dan rapikan blok kondisi. Commit `7c02dbfccf233c6e021338706a30ab7a35087f69`.
 - [ ] Deploy Worker preview terbaru setelah CI lulus.
 - [ ] Uji buat/baca story lintas dua akun, audience FOLLOWERS, dan expiry 24 jam pada APK gabungan.
 - Catatan batasan: tahap Story ini berbasis teks; upload foto/video belum dibuat karena memerlukan alur penyimpanan media dan URL aman.
