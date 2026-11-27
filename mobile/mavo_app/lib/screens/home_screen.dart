@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import '../services/MAVO_api.dart';
-import '../theme/MAVO_theme.dart';
+import '../services/mavo_api.dart';
+import '../theme/mavo_theme.dart';
 import 'stories_screen.dart';
 import 'creator_profile_screen.dart';
 
