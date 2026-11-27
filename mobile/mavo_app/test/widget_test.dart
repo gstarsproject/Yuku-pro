@@ -56,8 +56,8 @@ void main() {
   });
 
   testWidgets('MAVO authentication screen switches to registration', (tester) async {
-    await tester.view.setPhysicalSize(const Size(800, 1000));
-    await tester.view.setDevicePixelRatio(1);
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
