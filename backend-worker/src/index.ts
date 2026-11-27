@@ -57,7 +57,7 @@ function isValidMediaItem(item: unknown, userId: string): item is { objectKey: s
   const filename = key.startsWith("users/" + userId + "/") ? key.slice(("users/" + userId + "/").length) : "";
   const maxBytes = expectedMediaType === "VIDEO" ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
   return !!extension && mediaType === expectedMediaType &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp|gif|mp4|mov)$/i.test(filename) &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|gif|mp4|mov)$/i.test(filename) &&
     filename.toLowerCase().endsWith("." + extension) &&
     Number.isSafeInteger(byteSize) && byteSize >= 1 && byteSize <= maxBytes;
 }
