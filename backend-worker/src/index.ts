@@ -125,7 +125,7 @@ export default {
    } catch(e) { console.error("Session lookup failed",e); return json({success:false,message:"Tidak dapat memeriksa sesi"},503); }
   }
 
-  const followMatch = path.match(/^\\/api\\/v1\\/users\\/([0-9a-f-]{36})\\/follow$/i);
+  const followMatch = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/follow$/i);
   if (followMatch && ["GET","POST","DELETE"].includes(request.method)) {
    try {
     return await db(env, async c => {
