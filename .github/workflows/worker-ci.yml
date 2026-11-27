@@ -40,7 +40,7 @@ jobs:
 
   deploy-preview:
     name: Deploy isolated MAVO preview Workers
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/mavo-user-auth' || github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feature/mavo-user-auth'
+    if: github.ref == 'refs/heads/feature/mavo-user-auth' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: validate
     runs-on: ubuntu-latest
     permissions:
@@ -60,10 +60,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "9252e9ed7c59dab5d7602711bd80ad16"
-        run: npx wrangler deploy --config wrangler.preview.jsonc
+        run: npx wrangler preview --config wrangler.preview.jsonc
       - name: Deploy alternate preview hostname
         working-directory: backend-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: "9252e9ed7c59dab5d7602711bd80ad16"
-        run: npx wrangler deploy --config wrangler.preview-alt.jsonc
+        run: npx wrangler preview --config wrangler.preview-alt.jsonc
