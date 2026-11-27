@@ -48,7 +48,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: audience,
+              initialValue: audience,
               decoration: const InputDecoration(labelText: 'Siapa yang bisa melihat?'),
               items: const [
                 DropdownMenuItem(value: 'PUBLIC', child: Text('Publik')),
@@ -65,9 +65,11 @@ class _StoriesScreenState extends State<StoriesScreen> {
                   await YukuApi.createStory(content: content, audience: audience);
                   if (sheetContext.mounted) Navigator.pop(sheetContext, true);
                 } catch (e) {
-                  if (sheetContext.mounted) ScaffoldMessenger.of(sheetContext).showSnackBar(
-                    SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-                  );
+                  if (sheetContext.mounted) {
+                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                      SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+                    );
+                  }
                 }
               },
               child: const Text('Bagikan Story'),
@@ -119,10 +121,10 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: MavoColors.cloud,
+    backgroundColor: MavoColors.background,
     appBar: AppBar(
       title: const Text('MAVO Stories', style: TextStyle(fontWeight: FontWeight.w800)),
-      backgroundColor: MavoColors.cloud,
+      backgroundColor: MavoColors.background,
       foregroundColor: MavoColors.midnight,
       actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
     ),
@@ -137,10 +139,12 @@ class _StoriesScreenState extends State<StoriesScreen> {
       future: _storiesFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (snapshot.hasError) {
+          return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('Story belum dapat dimuat.'),
           TextButton(onPressed: _refresh, child: const Text('Coba lagi')),
-        ]));
+          ]));
+        }
         final stories = snapshot.data ?? [];
         if (stories.isEmpty) return Center(child: Padding(
           padding: const EdgeInsets.all(32),
