@@ -79,13 +79,15 @@ class _InboxScreenState extends State<InboxScreen> {
             child: filtered.isEmpty
               ? const Center(child: Text('Percakapan tidak ditemukan', style: TextStyle(color: MavoColors.muted)))
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                  padding: const EdgeInsets.fromLTRB(14, 2, 14, 14),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 3),
+                  separatorBuilder: (_, __) => const SizedBox(height: 7),
                   itemBuilder: (context, index) {
                     final c = filtered[index];
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
+                      tileColor: Colors.white,
                       leading: _Avatar(name: c.name, color: c.color, group: c.group, online: c.online),
                       title: Row(children: [
                         Expanded(child: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.ink))),
