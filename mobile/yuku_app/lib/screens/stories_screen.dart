@@ -81,9 +81,16 @@ class _StoriesScreenState extends State<StoriesScreen> {
             SizedBox(width: double.infinity, child: FilledButton(
               onPressed: () async {
                 final content = controller.text.trim();
-                if (content.isEmpty) return;
+                if (content.isEmpty && media.isEmpty) return;
                 try {
-                  await YukuApi.createStory(content: content, audience: audience);
+                  final uploaded = <Map<String,dynamic>>[];
+                  for (final item in media) {
+                    final ext = item.name.toLowerCase().split('.').last;
+                    final isVideo = ['mp4','mov'].contains(ext);
+                    final mime = switch (ext) { 'jpg' || 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', 'mov' => 'video/quicktime', _ => 'video/mp4' };
+                    uploaded.add(await YukuApi.uploadMediaFile(file: File(item.path), mediaType: isVideo ? 'VIDEO' : 'IMAGE', contentType: mime));
+                  }
+                  await YukuApi.createStory(content: content, audience: audience, media: uploaded, locationName: locationController.text);
                   if (sheetContext.mounted) Navigator.pop(sheetContext, true);
                 } catch (e) {
                   if (sheetContext.mounted) {
