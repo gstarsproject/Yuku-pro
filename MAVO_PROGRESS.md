@@ -131,3 +131,19 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - Creator profile Pengikut and Mengikuti counters now open live lists; removed the hard-coded 1,280 follower demo count.
 - Each listed account opens its real creator profile.
 - Validation pending: GitHub Actions CI and two-account runtime test on Android preview. No production deployment; preview database remains the test database.
+
+
+## Media Post/Story — tahap fondasi backend (2026-11-27)
+- [x] Buat bucket privat Neon Object Storage mavo-media pada TEST branch mavo-test (region ap-southeast-1 / Singapore).
+- [x] Tambah tabel MediaAsset, relasi ke Post/Story/User, indeks, dan kolom lokasi opsional (nama tempat + koordinat) di Prisma schema.
+- [x] Buat migration 20261127120000_add_post_story_media.
+- [x] Terapkan tabel dan kolom tersebut ke Neon TEST mavo-test; semua 8 perintah SQL selesai tanpa error. Produksi tidak disentuh.
+- [x] Tambah Worker endpoint terautentikasi untuk meminta presigned upload URL dan presigned download URL 15 menit; pemeriksaan akses media menghormati owner, audience post/story, follow, dan expiry Story.
+- [x] Tambah dukungan Worker untuk melampirkan metadata media dan label lokasi saat membuat Post/Story.
+- [x] Tambah metode Flutter untuk meminta upload URL dan mengirim file langsung ke object storage, serta mengirim metadata media/lokasi saat membuat Post/Story.
+- [x] Tambah dependency image_picker untuk pemilih galeri Android.
+- [ ] Worker CI pertama gagal karena dua karakter literal backslash-n yang tersisip pada source. Sudah diperbaiki pada commit e58e315cfb5cf9b9e596f5063e1e17dc9e5f48de; validasi ulang belum terdeteksi.
+- [ ] Flutter UI pemilihan foto/video dan input lokasi masih dalam pengerjaan; belum ada preview media di feed/story atau video player.
+- [ ] Cloudflare Worker secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL_S3, AWS_REGION belum terpasang pada mavo-api-preview. Credential Neon TEST dibuat khusus scope storage:read/write dan expiry 2027-11-27; pemasangan secret melalui dashboard Cloudflare perlu dilakukan manual karena operasi penyalinan secret ditolak kontrol keamanan.
+- [ ] Jangan deploy Worker/API media sampai secret storage terpasang dan CI lulus.
+- Catatan keamanan: bucket privat; kredensial tidak boleh ditanam di APK, repository, atau source code. URL file yang diberikan ke aplikasi hanya berlaku 15 menit.
