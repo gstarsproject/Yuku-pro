@@ -384,6 +384,8 @@ if (avatarMedia) {
       if (request.method !== "GET") { const limited = await userActionRateLimit(env, viewer.id, "follow-change"); if (limited) return limited; }
       const targetId = followMatch[1];
       if (viewer.id === targetId) return json({success:false,message:"Kamu tidak bisa mengikuti akun sendiri."},400);
+      const blocked = await c.query('SELECT EXISTS(SELECT 1 FROM "UserBlock" WHERE ("blockerId"=$1 AND "blockedId"=$2) OR ("blockerId"=$2 AND "blockedId"=$1)) AS blocked',[viewer.id,targetId]);
+      if (blocked.rows[0]?.blocked) return json({success:false,message:"Interaksi dengan akun ini dibatasi."},403);
       const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[targetId]);
       if (!target.rows[0]) return json({success:false,message:"Akun tidak ditemukan."},404);
       if (request.method === "POST") {
@@ -540,7 +542,7 @@ if (avatarMedia) {
       const limited = await userActionRateLimit(env, user.id, "user-search"); if (limited) return limited;
       const query = (url.searchParams.get("q") || "").trim();
       if (query.length < 2 || query.length > 60) return json({success:true,count:0,data:[]});
-      const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\'ACTIVE\' AND u."role"<>\'ADMIN\' AND u."id"<>$1 AND p."displayName" ILIKE $2 ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query + '%']);
+      const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\'ACTIVE\' AND u."role"<>\'ADMIN\' AND u."id"<>$1 AND p."displayName" ILIKE $2 AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$1 AND b."blockedId"=u."id") OR (b."blockerId"=u."id" AND b."blockedId"=$1)) ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query + '%']);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User search failed",e); return json({success:false,message:"Pencarian pengguna gagal."},503); }
@@ -572,7 +574,7 @@ if (avatarMedia) {
         await c.query('INSERT INTO "ConversationParticipant" ("id","conversationId","userId") VALUES ($1,$2,$3),($4,$2,$5) ON CONFLICT ("conversationId","userId") DO NOTHING',[crypto.randomUUID(),conversationId,user.id,crypto.randomUUID(),recipientId]);
         return json({success:true,data:{id:conversationId,recipientId}},201);
       }
-      const result = await c.query('SELECT cv."id",peer."id" AS "userId",pr."displayName",pr."avatarUrl",lm."body" AS "lastMessage",lm."createdAt" AS "lastMessageAt",(SELECT COUNT(*)::int FROM "Message" um WHERE um."conversationId"=cv."id" AND um."senderId"<>$1 AND um."readAt" IS NULL) AS "unreadCount" FROM "ConversationParticipant" mine JOIN "Conversation" cv ON cv."id"=mine."conversationId" JOIN "ConversationParticipant" other ON other."conversationId"=cv."id" AND other."userId"<>$1 JOIN "User" peer ON peer."id"=other."userId" AND peer."status"=\'ACTIVE\' LEFT JOIN "Profile" pr ON pr."userId"=peer."id" LEFT JOIN LATERAL (SELECT m."body",m."createdAt" FROM "Message" m WHERE m."conversationId"=cv."id" ORDER BY m."createdAt" DESC LIMIT 1) lm ON TRUE WHERE mine."userId"=$1 AND EXISTS (SELECT 1 FROM "Follow" f1 WHERE f1."followerId"=$1 AND f1."followingId"=peer."id") AND EXISTS (SELECT 1 FROM "Follow" f2 WHERE f2."followerId"=peer."id" AND f2."followingId"=$1) ORDER BY COALESCE(lm."createdAt",cv."createdAt") DESC LIMIT 100',[user.id]);
+      const result = await c.query('SELECT cv."id",peer."id" AS "userId",pr."displayName",pr."avatarUrl",lm."body" AS "lastMessage",lm."createdAt" AS "lastMessageAt",(SELECT COUNT(*)::int FROM "Message" um WHERE um."conversationId"=cv."id" AND um."senderId"<>$1 AND um."readAt" IS NULL) AS "unreadCount" FROM "ConversationParticipant" mine JOIN "Conversation" cv ON cv."id"=mine."conversationId" JOIN "ConversationParticipant" other ON other."conversationId"=cv."id" AND other."userId"<>$1 JOIN "User" peer ON peer."id"=other."userId" AND peer."status"=\'ACTIVE\' LEFT JOIN "Profile" pr ON pr."userId"=peer."id" LEFT JOIN LATERAL (SELECT m."body",m."createdAt" FROM "Message" m WHERE m."conversationId"=cv."id" ORDER BY m."createdAt" DESC LIMIT 1) lm ON TRUE WHERE mine."userId"=$1 AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$1 AND b."blockedId"=peer."id") OR (b."blockerId"=peer."id" AND b."blockedId"=$1)) AND EXISTS (SELECT 1 FROM "Follow" f1 WHERE f1."followerId"=$1 AND f1."followingId"=peer."id") AND EXISTS (SELECT 1 FROM "Follow" f2 WHERE f2."followerId"=peer."id" AND f2."followingId"=$1) ORDER BY COALESCE(lm."createdAt",cv."createdAt") DESC LIMIT 100',[user.id]);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Conversations request failed",e); return json({success:false,message:"Percakapan gagal dimuat."},503); }
@@ -588,6 +590,8 @@ if (avatarMedia) {
       if (!membership.rows[0]) return json({success:false,message:"Percakapan tidak ditemukan."},404);
       const peer = await c.query('SELECT other."userId" FROM "ConversationParticipant" other WHERE other."conversationId"=$1 AND other."userId"<>$2 LIMIT 1',[conversationId,user.id]);
       if (!peer.rows[0]) return json({success:false,message:"Percakapan tidak ditemukan."},404);
+      const blocked = await c.query('SELECT EXISTS(SELECT 1 FROM "UserBlock" WHERE ("blockerId"=$1 AND "blockedId"=$2) OR ("blockerId"=$2 AND "blockedId"=$1)) AS blocked',[user.id,peer.rows[0].userId]);
+      if (blocked.rows[0]?.blocked) return json({success:false,message:"Chat dinonaktifkan karena salah satu akun memblokir akun lainnya."},403);
       const mutual = await c.query('SELECT EXISTS (SELECT 1 FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2) AS "aFollowsB", EXISTS (SELECT 1 FROM "Follow" WHERE "followerId"=$2 AND "followingId"=$1) AS "bFollowsA"',[user.id,peer.rows[0].userId]);
       if (mutual.rows[0]?.aFollowsB !== true || mutual.rows[0]?.bFollowsA !== true)
         return json({success:false,message:"Chat dinonaktifkan karena kalian tidak lagi saling mengikuti."},403);
@@ -725,6 +729,7 @@ if (avatarMedia) {
          JOIN "User" u ON u."id" = p."authorId"
          LEFT JOIN "Profile" pr ON pr."userId" = p."authorId"
          WHERE u."status" = 'ACTIVE'
+           AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$1 AND b."blockedId"=p."authorId") OR (b."blockerId"=p."authorId" AND b."blockedId"=$1))
            AND ($3::uuid IS NULL OR p."authorId" = $3::uuid)
            AND ($4::boolean = false OR EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId" = $1 AND f."followingId" = p."authorId"))
            AND ($5::boolean = false OR p."audience" = 'PUBLIC')
