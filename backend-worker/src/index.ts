@@ -8,6 +8,7 @@ async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
 }
 
 const TOKEN_TTL_SECONDS = 28800;
+const MAX_POST_CONTENT_LENGTH = 2000;
 const encoder = new TextEncoder();
 const toHex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
 async function sha256(value: string) {
@@ -129,7 +130,7 @@ export default {
     const body = await readRequestBody(request);
     const content = typeof body.content === "string" ? body.content.trim() : "";
     const audience = typeof body.audience === "string" ? body.audience : "PUBLIC";
-    if (!content || content.length > 2000) return json({success:false,message:"Isi postingan wajib diisi (maksimal 2.000 karakter)."},400);
+    if (!content || content.length > MAX_POST_CONTENT_LENGTH) return json({success:false,message:"Isi postingan wajib diisi (maksimal 2.000 karakter)."},400);
     if (!["PUBLIC","FOLLOWERS","PRIVATE"].includes(audience)) return json({success:false,message:"Pilihan privasi tidak valid."},400);
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
