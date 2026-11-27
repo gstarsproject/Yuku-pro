@@ -185,7 +185,30 @@ class _PostsFeedState extends State<_PostsFeed> {
         final content = (post["content"] ?? "").toString();
         final audience = switch ((post["audience"] ?? "PUBLIC").toString()) { "FOLLOWERS" => "Pengikut", "PRIVATE" => "Privat", _ => "Publik" };
         return Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)), Text(audience, style: const TextStyle(fontSize: 10, color: MavoColors.muted))])), const Icon(Icons.more_horiz, color: MavoColors.muted)]),
+          Row(children: [
+            Expanded(child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                final authorId = (post["authorId"] ?? "").toString();
+                if (authorId.isEmpty) return;
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => CreatorProfileScreen(
+                    creatorName: name,
+                    creatorUserId: authorId,
+                  ),
+                ));
+              },
+              child: Row(children: [
+                const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)),
+                const SizedBox(width: 10),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(name, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+                  Text(audience, style: const TextStyle(fontSize: 10, color: MavoColors.muted)),
+                ])),
+              ]),
+            )),
+            const Icon(Icons.more_horiz, color: MavoColors.muted),
+          ]),
           const SizedBox(height: 13),
           Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
         ]));
