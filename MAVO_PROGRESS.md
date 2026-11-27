@@ -227,3 +227,7 @@ Status awal tahap 1:
 - [ ] CI Worker dan Flutter untuk batch ini harus lulus.
 - [ ] Uji dua akun di perangkat Android: profil, postingan privat/followers, tombol Pesan, saling Follow, Unfollow.
 - [ ] Upload media belum dapat dinyatakan selesai sampai kredensial storage TEST dikonfigurasi dan tes berhasil.
+
+- [x] Profil kreator mengganti panel konten demo dengan daftar postingan aktual dari API.
+- [x] Daftar postingan kreator mengikuti filter visibilitas server: publik, followers yang sudah mengikuti, dan privat hanya pemilik.
+- [ ] CI dan tes dua akun untuk profil kreator masih menunggu.
