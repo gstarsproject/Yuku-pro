@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/MAVO_api.dart';
+import '../services/mavo_api.dart';
 import 'app_shell.dart';
 import 'auth_screen.dart';
 
