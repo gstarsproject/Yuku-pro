@@ -25,7 +25,11 @@ class _StoriesScreenState extends State<StoriesScreen> {
   Future<void> _refresh() async {
     final request = YukuApi.stories();
     setState(() => _storiesFuture = request);
-    await request;
+    try {
+      await request;
+    } catch (_) {
+      // FutureBuilder displays the error and keeps retry available.
+    }
   }
 
   Future<void> _composeStory() async {
