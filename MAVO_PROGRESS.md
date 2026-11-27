@@ -124,3 +124,10 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [ ] Health endpoint preview belum dapat diverifikasi melalui pemeriksaan HTTP eksternal; jangan anggap deploy sukses sebagai bukti runtime end-to-end.
 - [ ] Setelah artifact APK berhasil diunggah, jalankan uji runtime dua akun untuk Chat, Notifikasi, Like/Komentar, Story, Follow/Unfollow, dan audience feed.
 - Database tetap Neon TEST `mavo-test`; produksi belum disentuh dan PR belum di-merge.
+
+## Follow list repair — 2026-11-27
+- Added authenticated API `GET /api/v1/users/:id/relations?type=followers|following` to return real follower/following accounts from the Follow table.
+- Added Flutter `YukuApi.userRelations` client method.
+- Creator profile Pengikut and Mengikuti counters now open live lists; removed the hard-coded 1,280 follower demo count.
+- Each listed account opens its real creator profile.
+- Validation pending: GitHub Actions CI and two-account runtime test on Android preview. No production deployment; preview database remains the test database.
