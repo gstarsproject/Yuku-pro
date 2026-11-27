@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/yuku_api.dart';
+import '../services/mavo_api.dart';
 import '../theme/yuku_theme.dart';
 import 'stories_screen.dart';
+import 'story_composer_screen.dart';
 import 'creator_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -92,20 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('Stories', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 94,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: const [
-                      _StoryItem(label: 'Your story', color: MavoColors.violet, isAdd: true),
-                      _StoryItem(label: 'Discover', color: MavoColors.coral),
-                      _StoryItem(label: 'Travel', color: MavoColors.aqua),
-                      _StoryItem(label: 'Lifestyle', color: Color(0xFFFFB84D)),
-                      _StoryItem(label: 'Creators', color: Color(0xFF8A6BFF)),
-                      _StoryItem(label: 'Community', color: Color(0xFFEF70B5)),
-                    ],
-                  ),
-                ),
+                const StoryStrip(),
               ]),
             ),
           ),
@@ -154,41 +143,101 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _StoryItem extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool isAdd;
-  const _StoryItem({required this.label, required this.color, this.isAdd = false});
+class StoryStrip extends StatefulWidget {
+  const StoryStrip({super.key});
+  @override
+  State<StoryStrip> createState() => _StoryStripState();
+}
+
+class _StoryStripState extends State<StoryStrip> {
+  late Future<List<Map<String, dynamic>>> _future;
+  @override
+  void initState() { super.initState(); _future = MavoApi.stories(); }
+
+  Future<void> _refresh() async { setState(() => _future = MavoApi.stories()); }
+
+  Future<void> _compose() async {
+    final created = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const StoryComposerScreen()));
+    if (created == true && mounted) await _refresh();
+  }
+
+  Future<void> _open(int index, List<Map<String, dynamic>> stories) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => StoriesScreen(stories: stories, initialIndex: index)));
+    if (mounted) await _refresh();
+  }
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 67,
-    child: InkWell(
-      borderRadius: BorderRadius.circular(35),
-      onTap: () {
-        if (isAdd) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Upload story akan aktif setelah integrasi media.')),
-          );
-        } else {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => StoriesScreen(initialStory: label),
-          ));
+    height: 94,
+    child: FutureBuilder<List<Map<String, dynamic>>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final stories = snapshot.data ?? const <Map<String, dynamic>>[];
+        if (snapshot.hasError) {
+          return Row(children: [
+            _StoryBubble(label: 'Buat Story', onTap: _compose, color: MavoColors.violet, isAdd: true),
+            const SizedBox(width: 10),
+            const Expanded(child: Center(child: Text('Story belum dapat dimuat', style: TextStyle(color: MavoColors.muted, fontSize: 11)))),
+            IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh, color: MavoColors.violet)),
+          ]);
         }
+        return ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            _StoryBubble(label: 'Cerita kamu', onTap: _compose, color: MavoColors.violet, isAdd: true),
+            if (snapshot.connectionState == ConnectionState.waiting && stories.isEmpty)
+              const SizedBox(width: 100, child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))))
+            else
+              ...List.generate(stories.length, (i) {
+                final story = stories[i];
+                final media = (story['media'] as List<dynamic>? ?? const []);
+                final mediaId = media.isNotEmpty ? (media.first as Map)['id']?.toString() : null;
+                return _StoryBubble(
+                  label: story['authorName']?.toString() ?? 'MAVO user',
+                  color: const Color(0xFFFF6D8B),
+                  mediaId: mediaId,
+                  onTap: () => _open(i, stories),
+                );
+              }),
+          ],
+        );
       },
+    ),
+  );
+}
+
+class _StoryBubble extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+  final bool isAdd;
+  final String? mediaId;
+  const _StoryBubble({required this.label, required this.onTap, required this.color, this.isAdd = false, this.mediaId});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 72,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(35),
       child: Column(children: [
         Container(
           padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: color, width: 2.2),
-          ),
+          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 2.2)),
           child: CircleAvatar(
             radius: 25,
             backgroundColor: color.withValues(alpha: .13),
             child: isAdd
-                ? Icon(Icons.add_rounded, color: color, size: 27)
-                : Icon(Icons.person_rounded, color: color, size: 27),
+              ? Icon(Icons.add_rounded, color: color, size: 27)
+              : (mediaId == null
+                ? Icon(Icons.person_rounded, color: color, size: 27)
+                : FutureBuilder<String>(
+                    future: MavoApi.mediaUrl(mediaId!),
+                    builder: (context, snapshot) => snapshot.hasData
+                      ? ClipOval(child: Image.network(snapshot.data!, width: 50, height: 50, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(Icons.person, color: color)))
+                      : Icon(Icons.person_rounded, color: color, size: 27),
+                  )),
           ),
         ),
         const SizedBox(height: 5),
