@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Install dependencies
@@ -33,3 +33,27 @@ jobs:
       - name: Wrangler dry run
         working-directory: backend-worker
         run: npx wrangler deploy --dry-run --config wrangler.preview.jsonc
+
+  deploy-preview:
+    name: Deploy isolated MAVO preview Worker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/mavo-user-auth'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: backend-worker
+        run: npm install
+      - name: Deploy mavo-preview only
+        working-directory: backend-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "9252e9ed7c59dab5d7602711bd80ad16"
+        run: npx wrangler deploy --config wrangler.preview.jsonc
