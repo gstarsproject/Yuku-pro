@@ -284,3 +284,10 @@ Status awal tahap 1:
 - [ ] Tetap perlu validasi runtime di preview untuk status 400/413; pemeriksaan TypeScript dan Wrangler CI menunggu hasil workflow.
 - [ ] Rate limiting autentikasi dan pembatasan CORS belum diterapkan; jangan anggap API siap rilis publik.
 
+### Hasil CI untuk commit fdf9d87
+- [x] Cloudflare Worker CI run `46002417682`: dependency install, TypeScript typecheck, Wrangler dry-run, dan alternate hostname dry-run semuanya PASS.
+- [ ] Job deploy preview pada run tersebut berstatus SKIPPED; karena itu perubahan request-error handling belum dinyatakan ter-deploy.
+- [ ] Akses runtime endpoint preview melalui pemeriksa web tidak tersedia pada sesi ini; status HTTP 400/413 belum diuji langsung.
+- [ ] Backend CI run `46002417782` menyelesaikan Prisma Client generation dan NestJS build; menunggu status akhir job.
+- Catatan: tidak ada perubahan production.
+
