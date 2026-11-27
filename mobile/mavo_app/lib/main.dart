@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/auth_gate.dart';
-import 'theme/MAVO_theme.dart';
+import 'theme/mavo_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
