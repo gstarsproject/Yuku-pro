@@ -200,6 +200,7 @@ class _ChatScreenState extends State<_ChatScreen> {
   bool _loading = true;
   bool _sending = false;
   String? _error;
+  String? _myUserId;
 
   @override
   void initState() { super.initState(); _load(); }
@@ -209,10 +210,11 @@ class _ChatScreenState extends State<_ChatScreen> {
 
   Future<void> _load() async {
     try {
+      final user = await MavoApi.me();
       final items = await MavoApi.messages(widget.conversationId);
       await MavoApi.markConversationRead(widget.conversationId);
       if (!mounted) return;
-      setState(() { _messages = items; _error = null; });
+      setState(() { _myUserId = user['id']?.toString(); _messages = items; _error = null; });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
       });
@@ -271,5 +273,4 @@ class _ChatScreenState extends State<_ChatScreen> {
     ]),
   );
 
-  String? get _myUserId => null;
 }
