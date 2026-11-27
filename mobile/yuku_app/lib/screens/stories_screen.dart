@@ -7,7 +7,8 @@ import '../theme/yuku_theme.dart';
 
 class StoriesScreen extends StatefulWidget {
   final String initialStory;
-  const StoriesScreen({super.key, this.initialStory = 'Discover'});
+  final String? initialUserId;
+  const StoriesScreen({super.key, this.initialStory = 'Discover', this.initialUserId});
 
   @override
   State<StoriesScreen> createState() => _StoriesScreenState();
@@ -181,13 +182,16 @@ class _StoriesScreenState extends State<StoriesScreen> {
           TextButton(onPressed: _refresh, child: const Text('Coba lagi')),
           ]));
         }
-        final stories = snapshot.data ?? [];
+        final allStories = snapshot.data ?? <Map<String, dynamic>>[];
+        final stories = widget.initialUserId == null || widget.initialUserId!.isEmpty
+            ? allStories
+            : allStories.where((story) => (story['userId'] ?? story['authorId'] ?? '').toString() == widget.initialUserId).toList();
         if (stories.isEmpty) return Center(child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Icon(Icons.auto_awesome_rounded, size: 54, color: MavoColors.violet),
             const SizedBox(height: 14),
-            const Text('Belum ada Story', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+            Text(widget.initialUserId == null ? 'Belum ada Story' : 'Belum ada Story dari ${widget.initialStory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
             const SizedBox(height: 6),
             const Text('Bagikan momen singkatmu. Story akan hilang otomatis setelah 24 jam.', textAlign: TextAlign.center, style: TextStyle(color: MavoColors.muted)),
             const SizedBox(height: 16),
