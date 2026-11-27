@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import '../services/yuku_api.dart';
-import '../theme/yuku_theme.dart';
+import '../services/MAVO_api.dart';
+import '../theme/MAVO_theme.dart';
 import 'stories_screen.dart';
 import 'creator_profile_screen.dart';
 
@@ -20,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _storiesFuture = YukuApi.stories();
+    _storiesFuture = MAVOApi.stories();
   }
 
   @override
@@ -28,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async {
-          final storiesRequest = YukuApi.stories();
+          final storiesRequest = MAVOApi.stories();
           setState(() => _storiesFuture = storiesRequest);
           await Future.wait([
             _postsFeedKey.currentState?.refresh() ?? Future<void>.value(),
@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
             sliver: SliverToBoxAdapter(
               child: FutureBuilder<Map<String, dynamic>>(
-                future: YukuApi.health(),
+                future: MAVOApi.health(),
                 builder: (context, snapshot) {
                   final connected = snapshot.hasData && snapshot.data?['status'] == 'ok';
                   final failed = snapshot.hasError;
@@ -205,9 +205,9 @@ class _PostsFeedState extends State<_PostsFeed> {
   late Future<List<Map<String, dynamic>>> _future;
 
   Future<List<Map<String, dynamic>>> _loadPosts() {
-    if (widget.feedMode == 1) return YukuApi.posts(followingOnly: true);
-    if (widget.feedMode == 3) return YukuApi.posts(publicOnly: true);
-    return YukuApi.posts();
+    if (widget.feedMode == 1) return MAVOApi.posts(followingOnly: true);
+    if (widget.feedMode == 3) return MAVOApi.posts(publicOnly: true);
+    return MAVOApi.posts();
   }
 
   @override
@@ -255,7 +255,7 @@ class _PostsFeedState extends State<_PostsFeed> {
         return Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: Column(children: [
           const Text("Feed belum dapat dimuat.", style: TextStyle(color: MavoColors.ink, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          TextButton(onPressed: () => setState(() => _future = YukuApi.posts()), child: const Text("Coba lagi")),
+          TextButton(onPressed: () => setState(() => _future = MAVOApi.posts()), child: const Text("Coba lagi")),
         ]));
       }
       final posts = snapshot.data ?? [];
@@ -292,7 +292,7 @@ class _PostCardState extends State<_PostCard> {
     final previous = _liked;
     setState(() { _busy = true; _liked = !previous; _likes += _liked ? 1 : -1; });
     try {
-      final result = await YukuApi.setPostLike(widget.post['id'].toString(), liked: _liked);
+      final result = await MAVOApi.setPostLike(widget.post['id'].toString(), liked: _liked);
       if (!mounted) return;
       setState(() { _liked = result['likedByMe'] == true; _likes = (result['likesCount'] as num).toInt(); });
     } catch (e) {
@@ -385,7 +385,7 @@ class _PostCommentsSheetState extends State<_PostCommentsSheet> {
   late Future<List<Map<String, dynamic>>> _future;
   bool _sending = false;
   @override
-  void initState() { super.initState(); _future = YukuApi.postComments(widget.postId); }
+  void initState() { super.initState(); _future = MAVOApi.postComments(widget.postId); }
   @override
   void dispose() { _controller.dispose(); super.dispose(); }
 
@@ -394,9 +394,9 @@ class _PostCommentsSheetState extends State<_PostCommentsSheet> {
     if (value.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      await YukuApi.addPostComment(widget.postId, value);
+      await MAVOApi.addPostComment(widget.postId, value);
       _controller.clear();
-      setState(() => _future = YukuApi.postComments(widget.postId));
+      setState(() => _future = MAVOApi.postComments(widget.postId));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
     } finally { if (mounted) setState(() => _sending = false); }
@@ -431,7 +431,7 @@ class _PostCommentsSheetState extends State<_PostCommentsSheet> {
         IconButton(onPressed: _sending ? null : _send, icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded, color: MavoColors.violet)),
       ]),
       Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () async {
-        final latest = await YukuApi.postComments(widget.postId);
+        final latest = await MAVOApi.postComments(widget.postId);
         if (context.mounted) Navigator.pop(context, latest.length);
       }, child: const Text('Selesai'))),
     ])),
@@ -619,7 +619,7 @@ class _MavoPostMedia extends StatelessWidget {
   const _MavoPostMedia({required this.mediaId, required this.mediaType});
   @override
   Widget build(BuildContext context) => FutureBuilder<String>(
-    future: YukuApi.mediaDownloadUrl(mediaId),
+    future: MAVOApi.mediaDownloadUrl(mediaId),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
       if (snapshot.hasError || !snapshot.hasData) return const SizedBox(height: 80, child: Center(child: Icon(Icons.broken_image_outlined, color: MavoColors.muted)));
