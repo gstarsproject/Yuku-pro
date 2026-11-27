@@ -16,28 +16,23 @@ void main() {
     expect(find.text('For You'), findsOneWidget);
   });
 
-  testWidgets('Inbox opens a conversation preview', (tester) async {
+  testWidgets('Inbox renders the live conversation screen', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: InboxScreen())));
     await tester.pump();
 
     expect(find.text('Pesan'), findsOneWidget);
-    expect(find.text('Nadia Putri'), findsOneWidget);
-
-    await tester.tap(find.byType(ListTile).first);
-    await tester.pumpAndSettle(const Duration(milliseconds: 100));
-
-    expect(find.text('Mode pratinjau — pesan hanya tersimpan di layar ini.'), findsOneWidget);
-    expect(find.text('Hai! Senang bisa terhubung di MAVO 😊'), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.edit_square), findsOneWidget);
   });
 
-  testWidgets('MAVO story viewer renders selected story', (tester) async {
+  testWidgets('MAVO Stories screen renders live story controls', (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: StoriesScreen(initialStory: 'Discover'),
     ));
     await tester.pump();
 
-    expect(find.text('DISCOVER'), findsOneWidget);
-    expect(find.text('Bagikan cerita'), findsOneWidget);
+    expect(find.text('MAVO Stories'), findsOneWidget);
+    expect(find.text('Buat Story'), findsOneWidget);
   });
 
   testWidgets('Creator demo profile keeps follow disabled without account id', (tester) async {
