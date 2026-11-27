@@ -324,3 +324,12 @@ Status awal tahap 1:
 - [x] Verifikasi binding USER_ACTION_LIMITER pada mavo-preview dan mavo-api-preview setelah deployment.
 - [ ] Uji runtime HTTP 429 dengan sesi pengguna valid; deployment dan binding sudah aktif, tetapi perilaku limit belum diuji end-to-end.
 - Catatan: rate limit aktivitas bersifat per user dan per jenis aksi; pembatas Cloudflare bersifat approximate. Production tidak disentuh.
+
+### Verifikasi deployment lanjutan — 2026-11-27 (commit 4b0ad54)
+- [x] Memperbaiki karakter newline literal yang menyebabkan TypeScript gagal pada `backend-worker/src/index.ts` baris 15.
+- [x] GitHub Actions Worker CI run `46004123141`: TypeScript typecheck PASS; kedua Wrangler dry-run PASS.
+- [x] Deploy job run `46004123141`: deploy `mavo-preview` dan `mavo-api-preview` PASS.
+- [x] Verifikasi Cloudflare: `mavo-preview` versi `b88815d2-2102-4a85-ad74-d47bc79f528c` memiliki binding `USER_ACTION_LIMITER`.
+- [x] Verifikasi Cloudflare: `mavo-api-preview` versi `3771252d-e51e-4845-93cd-55f7123bf98d` memiliki binding `USER_ACTION_LIMITER`.
+- [ ] Uji runtime HTTP 429 dengan sesi pengguna valid belum dilakukan.
+- Catatan: kedua Worker preview sudah diperbarui otomatis melalui GitHub Actions. Production tidak disentuh.
