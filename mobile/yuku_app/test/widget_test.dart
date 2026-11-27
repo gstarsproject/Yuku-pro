@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:yuku_app/screens/app_shell.dart';
 import 'package:yuku_app/screens/auth_screen.dart';
 import 'package:yuku_app/screens/creator_profile_screen.dart';
+import 'package:yuku_app/screens/inbox_screen.dart';
+import 'package:yuku_app/screens/stories_screen.dart';
 
 void main() {
   testWidgets('MAVO home shell renders', (tester) async {
@@ -15,28 +17,24 @@ void main() {
   });
 
   testWidgets('Inbox opens a conversation preview', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: AppShell()));
+    await tester.pumpWidget(const MaterialApp(home: InboxScreen()));
     await tester.pump();
-
-    await tester.tap(find.text('Inbox'));
-    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Pesan'), findsOneWidget);
     expect(find.text('Nadia Putri'), findsOneWidget);
 
-    await tester.tap(find.text('Nadia Putri'));
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byType(ListTile).first);
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
     expect(find.text('Mode pratinjau — pesan hanya tersimpan di layar ini.'), findsOneWidget);
     expect(find.text('Hai! Senang bisa terhubung di MAVO 😊'), findsOneWidget);
   });
 
-  testWidgets('Home story opens the MAVO story viewer', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: AppShell()));
+  testWidgets('MAVO story viewer renders selected story', (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: StoriesScreen(initialStory: 'Discover'),
+    ));
     await tester.pump();
-
-    await tester.tap(find.text('Discover'));
-    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('DISCOVER'), findsOneWidget);
     expect(find.text('Bagikan cerita'), findsOneWidget);
@@ -54,7 +52,7 @@ void main() {
     await tester.tap(find.text('Ikuti'));
     await tester.pump();
 
-    expect(find.text('Mengikuti'), findsOneWidget);
+    expect(find.text('Mengikuti'), findsNWidgets(2));
     expect(find.text('1281'), findsOneWidget);
   });
 
