@@ -217,3 +217,13 @@ Status awal tahap 1:
 
 - [x] Tombol Pesan di profil kreator kini membuka percakapan langsung melalui Inbox; server tetap menjadi pengaman utama dan menolak jika belum saling Follow.
 - [ ] Uji navigasi tombol Pesan dan skenario mutual-follow di dua perangkat setelah APK batch terbaru tersedia.
+
+## Tahap 1 — pembaruan profil dan chat (27 Nov 2026)
+- [x] Filter chat pribadi dengan syarat saling Follow pada create/list/read/send.
+- [x] Tombol Pesan profil kreator membuka alur chat.
+- [x] Endpoint daftar postingan mendukung filter authorId dengan tetap menerapkan aturan visibilitas PUBLIC/FOLLOWERS/PRIVATE.
+- [x] API Flutter mendukung pemanggilan postingan berdasarkan authorId.
+- [x] Profil pribadi menampilkan daftar postingan dan jumlah like/komentar dari API.
+- [ ] CI Worker dan Flutter untuk batch ini harus lulus.
+- [ ] Uji dua akun di perangkat Android: profil, postingan privat/followers, tombol Pesan, saling Follow, Unfollow.
+- [ ] Upload media belum dapat dinyatakan selesai sampai kredensial storage TEST dikonfigurasi dan tes berhasil.
