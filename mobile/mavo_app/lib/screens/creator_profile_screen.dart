@@ -159,7 +159,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
           padding: const EdgeInsets.all(4),
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(colors: [MavoColors.violet, MavoColors.coral, Color(0xFFFFC45C)]),
+            gradient: const LinearGradient(colors: [MavoColors.violet, MavoColors.midnight]),
           ),
           child: CircleAvatar(
             radius: 48,
