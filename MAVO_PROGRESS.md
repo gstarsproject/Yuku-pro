@@ -118,7 +118,7 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 ## Pembaruan 2026-11-27 — Deploy preview Chat/Notifikasi dan build APK batch
 - [x] Cloudflare Worker validation PASS pada push commit `17d3e14dd802b0b2511bc6bd31752f5ed953dcae` (run `45989373429`).
 - [x] Deploy `mavo-preview` dan alternate preview hostname PASS pada run `45989373429`; deployment hanya ke lingkungan preview.
-- [x] Verifikasi konfigurasi Flutter: `YukuApi.baseUrl` mengarah ke `https://mavo-api-preview.gstars-business.workers.dev`, bukan production API.
+- [x] Verifikasi konfigurasi Flutter: `MAVOApi.baseUrl` mengarah ke `https://mavo-api-preview.gstars-business.workers.dev`, bukan production API.
 - [x] Flutter Analyze PASS pada run `45989381702` (commit `17d3e14dd802b0b2511bc6bd31752f5ed953dcae`).
 - [ ] Flutter Tests dan build APK pada run `45989381702` masih berjalan saat catatan ini diperbarui.
 - [ ] Health endpoint preview belum dapat diverifikasi melalui pemeriksaan HTTP eksternal; jangan anggap deploy sukses sebagai bukti runtime end-to-end.
@@ -127,7 +127,7 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 
 ## Follow list repair — 2026-11-27
 - Added authenticated API `GET /api/v1/users/:id/relations?type=followers|following` to return real follower/following accounts from the Follow table.
-- Added Flutter `YukuApi.userRelations` client method.
+- Added Flutter `MAVOApi.userRelations` client method.
 - Creator profile Pengikut and Mengikuti counters now open live lists; removed the hard-coded 1,280 follower demo count.
 - Each listed account opens its real creator profile.
 - Validation pending: GitHub Actions CI and two-account runtime test on Android preview. No production deployment; preview database remains the test database.
@@ -170,7 +170,7 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - Catatan: nama tampilan dan bio tetap dapat diedit tanpa memilih foto. Produksi tidak disentuh.
 
 ## Perbaikan Inbox Chat — 2026-11-27
-- [x] Konfirmasi database TEST: dua akun aktif (Mavodev dan yuku) terdaftar sebagai peserta percakapan yang sama; percakapan berisi 4 pesan.
+- [x] Konfirmasi database TEST: dua akun aktif (Mavodev dan MAVO) terdaftar sebagai peserta percakapan yang sama; percakapan berisi 4 pesan.
 - [x] Jalankan query daftar percakapan yang sama dengan Worker untuk kedua userId; masing-masing akun memperoleh tepat satu baris percakapan dengan nama akun lawan.
 - [x] Flutter Inbox diperbaiki: tombol refresh eksplisit, empty state kini bisa ditarik untuk refresh, dan refresh indicator menunggu request selesai.
 - [x] Inbox otomatis meminta daftar terbaru setiap 12 detik agar pesan/percakapan dari HP kedua ikut muncul tanpa harus keluar-masuk menu.
@@ -374,3 +374,11 @@ Status awal tahap 1:
 - [ ] **CORS:** wildcard masih dipakai. Tetapkan allowlist setelah domain web resmi MAVO dipastikan; jangan menebak domain.
 - [ ] **Runtime:** pengujian 400/413/429, akses media lintas akun, dan skenario dua akun masih perlu dilakukan di preview.
 - Catatan: tahap ini hanya audit source. Belum ada perubahan kode, database, konfigurasi, atau deployment. Branch pengembangan dan lingkungan TEST tetap terpisah dari produksi.
+
+
+## Branding migration — MAVO (2026-11-27)
+- Replaced YUKU naming in core project documentation, brand guideline, API specification, transaction notes, backend service identifiers, admin metadata, and Flutter source identifiers with MAVO.
+- Renamed Flutter project directory from `mobile/yuku_app/` to `mobile/mavo_app/`, including API/theme source filenames.
+- Updated Flutter package identity, backend package identity, Docker development database labels, and CI paths to MAVO.
+- Repository and historical binary archive names are not changed in this pass; external service URLs and persisted database identifiers require a coordinated migration rather than blind text replacement.
+- CI/build verification is required after the rename; no production deployment was initiated.
