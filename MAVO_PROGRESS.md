@@ -246,3 +246,6 @@ Status awal tahap 1:
 - [x] Refresh Story tidak lagi melempar error async tanpa penanganan; FutureBuilder menampilkan error dan tombol coba lagi tetap tersedia.
 - [ ] Worker CI dan Flutter CI untuk batch ini harus lulus sebelum dianggap siap.
 - [ ] Live streaming dan Story media tetap menunggu konfigurasi storage dan pengujian runtime.
+
+- [x] Home Stories strip sekarang memuat Story aktif dari API, menampilkan nama kreator unik (bukan chip kategori contoh), dan menampilkan status kosong/error.
+- [x] Future Story di Home disimpan agar tidak meminta ulang API pada setiap rebuild; pull-to-refresh memperbarui Story dan feed bersama.
