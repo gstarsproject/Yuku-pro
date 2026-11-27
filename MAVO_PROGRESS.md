@@ -176,3 +176,33 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] Inbox otomatis meminta daftar terbaru setiap 12 detik agar pesan/percakapan dari HP kedua ikut muncul tanpa harus keluar-masuk menu.
 - [ ] Build APK dan Flutter CI untuk commit perbaikan Inbox masih harus divalidasi sebelum instalasi.
 - Catatan: belum ada bukti bahwa versi APK yang terpasang di dua HP memuat commit terbaru; jangan anggap perbaikan sudah teruji di perangkat sampai APK baru diuji.
+
+
+## Roadmap penyelesaian bertahap — disetujui pengguna (2026-11-27)
+
+Prinsip pengerjaan:
+- Pertahankan ekosistem MAVO: Social Media, LIVE, Chat, dan marketplace FRIEND / EXPERIENCE / PRO.
+- Kerjakan per tahap pada branch pengembangan dan database TEST; jangan menyentuh produksi.
+- Jangan menghapus atau merusak fitur yang sudah ada.
+- Setiap fitur harus melewati pemeriksaan kode, CI, dan pengujian runtime sebelum ditandai selesai.
+- Simpan APK batch untuk pengujian gabungan; jangan meminta pengguna memasang APK untuk setiap perubahan kecil.
+- Tidak merge PR atau deploy produksi tanpa persetujuan eksplisit pengguna.
+
+Urutan tahap:
+1. **Fondasi dan stabilisasi:** selesaikan Inbox dua akun, aturan akses chat saling-follow, profil dan galeri postingan nyata, Follow/Unfollow, Like/Komentar, Story, upload media, dan verifikasi runtime.
+2. **Social Media:** edit/hapus postingan, share, hashtag, pencarian, trending, reaksi/balasan Story, serta galeri profil.
+3. **Chat:** lampiran media, voice note, group chat, typing/presence, panggilan suara/video, dan push notification.
+4. **MAVO LIVE:** streaming, live chat, gift, battle, multi-guest, riwayat dan pendapatan kreator.
+5. **Marketplace:** onboarding penyedia, pengelolaan layanan, ketersediaan, booking, persetujuan, pembatalan, review dan dispute untuk FRIEND / EXPERIENCE / PRO.
+6. **Wallet dan transaksi:** integrasi payment gateway sandbox, ledger, komisi per kategori, settlement setelah layanan, refund dan payout.
+7. **Keamanan dan monetisasi:** verifikasi, report/block, moderasi, anti-spam, admin tools, AI rekomendasi/terjemahan, reward, iklan dan premium.
+8. **Rilis:** pengujian end-to-end, keamanan, performa, backup, monitoring, dan persiapan produksi.
+
+Status awal tahap 1:
+- Inbox refresh otomatis dan manual sudah ada di source; menunggu APK terbaru dan pengujian dua perangkat.
+- Aturan chat hanya jika kedua akun saling follow belum diterapkan.
+- Profil masih memiliki placeholder untuk galeri postingan; tombol bagikan profil belum berfungsi.
+- Tombol Pesan di profil kreator belum membuka percakapan.
+- Upload media post/story dan foto profil belum dapat diuji sampai secret Object Storage dikonfigurasi manual di Cloudflare preview.
+- Like/Komentar dan Story masih memerlukan pengujian runtime.
+- Worker preview harus mengikuti source terbaru sebelum pengujian API; jangan deploy produksi.
