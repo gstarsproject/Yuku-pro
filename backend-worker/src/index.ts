@@ -18,7 +18,7 @@ async function sha256(value: string) {
 const awsEncode = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
 const hexBytes = (value: ArrayBuffer) => toHex(new Uint8Array(value));
 async function hmacBytes(key: ArrayBuffer | Uint8Array, value: string) {
-  const imported = await crypto.subtle.importKey("raw", key instanceof Uint8Array ? key : new Uint8Array(key), {name:"HMAC",hash:"SHA-256"}, false, ["sign"]);
+  const imported = await crypto.subtle.importKey("raw", key instanceof Uint8Array ? key.slice().buffer as ArrayBuffer : key, {name:"HMAC",hash:"SHA-256"}, false, ["sign"]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", imported, encoder.encode(value)));
 }
 async function presignMedia(env: Env, method: "GET"|"PUT", objectKey: string, expires = 900) {
