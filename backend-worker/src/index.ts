@@ -13,19 +13,19 @@ const toHex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padSt
 async function sha256(value: string) {
   return toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value))));
 }
-async function makePasswordHash(password: string) {
+const PASSWORD_HASH_ITERATIONS = 100000; // Cloudflare Workers WebCrypto supports at most 100,000 PBKDF2 iterations.\nasync function makePasswordHash(password: string) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 310000, hash: "SHA-256" }, key, 256));
-  return "pbkdf2$310000$" + toHex(salt) + "$" + toHex(bits);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: PASSWORD_HASH_ITERATIONS, hash: "SHA-256" }, key, 256));
+  return "pbkdf2$" + PASSWORD_HASH_ITERATIONS + "$" + toHex(salt) + "$" + toHex(bits);
 }
 async function checkPassword(password: string, stored: string) {
   const parts = stored.split("$");
-  if (parts.length !== 4 || parts[0] !== "pbkdf2" || parts[1] !== "310000" ||
+  if (parts.length !== 4 || parts[0] !== "pbkdf2" || Number(parts[1]) !== PASSWORD_HASH_ITERATIONS ||
       !/^[a-f0-9]{32}$/i.test(parts[2]) || !/^[a-f0-9]{64}$/i.test(parts[3])) return false;
   const salt = new Uint8Array(parts[2].match(/../g)!.map(v => parseInt(v, 16)));
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 310000, hash: "SHA-256" }, key, 256));
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: Number(parts[1]), hash: "SHA-256" }, key, 256));
   const actual = toHex(bits), expected = parts[3].toLowerCase();
   if (actual.length !== expected.length) return false;
   let mismatch = 0;
