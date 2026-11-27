@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: YUKU API
+  title: MAVO API
   version: 1.0.0
-  description: Initial API contract for YUKU marketplace.
+  description: Initial API contract for MAVO marketplace.
 servers:
   - url: http://localhost:3000/api/v1
 paths:
