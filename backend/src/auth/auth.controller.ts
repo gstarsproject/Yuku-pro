@@ -33,7 +33,7 @@ class UserLoginDto {
   email!: string;
 
   @IsString()
-  @MinLength(10)
+  @MinLength(1)
   @MaxLength(128)
   password!: string;
 }
