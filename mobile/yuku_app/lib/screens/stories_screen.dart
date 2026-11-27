@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import '../services/yuku_api.dart';
 import '../theme/yuku_theme.dart';
 
@@ -141,6 +142,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
               IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: Colors.white)),
             ]),
             Center(child: Text(content, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 22, height: 1.45, fontWeight: FontWeight.w700))),
+            if ((story['locationName'] ?? '').toString().isNotEmpty) Text('📍 ${story['locationName']}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            if (story['media'] is List) ...(story['media'] as List).whereType<Map<String,dynamic>>().take(3).map((item) => _StoryMedia(mediaId: item['id'].toString(), mediaType: item['mediaType'].toString())),
             const Text('MAVO · STORY 24 JAM', style: TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1.1)),
           ]),
         ),
@@ -220,4 +223,32 @@ class _StoriesScreenState extends State<StoriesScreen> {
       },
     ),
   );
+}
+
+
+class _StoryMedia extends StatelessWidget {
+  final String mediaId; final String mediaType;
+  const _StoryMedia({required this.mediaId, required this.mediaType});
+  @override
+  Widget build(BuildContext context) => FutureBuilder<String>(
+    future: YukuApi.mediaDownloadUrl(mediaId),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) return const SizedBox(height: 70, child: Center(child: CircularProgressIndicator(color: Colors.white)));
+      if (mediaType == 'VIDEO') return _StoryVideo(url: snapshot.data!);
+      return ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(snapshot.data!, height: 180, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white)));
+    },
+  );
+}
+class _StoryVideo extends StatefulWidget {
+  final String url; const _StoryVideo({required this.url});
+  @override State<_StoryVideo> createState() => _StoryVideoState();
+}
+class _StoryVideoState extends State<_StoryVideo> {
+  late final VideoPlayerController _controller;
+  @override void initState() { super.initState(); _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))..initialize().then((_) { if (mounted) setState(() {}); }); }
+  @override void dispose() { _controller.dispose(); super.dispose(); }
+  @override Widget build(BuildContext context) {
+    if (!_controller.value.isInitialized) return const SizedBox(height: 90, child: Center(child: CircularProgressIndicator(color: Colors.white)));
+    return AspectRatio(aspectRatio: _controller.value.aspectRatio, child: Stack(alignment: Alignment.center, children: [VideoPlayer(_controller), IconButton(onPressed: () => setState(() => _controller.value.isPlaying ? _controller.pause() : _controller.play()), iconSize: 48, color: Colors.white, icon: Icon(_controller.value.isPlaying ? Icons.pause_circle : Icons.play_circle))]));
+  }
 }
