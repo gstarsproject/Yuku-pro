@@ -25,6 +25,22 @@
     "traces": { "enabled": true }
   },
   "previews": {
+    "vars": {
+      "APP_ENV": "preview",
+      "AWS_ENDPOINT_URL_S3": "https://br-divine-shape-bi7a8pkw.storage.c-5.ap-southeast-1.aws.neon.tech",
+      "AWS_REGION": "ap-southeast-1"
+    },
+    "hyperdrive": [
+      {
+        "binding": "HYPERDRIVE",
+        "id": "618629c1266146b5b4f898761552d004"
+      }
+    ],
+    "ratelimits": [
+      { "name": "AUTH_IP_LIMITER", "namespace_id": "87261101", "simple": { "limit": 30, "period": 60 } },
+      { "name": "AUTH_ID_LIMITER", "namespace_id": "87261102", "simple": { "limit": 5, "period": 60 } },
+      { "name": "USER_ACTION_LIMITER", "namespace_id": "87261103", "simple": { "limit": 30, "period": 60 } }
+    ],
     "observability": {
       "logs": {
         "enabled": true,
@@ -36,9 +52,6 @@
         "enabled": false,
         "head_sampling_rate": 1,
         "persist": true
-      },
-      "issue_detection": {
-        "enabled": false
       }
     }
   }
