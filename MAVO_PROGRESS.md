@@ -160,3 +160,11 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [ ] Build Android terbaru masih berjalan; jangan kirim APK sampai Flutter analyze, tests, dan release build sukses.
 - [ ] Location saat ini berupa label tempat yang diketik manual, belum GPS/geocoding. Ini disengaja agar lokasi tidak dibagikan otomatis.
 - [ ] Perlu runtime test upload/download memakai dua akun dan uji visibilitas PUBLIC/FOLLOWERS/PRIVATE sebelum fitur dinyatakan selesai.
+## Edit Profil — galeri foto (2026-11-27)
+- [x] Form Edit Profil kini menyediakan pemilih foto profil langsung dari galeri Android, preview foto, edit nama tampilan, dan bio.
+- [x] Foto diproses melalui upload privat Neon Object Storage (bukan URL gambar publik).
+- [x] Worker PATCH profil menyimpan metadata MediaAsset pemilik dan mengikat objectKey ke Profile.avatarUrl; GET profil mengembalikan avatarMediaId.
+- [x] Flutter mengambil URL sementara media privat untuk menampilkan foto profil.
+- [ ] Validasi GitHub Actions Flutter/Worker dan build APK untuk batch berikutnya masih berjalan.
+- [ ] Upload foto profil belum dapat diuji runtime sampai secret S3 tersedia pada Cloudflare Worker preview.
+- Catatan: nama tampilan dan bio tetap dapat diedit tanpa memilih foto. Produksi tidak disentuh.
