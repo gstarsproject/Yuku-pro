@@ -322,6 +322,7 @@ if (avatarMedia) {
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const limited = await userActionRateLimit(env, user.id, "media-url-read"); if (limited) return limited;
       const result = await c.query(`SELECT m."objectKey",m."contentType",m."mediaType",m."ownerId",p."audience" AS "postAudience",p."authorId" AS "postAuthor",s."audience" AS "storyAudience",s."userId" AS "storyAuthor",s."expiresAt" AS "storyExpires" FROM "MediaAsset" m LEFT JOIN "Post" p ON p."id"=m."postId" LEFT JOIN "Story" s ON s."id"=m."storyId" WHERE m."id"=$1 LIMIT 1`,[mediaUrlMatch[1]]);
       const media = result.rows[0];
       if (!media) return json({success:false,message:"Media tidak ditemukan."},404);
@@ -375,6 +376,7 @@ if (avatarMedia) {
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const limited = await userActionRateLimit(env, user.id, "user-search"); if (limited) return limited;
       const query = (url.searchParams.get("q") || "").trim();
       if (query.length < 2 || query.length > 60) return json({success:true,count:0,data:[]});
       const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\'ACTIVE\' AND u."role"<>\'ADMIN\' AND u."id"<>$1 AND p."displayName" ILIKE $2 ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query + '%']);
@@ -455,6 +457,7 @@ if (avatarMedia) {
     return await db(env, async c => {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      if (request.method === "POST") { const limited = await userActionRateLimit(env, user.id, "notification-mark-read"); if (limited) return limited; }
       if (request.method === "POST") {
         await c.query('UPDATE "Notification" SET "readAt"=NOW() WHERE "recipientId"=$1 AND "readAt" IS NULL',[user.id]);
         return json({success:true,data:{markedRead:true}});
