@@ -1,4 +1,4 @@
-# Status Proyek YUKU
+# Status Proyek MAVO
 
 | Modul | Status paket saat ini |
 |---|---|
