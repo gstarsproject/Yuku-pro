@@ -133,6 +133,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 counterStyle: TextStyle(color: MavoColors.muted, fontSize: 10),
               ),
             ),
+            if (_media.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(spacing: 8, runSpacing: 8, children: _media.map((item) => Stack(children: [
+                ClipRRect(borderRadius: BorderRadius.circular(10), child: ['mp4','mov'].contains(item.name.toLowerCase().split('.').last)
+                  ? Container(width: 88, height: 88, color: MavoColors.violetSoft, child: const Icon(Icons.play_circle_fill_rounded, size: 34, color: MavoColors.violet))
+                  : Image.file(File(item.path), width: 88, height: 88, fit: BoxFit.cover)),
+                Positioned(right: 0, top: 0, child: InkWell(onTap: () => setState(() => _media.remove(item)), child: const CircleAvatar(radius: 11, backgroundColor: Colors.black87, child: Icon(Icons.close, size: 13, color: Colors.white)))),
+              ])).toList()),
+            ],
+            if (_locationController.text.trim().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Text('Lokasi: ${_locationController.text}', style: const TextStyle(color: MavoColors.violet, fontSize: 12))),
             const Divider(height: 24),
             const Text('Tambahkan ke postingan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: MavoColors.midnight)),
             const SizedBox(height: 12),
