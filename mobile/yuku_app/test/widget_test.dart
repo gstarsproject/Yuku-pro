@@ -1,58 +1,59 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuku_app/main.dart';
+import 'package:yuku_app/screens/auth_screen.dart';
+import 'package:yuku_app/screens/stories_screen.dart';
+import 'package:yuku_app/screens/story_composer_screen.dart';
 
 void main() {
-  testWidgets('MAVO home shell renders', (tester) async {
-    await tester.pumpWidget(const YukuApp());
-    await tester.pump();
+  testWidgets('MAVO sign-in screen renders', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: AuthScreen(onAuthenticated: () {}),
+    ));
 
-    expect(find.text('MAVO'), findsOneWidget);
-    expect(find.text('Stories'), findsOneWidget);
-    expect(find.text('For You'), findsOneWidget);
+    expect(find.text('Selamat datang di MAVO'), findsOneWidget);
+    expect(find.text('Masuk'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
   });
 
-  testWidgets('Inbox opens a conversation preview', (tester) async {
-    await tester.pumpWidget(const YukuApp());
-    await tester.pump();
+  testWidgets('MAVO registration form can be opened', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: AuthScreen(onAuthenticated: () {}),
+    ));
 
-    await tester.tap(find.text('Inbox'));
+    await tester.tap(find.text('Belum punya akun? Daftar'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Pesan'), findsOneWidget);
-    expect(find.text('Nadia Putri'), findsOneWidget);
-
-    await tester.tap(find.text('Nadia Putri'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Mode pratinjau — pesan hanya tersimpan di layar ini.'), findsOneWidget);
-    expect(find.text('Hai! Senang bisa terhubung di MAVO 😊'), findsOneWidget);
-  });
-  testWidgets('Home story opens the MAVO story viewer', (tester) async {
-    await tester.pumpWidget(const YukuApp());
-    await tester.pump();
-
-    await tester.tap(find.text('Discover'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('DISCOVER'), findsOneWidget);
-    expect(find.text('Bagikan cerita'), findsOneWidget);
+    expect(find.text('Buat Akun'), findsOneWidget);
+    expect(find.text('Nama tampilan'), findsOneWidget);
+    expect(find.text('Password minimal 10 karakter.'), findsOneWidget);
   });
 
-  testWidgets('Creator profile follow button updates preview state', (tester) async {
-    await tester.pumpWidget(const YukuApp());
-    await tester.pump();
+  testWidgets('Story composer offers photo and video selection', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: StoryComposerScreen()));
 
-    await tester.tap(find.byTooltip('Lihat profil kreator'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('MAVO Community'), findsOneWidget);
-    expect(find.text('1280'), findsOneWidget);
-
-    await tester.tap(find.text('Ikuti'));
-    await tester.pump();
-
-    expect(find.text('Mengikuti'), findsNWidgets(2));
-    expect(find.text('1281'), findsOneWidget);
+    expect(find.text('Buat Story'), findsOneWidget);
+    expect(find.text('Pilih foto atau video'), findsOneWidget);
+    expect(find.text('Foto'), findsOneWidget);
+    expect(find.text('Video'), findsOneWidget);
+    expect(find.text('Bagikan Story'), findsOneWidget);
+    expect(find.text('Story akan otomatis hilang setelah 24 jam.'), findsOneWidget);
   });
 
+  testWidgets('Story viewer displays text-only story', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: StoriesScreen(stories: [
+        {
+          'id': 'story-1',
+          'content': 'Halo dari MAVO!',
+          'authorName': 'MAVO Creator',
+          'createdAt': DateTime.now().toIso8601String(),
+          'media': <Map<String, dynamic>>[],
+        },
+      ]),
+    ));
+
+    expect(find.text('MAVO Creator'), findsOneWidget);
+    expect(find.text('Halo dari MAVO!'), findsOneWidget);
+  });
 }
