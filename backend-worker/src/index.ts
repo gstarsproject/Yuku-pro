@@ -177,7 +177,7 @@ export default {
       if (!current.rows[0]) return json({success:false,message:"Profil tidak ditemukan."},404);
       const displayName = typeof body.displayName === "string" ? body.displayName.trim() : current.rows[0].displayName;
       const bio = typeof body.bio === "string" ? body.bio.trim() : current.rows[0].bio;
-      const avatarUrl = typeof body.avatarUrl === "string" ? body.avatarUrl.trim() : current.rows[0].avatarUrl;
+      let avatarUrl = typeof body.avatarUrl === "string" ? body.avatarUrl.trim() : current.rows[0].avatarUrl;
       if (displayName.length < 2 || displayName.length > 40) return json({success:false,message:"Nama harus 2–40 karakter."},400);
       if (typeof bio === "string" && bio.length > 1000) return json({success:false,message:"Bio maksimal 1.000 karakter."},400);
       const avatarMedia = body.avatarMedia && typeof body.avatarMedia === "object" ? body.avatarMedia as Record<string, unknown> : null;
