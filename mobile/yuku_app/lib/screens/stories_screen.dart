@@ -14,7 +14,7 @@ class StoriesScreen extends StatefulWidget {
 class _StoriesScreenState extends State<StoriesScreen> {
   late int _index;
   @override
-  void initState() { super.initState(); _index = widget.initialIndex.clamp(0, widget.stories.length - 1); }
+  void initState() { super.initState(); _index = widget.stories.isEmpty ? 0 : widget.initialIndex.clamp(0, widget.stories.length - 1); }
 
   void _move(int delta) {
     final next = _index + delta;
