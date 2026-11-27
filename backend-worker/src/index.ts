@@ -603,7 +603,7 @@ if (avatarMedia) {
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Load posts failed",e); return json({success:false,message:"Feed gagal dimuat."},503); }
   }
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
-  if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "yuku-api-worker", status: "ok" });
+  if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "MAVO-api-worker", status: "ok" });
   if (path === "/health/db" || path === "/api/health/db") {
    try {
     await db(env, c => c.query("SELECT 1"));
