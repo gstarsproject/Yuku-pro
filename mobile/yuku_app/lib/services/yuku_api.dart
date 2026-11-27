@@ -347,11 +347,14 @@ class YukuApi {
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
 
-  static Future<List<Map<String, dynamic>>> posts() async {
+  static Future<List<Map<String, dynamic>>> posts({String? authorId}) async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final uri = Uri.parse('$baseUrl/api/v1/posts').replace(queryParameters: {
+      if (authorId != null && authorId.isNotEmpty) 'authorId': authorId,
+    });
     final response = await _client.get(
-      Uri.parse('$baseUrl/api/v1/posts'),
+      uri,
       headers: {'Authorization': 'Bearer $token'},
     ).timeout(const Duration(seconds: 25));
     final body = await _decode(response);
