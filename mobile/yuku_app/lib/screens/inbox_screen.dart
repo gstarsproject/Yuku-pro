@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../services/yuku_api.dart';
-import '../theme/yuku_theme.dart';
+import '../services/MAVO_api.dart';
+import '../theme/MAVO_theme.dart';
 
 class InboxScreen extends StatefulWidget {
   const InboxScreen({super.key});
@@ -12,7 +12,7 @@ class InboxScreen extends StatefulWidget {
     required String name,
   }) async {
     try {
-      final conversation = await YukuApi.createConversation(recipientId);
+      final conversation = await MAVOApi.createConversation(recipientId);
       if (!context.mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => _ChatScreen(
@@ -34,7 +34,7 @@ class InboxScreen extends StatefulWidget {
 }
 
 class _InboxScreenState extends State<InboxScreen> {
-  late Future<List<Map<String, dynamic>>> _future = YukuApi.conversations();
+  late Future<List<Map<String, dynamic>>> _future = MAVOApi.conversations();
   final TextEditingController _search = TextEditingController();
   Timer? _refreshTimer;
 
@@ -48,7 +48,7 @@ class _InboxScreenState extends State<InboxScreen> {
   }
 
   Future<void> _refresh() async {
-    final next = YukuApi.conversations();
+    final next = MAVOApi.conversations();
     if (mounted) setState(() => _future = next);
     try { await next; } catch (_) { /* FutureBuilder displays the error. */ }
   }
@@ -67,7 +67,7 @@ class _InboxScreenState extends State<InboxScreen> {
     );
     if (selected == null || !mounted) return;
     try {
-      final conversation = await YukuApi.createConversation(selected['id'].toString());
+      final conversation = await MAVOApi.createConversation(selected['id'].toString());
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => _ChatScreen(
@@ -169,7 +169,7 @@ class _NewChatDialogState extends State<_NewChatDialog> {
     if (value.trim().length < 2) { setState(() { _users = []; _error = null; }); return; }
     setState(() { _loading = true; _error = null; });
     try {
-      final result = await YukuApi.searchUsers(value);
+      final result = await MAVOApi.searchUsers(value);
       if (mounted) setState(() => _users = result);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -223,9 +223,9 @@ class _ChatScreenState extends State<_ChatScreen> {
 
   Future<void> _load() async {
     try {
-      final me = await YukuApi.currentUser();
-      await YukuApi.markConversationRead(widget.conversationId);
-      final messages = await YukuApi.conversationMessages(widget.conversationId);
+      final me = await MAVOApi.currentUser();
+      await MAVOApi.markConversationRead(widget.conversationId);
+      final messages = await MAVOApi.conversationMessages(widget.conversationId);
       if (mounted) setState(() { _myId = me?['id']?.toString(); _messages = messages; _loading = false; _error = null; });
     } catch (e) {
       if (mounted) setState(() { _loading = false; _error = e.toString(); });
@@ -237,7 +237,7 @@ class _ChatScreenState extends State<_ChatScreen> {
     if (value.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      await YukuApi.sendMessage(widget.conversationId, value);
+      await MAVOApi.sendMessage(widget.conversationId, value);
       _message.clear();
       await _load();
     } catch (e) {
@@ -289,11 +289,11 @@ class _NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<_NotificationsScreen> {
-  late Future<List<Map<String, dynamic>>> _future = YukuApi.notifications();
-  Future<void> _refresh() async => setState(() => _future = YukuApi.notifications());
+  late Future<List<Map<String, dynamic>>> _future = MAVOApi.notifications();
+  Future<void> _refresh() async => setState(() => _future = MAVOApi.notifications());
 
   Future<void> _markAll() async {
-    await YukuApi.markNotificationsRead();
+    await MAVOApi.markNotificationsRead();
     if (mounted) _refresh();
   }
 
