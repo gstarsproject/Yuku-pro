@@ -97,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
             Container(padding: const EdgeInsets.all(3), decoration: const BoxDecoration(shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [MavoColors.violet, MavoColors.coral, Color(0xFFFFC45C)])),
+              gradient: const LinearGradient(colors: [MavoColors.violet, MavoColors.midnight])),
               child: CircleAvatar(radius: 42, backgroundColor: Colors.white,
                 backgroundImage: avatarUrl.startsWith('https://') ? NetworkImage(avatarUrl) : null,
                 child: avatarUrl.startsWith('https://') ? null : const Icon(Icons.person_rounded, size: 42, color: MavoColors.violet))),
