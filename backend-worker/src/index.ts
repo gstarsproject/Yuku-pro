@@ -161,6 +161,78 @@ export default {
     });
    } catch(e) { console.error("Create post failed",e); return json({success:false,message:"Postingan gagal disimpan. Coba lagi."},503); }
   }
+  if (path === "/api/v1/conversations" && ["GET","POST"].includes(request.method)) {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      if (request.method === "POST") {
+        const body = await readRequestBody(request);
+        const recipientId = typeof body.recipientId === "string" ? body.recipientId : "";
+        if (!/^[0-9a-f-]{36}$/i.test(recipientId) || recipientId === user.id) return json({success:false,message:"Pengguna tujuan tidak valid."},400);
+        const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[recipientId]);
+        if (!target.rows[0]) return json({success:false,message:"Pengguna tidak ditemukan."},404);
+        const directKey = [user.id,recipientId].sort().join(":");
+        const inserted = await c.query('INSERT INTO "Conversation" ("id","directKey","createdAt") VALUES ($1,$2,NOW()) ON CONFLICT ("directKey") DO NOTHING RETURNING "id"',[crypto.randomUUID(),directKey]);
+        let conversationId = inserted.rows[0]?.id;
+        if (!conversationId) {
+          const existing = await c.query('SELECT "id" FROM "Conversation" WHERE "directKey"=$1 LIMIT 1',[directKey]);
+          conversationId = existing.rows[0]?.id;
+        }
+        if (!conversationId) throw new Error("Conversation could not be created");
+        await c.query('INSERT INTO "ConversationParticipant" ("id","conversationId","userId") VALUES ($1,$2,$3),($4,$2,$5) ON CONFLICT ("conversationId","userId") DO NOTHING',[crypto.randomUUID(),conversationId,user.id,crypto.randomUUID(),recipientId]);
+        return json({success:true,data:{id:conversationId,recipientId}},201);
+      }
+      const result = await c.query('SELECT cv."id",peer."id" AS "userId",pr."displayName",pr."avatarUrl",lm."body" AS "lastMessage",lm."createdAt" AS "lastMessageAt",(SELECT COUNT(*)::int FROM "Message" um WHERE um."conversationId"=cv."id" AND um."senderId"<>$1 AND um."readAt" IS NULL) AS "unreadCount" FROM "ConversationParticipant" mine JOIN "Conversation" cv ON cv."id"=mine."conversationId" JOIN "ConversationParticipant" other ON other."conversationId"=cv."id" AND other."userId"<>$1 JOIN "User" peer ON peer."id"=other."userId" AND peer."status"=\'ACTIVE\' LEFT JOIN "Profile" pr ON pr."userId"=peer."id" LEFT JOIN LATERAL (SELECT m."body",m."createdAt" FROM "Message" m WHERE m."conversationId"=cv."id" ORDER BY m."createdAt" DESC LIMIT 1) lm ON TRUE WHERE mine."userId"=$1 ORDER BY COALESCE(lm."createdAt",cv."createdAt") DESC LIMIT 100',[user.id]);
+      return json({success:true,count:result.rowCount,data:result.rows});
+    });
+   } catch(e) { console.error("Conversations request failed",e); return json({success:false,message:"Percakapan gagal dimuat."},503); }
+  }
+  const messageMatch = path.match(/^\/api\/v1\/conversations\/([0-9a-f-]{36})\/(messages|read)$/i);
+  if (messageMatch && ["GET","POST"].includes(request.method)) {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      const conversationId = messageMatch[1], action = messageMatch[2].toLowerCase();
+      const membership = await c.query('SELECT 1 FROM "ConversationParticipant" WHERE "conversationId"=$1 AND "userId"=$2 LIMIT 1',[conversationId,user.id]);
+      if (!membership.rows[0]) return json({success:false,message:"Percakapan tidak ditemukan."},404);
+      if (action === "read") {
+        if (request.method !== "POST") return json({success:false,message:"Method not allowed"},405);
+        await c.query('UPDATE "Message" SET "readAt"=NOW() WHERE "conversationId"=$1 AND "senderId"<>$2 AND "readAt" IS NULL',[conversationId,user.id]);
+        await c.query('UPDATE "Notification" SET "readAt"=NOW() WHERE "recipientId"=$1 AND "type"=\'MESSAGE\' AND "entityId"=$2 AND "readAt" IS NULL',[user.id,conversationId]);
+        return json({success:true,data:{conversationId,read:true}});
+      }
+      if (request.method === "GET") {
+        const result = await c.query('SELECT m."id",m."senderId",m."body",m."createdAt",m."readAt",p."displayName" AS "senderName",p."avatarUrl" AS "senderAvatar" FROM "Message" m LEFT JOIN "Profile" p ON p."userId"=m."senderId" WHERE m."conversationId"=$1 ORDER BY m."createdAt" ASC LIMIT 200',[conversationId]);
+        return json({success:true,count:result.rowCount,data:result.rows});
+      }
+      const body = await readRequestBody(request), content = typeof body.content === "string" ? body.content.trim() : "";
+      if (!content || content.length > 5000) return json({success:false,message:"Pesan wajib diisi (maksimal 5.000 karakter)."},400);
+      const inserted = await c.query('INSERT INTO "Message" ("id","conversationId","senderId","body","createdAt") VALUES ($1,$2,$3,$4,NOW()) RETURNING "id","conversationId","senderId","body","createdAt","readAt"',[crypto.randomUUID(),conversationId,user.id,content]);
+      const peers = await c.query('SELECT "userId" FROM "ConversationParticipant" WHERE "conversationId"=$1 AND "userId"<>$2',[conversationId,user.id]);
+      for (const peer of peers.rows) {
+        await c.query('INSERT INTO "Notification" ("id","recipientId","actorId","type","entityId","message","createdAt") VALUES ($1,$2,$3,\'MESSAGE\',$4,$5,NOW())',[crypto.randomUUID(),peer.userId,user.id,conversationId,(user.displayName || "Pengguna") + ": " + content.slice(0,400)]);
+      }
+      return json({success:true,data:{...inserted.rows[0],senderName:user.displayName,senderAvatar:user.avatarUrl}},201);
+    });
+   } catch(e) { console.error("Messages request failed",e); return json({success:false,message:"Pesan gagal diproses."},503); }
+  }
+  if (path === "/api/v1/notifications" && ["GET","POST"].includes(request.method)) {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c,request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      if (request.method === "POST") {
+        await c.query('UPDATE "Notification" SET "readAt"=NOW() WHERE "recipientId"=$1 AND "readAt" IS NULL',[user.id]);
+        return json({success:true,data:{markedRead:true}});
+      }
+      const result = await c.query('SELECT n."id",n."type",n."entityId",n."message",n."createdAt",n."readAt",p."displayName" AS "actorName",p."avatarUrl" AS "actorAvatar" FROM "Notification" n LEFT JOIN "Profile" p ON p."userId"=n."actorId" WHERE n."recipientId"=$1 ORDER BY n."createdAt" DESC LIMIT 100',[user.id]);
+      const unread = await c.query('SELECT COUNT(*)::int AS count FROM "Notification" WHERE "recipientId"=$1 AND "readAt" IS NULL',[user.id]);
+      return json({success:true,count:result.rowCount,unreadCount:unread.rows[0]?.count || 0,data:result.rows});
+    });
+   } catch(e) { console.error("Notifications request failed",e); return json({success:false,message:"Notifikasi gagal dimuat."},503); }
+  }
   if (path === "/api/v1/stories" && ["GET","POST"].includes(request.method)) {
    try {
     return await db(env, async c => {
