@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "yuku-pro",
+  "name": "MAVO-pro",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-26",
   "preview_urls": true,
