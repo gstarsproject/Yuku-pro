@@ -23,6 +23,9 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
   int _followers = 0;
   int _followingCount = 0;
   bool _loadingFollow = false;
+  bool _isBlocked = false;
+  bool _blockedByUser = false;
+  bool _loadingSafety = true;
   String? _followError;
   Map<String, dynamic> _profile = {};
   bool _profileLoading = true;
@@ -33,6 +36,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     super.initState();
     _loadFollowStatus();
     _loadCreatorProfile();
+    _loadBlockStatus();
     final id = widget.creatorUserId;
     _postsFuture = id == null || id.isEmpty ? Future.value([]) : MAVOApi.posts(authorId: id);
   }
@@ -60,6 +64,123 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     } catch (e) {
       if (mounted) setState(() => _followError = e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  Future<void> _loadBlockStatus() async {
+    final id = widget.creatorUserId;
+    if (id == null || id.isEmpty) { if (mounted) setState(() => _loadingSafety = false); return; }
+    try {
+      final data = await MAVOApi.userBlockStatus(id);
+      if (mounted) setState(() {
+        _isBlocked = data['isBlocked'] == true;
+        _blockedByUser = data['blockedByUser'] == true;
+        _loadingSafety = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingSafety = false);
+    }
+  }
+
+  Future<void> _toggleBlock() async {
+    final id = widget.creatorUserId;
+    if (id == null || id.isEmpty || _loadingSafety || _blockedByUser) return;
+    final action = _isBlocked ? 'membuka blokir' : 'memblokir';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_isBlocked ? 'Buka blokir akun?' : 'Blokir akun ini?'),
+        content: Text(_isBlocked
+          ? 'Akun ini dapat kembali menemukan profil dan berinteraksi denganmu sesuai aturan MAVO.'
+          : 'Akun ini tidak dapat berinteraksi denganmu. Kalian juga tidak bisa saling mengikuti atau mengirim pesan.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(_isBlocked ? 'Buka blokir' : 'Blokir')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await MAVOApi.setUserBlocked(id, blocked: !_isBlocked);
+      if (!mounted) return;
+      setState(() { _isBlocked = !_isBlocked; _following = false; _followers = _followers; });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isBlocked ? 'Akun berhasil diblokir.' : 'Blokir akun dibuka.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
+  Future<void> _reportCreator() async {
+    final id = widget.creatorUserId;
+    if (id == null || id.isEmpty) return;
+    const reasons = <String, String>{
+      'SPAM': 'Spam atau penipuan',
+      'HARASSMENT': 'Pelecehan atau perundungan',
+      'HATE': 'Ujaran kebencian',
+      'IMPERSONATION': 'Menyamar sebagai orang lain',
+      'INAPPROPRIATE': 'Konten tidak pantas',
+      'SCAM': 'Penipuan atau aktivitas mencurigakan',
+      'OTHER': 'Alasan lainnya',
+    };
+    String selected = 'SPAM';
+    final details = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+        title: const Text('Laporkan akun'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Pilih alasan laporan. Tim MAVO akan meninjau laporan ini.'),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: selected,
+            isExpanded: true,
+            items: reasons.entries.map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
+            onChanged: (value) { if (value != null) setDialogState(() => selected = value); },
+          ),
+          const SizedBox(height: 10),
+          TextField(controller: details, maxLength: 1000, maxLines: 3,
+            decoration: const InputDecoration(hintText: 'Detail tambahan (opsional)')),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Kirim laporan')),
+        ],
+      )),
+    );
+    if (confirmed != true || !mounted) { details.dispose(); return; }
+    try {
+      await MAVOApi.reportUser(userId: id, reason: selected, details: details.text);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan terkirim. Terima kasih sudah membantu menjaga MAVO.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      details.dispose();
+    }
+  }
+
+  Future<void> _showSafetyMenu() async {
+    if (widget.creatorUserId == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+          leading: Icon(_isBlocked ? Icons.lock_open_outlined : Icons.block_rounded, color: MavoColors.ink),
+          title: Text(_isBlocked ? 'Buka blokir akun' : 'Blokir akun'),
+          subtitle: Text(_isBlocked ? 'Izinkan akun ini berinteraksi kembali' : 'Batasi interaksi dengan akun ini'),
+          onTap: _loadingSafety || _blockedByUser ? null : () { Navigator.pop(sheetContext); _toggleBlock(); },
+        ),
+        ListTile(
+          leading: const Icon(Icons.flag_outlined, color: MavoColors.coral),
+          title: const Text('Laporkan akun'),
+          subtitle: const Text('Laporkan perilaku atau akun yang bermasalah'),
+          onTap: () { Navigator.pop(sheetContext); _reportCreator(); },
+        ),
+        if (_blockedByUser) const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Text('Akun ini membatasi interaksi denganmu.', style: TextStyle(color: MavoColors.muted)),
+        ),
+      ])),
+    );
   }
 
   Future<void> _toggleFollow() async {
@@ -148,9 +269,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
     return Scaffold(
     appBar: AppBar(
       title: const Text('Profil kreator', style: TextStyle(fontWeight: FontWeight.w800)),
-      actions: [IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Menu laporan dan blokir akan tersedia setelah layanan keamanan aktif.')),
-      ), icon: const Icon(Icons.more_horiz_rounded))],
+      actions: [IconButton(onPressed: _showSafetyMenu, tooltip: 'Keamanan akun', icon: const Icon(Icons.more_horiz_rounded))],
     ),
     body: ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
@@ -190,18 +309,18 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
         const SizedBox(height: 20),
         Row(children: [
           Expanded(child: FilledButton.icon(
-            onPressed: widget.creatorUserId == null || _loadingFollow ? null : _toggleFollow,
+            onPressed: widget.creatorUserId == null || _loadingFollow || _isBlocked || _blockedByUser ? null : _toggleFollow,
             style: FilledButton.styleFrom(
               backgroundColor: _following ? MavoColors.violetSoft : MavoColors.violet,
               foregroundColor: _following ? MavoColors.violet : Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 13),
             ),
             icon: _loadingFollow ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Icon(_following ? Icons.check_rounded : Icons.person_add_alt_1_rounded),
-            label: Text(widget.creatorUserId == null ? 'Profil demo' : (_following ? 'Mengikuti' : 'Ikuti')),
+            label: Text(widget.creatorUserId == null ? 'Profil demo' : (_isBlocked ? 'Diblokir' : (_blockedByUser ? 'Dibatasi' : (_following ? 'Mengikuti' : 'Ikuti')))),
           )),
           const SizedBox(width: 10),
           Expanded(child: OutlinedButton.icon(
-            onPressed: widget.creatorUserId == null
+            onPressed: widget.creatorUserId == null || _isBlocked || _blockedByUser
                 ? null
                 : () => InboxScreen.openDirectChat(
                     context,
