@@ -711,3 +711,9 @@ Status yang dipakai:
 - [x] Pengguna mengonfirmasi akun yang mengikuti dapat melihat postingan dengan audience FOLLOWERS.
 - [x] Setelah hubungan Follow dihapus (Unfollow), postingan FOLLOWERS tidak lagi terlihat oleh akun tersebut setelah refresh Home.
 - Status: Tes Follow/Unfollow, persistensi, hitungan Followers/Following, dan visibilitas postingan FOLLOWERS setelah Unfollow telah dikonfirmasi pengguna.
+
+
+## Pembaruan tes Edit Profil — 2026-11-28
+- [x] Pengguna mengonfirmasi perubahan nama atau bio berhasil disimpan dan tetap tersimpan setelah aplikasi ditutup sepenuhnya lalu dibuka kembali.
+- Status: Tes Edit Profil dasar dan persistensinya telah dikonfirmasi pengguna.
+- [ ] Uji unggah avatar/foto profil dan pastikan gambar dapat dibaca kembali setelah aplikasi dibuka ulang.
