@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -13,6 +14,7 @@ class YukuApi {
       final response = await _request('GET', '/api/v1/auth/me');
       final user = response['data'];
       _currentUser = user is Map ? Map<String, dynamic>.from(user) : null;
+      authChanges.value++;
     } catch (_) {
       // Keep the encrypted token when offline; the API will reject it if expired.
     }
@@ -20,6 +22,7 @@ class YukuApi {
   static String? _accessToken;
   static Map<String, dynamic>? _currentUser;
   static Map<String, dynamic>? get currentUser => _currentUser;
+  static final ValueNotifier<int> authChanges = ValueNotifier<int>(0);
   static void setAccessToken(String? token) => _accessToken = token;
   static bool get isSignedIn => _accessToken != null && _accessToken!.isNotEmpty;
 
@@ -58,6 +61,7 @@ class YukuApi {
         : null;
     if (!isSignedIn) throw Exception('Server tidak mengembalikan token sesi');
     await _secureStorage.write(key: 'mavo_access_token', value: _accessToken);
+    authChanges.value++;
     return session;
   }
 
@@ -77,6 +81,7 @@ class YukuApi {
     } catch (_) {}
     _accessToken = null;
     _currentUser = null;
+    authChanges.value++;
     await _secureStorage.delete(key: 'mavo_access_token');
   }
   static Future<Map<String, dynamic>> health() => _request('GET', '/health');
