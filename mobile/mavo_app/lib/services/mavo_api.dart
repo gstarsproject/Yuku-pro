@@ -409,6 +409,52 @@ class MAVOApi {
     return (await _decode(response))['data'] as Map<String, dynamic>;
   }
 
+  static Future<List<Map<String, dynamic>>> bookings() async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.get(Uri.parse('$baseUrl/api/v1/bookings'),
+      headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 25));
+    return ((await _decode(response))['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> createBooking({
+    required String serviceId,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    required String bookingMode,
+    int attendeeCount = 1,
+    int travelFee = 0,
+    String customerNote = '',
+  }) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.post(Uri.parse('$baseUrl/api/v1/bookings'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({
+        'serviceId': serviceId,
+        'startsAt': startsAt.toUtc().toIso8601String(),
+        'endsAt': endsAt.toUtc().toIso8601String(),
+        'bookingMode': bookingMode,
+        'attendeeCount': attendeeCount,
+        'travelFee': travelFee,
+        'customerNote': customerNote.trim(),
+      })).timeout(const Duration(seconds: 30));
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> bookingAction(String bookingId, String action) async {
+    if (!['accept', 'reject', 'start', 'complete', 'confirm'].contains(action)) {
+      throw ArgumentError.value(action, 'action', 'Unsupported booking action');
+    }
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/bookings/$bookingId/$action'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 25));
+    return (await _decode(response))['data'] as Map<String, dynamic>;
+  }
+
   static Future<List<Map<String, dynamic>>> posts({
     String? authorId,
     bool followingOnly = false,
