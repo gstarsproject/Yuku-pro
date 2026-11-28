@@ -116,6 +116,7 @@ export default function DashboardPage() {
           <a className="active" href="/">Overview</a>
           <a href="/users/">Users</a>
           <a href="/providers/">Providers</a>
+          <a href="/creators/">Creator Verified</a>
           <a href="/bookings/">Bookings</a>
           <a href="/payments/">Payments</a>
           <a href="/disputes/">Disputes</a>
