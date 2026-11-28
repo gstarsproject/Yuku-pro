@@ -122,7 +122,7 @@ export class AuthService {
     return actual.length === expected.length && timingSafeEqual(actual, expected);
   }
 
-  verifyAccessToken(token: string): AdminTokenPayload {
+  verifyAccessToken(token: string): SessionTokenPayload {
     const secret = this.config.get<string>('JWT_ACCESS_SECRET');
     if (!secret || secret.length < 32) {
       throw new UnauthorizedException('Token tidak valid');
@@ -133,7 +133,7 @@ export class AuthService {
 
     const [headerPart, payloadPart, signaturePart] = parts;
     let header: { alg?: string; typ?: string };
-    let payload: AdminTokenPayload;
+    let payload: SessionTokenPayload;
     try {
       header = JSON.parse(Buffer.from(headerPart, 'base64url').toString('utf8'));
       payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
@@ -162,7 +162,7 @@ export class AuthService {
       !payload ||
       typeof payload.sub !== 'string' ||
       typeof payload.email !== 'string' ||
-      payload.role !== 'ADMIN' ||
+      !['CUSTOMER', 'PROVIDER', 'ADMIN'].includes(payload.role) ||
       typeof payload.exp !== 'number' ||
       payload.exp <= now ||
       typeof payload.iat !== 'number' ||
