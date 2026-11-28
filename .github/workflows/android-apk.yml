@@ -1,0 +1,48 @@
+name: MAVO Android APK Preview
+
+on:
+  push:
+    branches:
+      - mavo/version-9-restore
+    paths:
+      - "mobile/yuku_app/**"
+      - ".github/workflows/android-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile/yuku_app
+        run: flutter pub get
+
+      - name: Build preview APK
+        working-directory: mobile/yuku_app
+        run: flutter build apk --debug --build-number=${{ github.run_number }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mavo-android-preview-apk
+          path: mobile/yuku_app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
