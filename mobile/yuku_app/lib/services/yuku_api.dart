@@ -67,11 +67,22 @@ class YukuApi {
   }
 
   static Future<List<Map<String, dynamic>>> myBookings() async {
-    final result = await _request('GET', '/api/v1/bookings');
-    final raw = result['data'] ?? result['items'] ?? result;
+    final uri = Uri.parse(baseUrl + '/api/v1/bookings').replace(queryParameters: {'limit': '50'});
+    final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 20));
+    dynamic decoded;
+    try { decoded = jsonDecode(response.body); }
+    catch (_) { throw Exception('Respons booking tidak valid'); }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = decoded is Map ? decoded['message'] : null;
+      throw Exception(message?.toString() ?? 'Gagal memuat booking');
+    }
+    final raw = decoded is List ? decoded : (decoded is Map ? (decoded['data'] ?? decoded['items']) : null);
     if (raw is! List) throw Exception('Data booking tidak valid');
     return raw.whereType<Map<String, dynamic>>().toList(growable: false);
   }
+
+  static Future<Map<String, dynamic>> bookingAction(String id, String action) =>
+    _request('POST', '/api/v1/bookings/' + id + '/' + action);
 
   static Future<List<Map<String, dynamic>>> myProviderServices() async {
     final result = await _request('GET', '/api/v1/provider/me/services');
