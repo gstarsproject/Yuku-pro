@@ -111,6 +111,9 @@ class YukuApi {
     dynamic decoded;
     try { decoded = jsonDecode(response.body); }
     catch (_) { throw Exception('Respons booking tidak valid'); }
+    if (response.statusCode == 404) {
+      throw Exception('API booking belum diaktifkan pada server preview MAVO.');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = decoded is Map ? decoded['message'] : null;
       throw Exception(message?.toString() ?? 'Gagal memuat booking');
