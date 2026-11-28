@@ -13,8 +13,19 @@ class YukuApi {
   static Future<List<Map<String, dynamic>>> categories() async {
     final response = await http.get(Uri.parse('$baseUrl/api/v1/categories')).timeout(const Duration(seconds: 15));
     if (response.statusCode != 200) throw Exception('Kategori gagal dimuat');
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    return (body['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Format respons kategori dari server tidak valid');
+    }
+    // Backend currently returns { items: [...] }; accept { data: [...] }
+    // as well so the mobile client remains compatible with paginated APIs.
+    final rawItems = decoded['items'] ?? decoded['data'];
+    if (rawItems is! List) {
+      throw Exception('Data kategori tidak ditemukan dalam respons server');
+    }
+    return rawItems
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
   }
 
   static Future<List<Map<String, dynamic>>> services({String query = '', String pillar = '', String category = ''}) async {
