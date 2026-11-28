@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/mavo_api.dart';
 import '../theme/yuku_theme.dart';
 
@@ -14,6 +15,7 @@ class _CreatorVerificationScreenState extends State<CreatorVerificationScreen> {
   final _category = TextEditingController();
   final _reason = TextEditingController();
   Map<String, dynamic>? _request;
+  final List<XFile> _documents = [];
   bool _loading = true;
   bool _submitting = false;
   String? _error;
@@ -37,13 +39,36 @@ class _CreatorVerificationScreenState extends State<CreatorVerificationScreen> {
     } catch (e) { if (mounted) setState(() { _loading = false; _error = e.toString().replaceFirst('Exception: ', ''); }); }
   }
 
+  Future<void> _pickDocuments() async {
+    try {
+      final picked = await ImagePicker().pickMultiImage(imageQuality: 85, maxWidth: 2000);
+      if (!mounted || picked.isEmpty) return;
+      setState(() {
+        for (final file in picked) {
+          if (_documents.length >= 3) break;
+          if (!_documents.any((item) => item.name == file.name && item.path == file.path)) _documents.add(file);
+        }
+      });
+      if (_documents.length >= 3 && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maksimal 3 bukti gambar.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak dapat memilih gambar: $e')));
+    }
+  }
+
   Future<void> _submit() async {
     if (_name.text.trim().length < 2 || _handle.text.trim().length < 2 || _category.text.trim().length < 2 || _reason.text.trim().length < 20) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lengkapi semua kolom. Alasan pengajuan minimal 20 karakter.'))); return;
     }
+    if (_documents.isEmpty || _documents.length > 3) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih 1–3 bukti gambar sebelum mengirim.'))); return;
+    }
     setState(() => _submitting = true);
     try {
-      final result = await MavoApi.submitCreatorVerification(creatorName: _name.text, handle: _handle.text, category: _category.text, reason: _reason.text);
+      final keys = <String>[];
+      for (final file in _documents) {
+        keys.add(await MavoApi.uploadCreatorVerificationDocument(file));
+      }
+      final result = await MavoApi.submitCreatorVerification(creatorName: _name.text, handle: _handle.text, category: _category.text, reason: _reason.text, documentKeys: keys);
       if (mounted) setState(() { _request = result; _submitting = false; });
     } catch (e) { if (mounted) { setState(() => _submitting = false); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); } }
   }
@@ -67,8 +92,16 @@ class _CreatorVerificationScreenState extends State<CreatorVerificationScreen> {
         _field(_name, 'Nama kreator'), _field(_handle, 'Username / @handle'), _field(_category, 'Kategori konten (mis. musik, travel, edukasi)'),
         _field(_reason, 'Alasan ingin diverifikasi', maxLines: 4, hint: 'Ceritakan aktivitas, audiens, dan identitas publik kreator kamu (minimal 20 karakter).'),
         const SizedBox(height: 8),
-        const Text('Pastikan nama dan akun media sosial yang kamu masukkan benar. Dokumen pendukung akan diminta melalui tahap unggah dokumen berikutnya.', style: TextStyle(fontSize: 11, color: MavoColors.muted, height: 1.4)),
-        const SizedBox(height: 18),
+        if (!pending && !verified) ...[
+          const SizedBox(height: 8),
+          const Text('Bukti pendukung (wajib 1–3 gambar, JPG/PNG/WEBP, maks. 10 MB per gambar)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: MavoColors.midnight)),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(onPressed: _submitting || _documents.length >= 3 ? null : _pickDocuments, icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Pilih bukti dari galeri')),
+          if (_documents.isNotEmpty) Wrap(spacing: 8, runSpacing: 4, children: _documents.map((file) => InputChip(label: Text(file.name, overflow: TextOverflow.ellipsis), onDeleted: _submitting ? null : () => setState(() => _documents.remove(file)))).toList()),
+          const SizedBox(height: 8),
+          const Text('Gunakan screenshot akun media sosial, bukti aktivitas kreator, atau foto identitas yang relevan. Dokumen disimpan privat dan hanya dapat dibuka admin saat pemeriksaan.', style: TextStyle(fontSize: 11, color: MavoColors.muted, height: 1.4)),
+          const SizedBox(height: 18),
+        ],
         if (!pending && !verified) FilledButton(onPressed: _submitting ? null : _submit, style: FilledButton.styleFrom(backgroundColor: MavoColors.violet, padding: const EdgeInsets.symmetric(vertical: 14)), child: _submitting ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(_status == 'REJECTED' ? 'Kirim ulang pengajuan' : 'Ajukan verifikasi')),
       ]),
     );
