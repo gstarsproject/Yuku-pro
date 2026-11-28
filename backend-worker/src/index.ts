@@ -882,6 +882,145 @@ if (avatarMedia) {
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Load posts failed",e); return json({success:false,message:"Feed gagal dimuat."},503); }
   }
+
+  // Marketplace booking lifecycle; all actions use the same hashed Worker session as the mobile app.
+  if (path === "/api/v1/bookings" && request.method === "GET") {
+    try {
+      return await db(env, async c => {
+        const user = await getSessionUser(c, request);
+        if (!user) return json({success:false,message:"Silakan login kembali."},401);
+        const r = await c.query(
+          'SELECT b.*,s."title" AS "serviceTitle",s."city",s."province",p."status" AS "paymentStatus",pp."status" AS "payoutStatus",pp."netAmount" AS "payoutNetAmount" FROM "Booking" b JOIN "Service" s ON s."id"=b."serviceId" LEFT JOIN "Payment" p ON p."bookingId"=b."id" LEFT JOIN "ProviderPayout" pp ON pp."bookingId"=b."id" WHERE b."customerId"=$1 OR b."providerId"=$1 ORDER BY b."createdAt" DESC LIMIT 100',
+          [user.id]);
+        return json({success:true,count:r.rowCount,data:r.rows});
+      });
+    } catch(e) { console.error("List bookings failed",e); return json({success:false,message:"Daftar booking gagal dimuat."},503); }
+  }
+  if (path === "/api/v1/bookings" && request.method === "POST") {
+    try {
+      const body = await readRequestBody(request);
+      const serviceId = typeof body.serviceId === "string" ? body.serviceId : "";
+      const startsAt = new Date(String(body.startsAt || ""));
+      const endsAt = new Date(String(body.endsAt || ""));
+      const bookingMode = body.bookingMode;
+      const attendeeCount = Number(body.attendeeCount ?? 1);
+      const travelFee = Number(body.travelFee ?? 0);
+      const customerNote = typeof body.customerNote === "string" ? body.customerNote.trim() : "";
+      if (!/^[0-9a-f-]{36}$/i.test(serviceId) || !Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime()) || endsAt <= startsAt) {
+        return json({success:false,message:"Layanan atau rentang waktu booking tidak valid."},400);
+      }
+      if (!["INSTANT","REQUEST"].includes(String(bookingMode)) || !Number.isInteger(attendeeCount) || attendeeCount < 1 || attendeeCount > 20 ||
+          !Number.isSafeInteger(travelFee) || travelFee < 0 || customerNote.length > 2000) {
+        return json({success:false,message:"Detail booking tidak valid."},400);
+      }
+      return await db(env, async c => {
+        const user = await getSessionUser(c, request);
+        if (!user) return json({success:false,message:"Silakan login kembali."},401);
+        const limited = await userActionRateLimit(env,user.id,"booking-create");
+        if (limited) return limited;
+        await c.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+        try {
+          const sr = await c.query(
+            'SELECT s."id",s."providerId",s."priceAmount",s."currency",s."mode",s."durationMinutes",p."userId" AS "providerUserId",cr."rateBps",cr."minFee",cr."maxFee",cr."isActive" AS "commissionActive" FROM "Service" s JOIN "ProviderProfile" p ON p."id"=s."providerId" JOIN "User" pu ON pu."id"=p."userId" JOIN "Category" cat ON cat."id"=s."categoryId" LEFT JOIN "CommissionRule" cr ON cr."categoryId"=cat."id" WHERE s."id"=$1 AND s."isPublished"=TRUE AND pu."status"=\'ACTIVE\' AND p."verificationStatus"=\'VERIFIED\' LIMIT 1',
+            [serviceId]);
+          const service = sr.rows[0];
+          if (!service) { await c.query("ROLLBACK"); return json({success:false,message:"Layanan tidak tersedia atau provider belum terverifikasi."},404); }
+          if (service.providerUserId === user.id) { await c.query("ROLLBACK"); return json({success:false,message:"Kamu tidak dapat memesan layanan sendiri."},400); }
+          if (!service.commissionActive || service.rateBps === null) { await c.query("ROLLBACK"); return json({success:false,message:"Komisi kategori belum dikonfigurasi."},409); }
+          const blocked = await c.query(
+            'SELECT EXISTS(SELECT 1 FROM "Availability" WHERE "providerId"=$1 AND "isBlocked"=TRUE AND "startsAt"<$3 AND "endsAt">$2) AS blocked',
+            [service.providerId,startsAt,endsAt]);
+          if (blocked.rows[0]?.blocked) { await c.query("ROLLBACK"); return json({success:false,message:"Jadwal provider diblokir pada waktu tersebut."},409); }
+          const availability = await c.query(
+            'SELECT EXISTS(SELECT 1 FROM "Availability" WHERE "providerId"=$1 AND "isBlocked"=FALSE AND "startsAt"<=$2 AND "endsAt">=$3) AS available',
+            [service.providerId,startsAt,endsAt]);
+          if (!availability.rows[0]?.available) { await c.query("ROLLBACK"); return json({success:false,message:"Provider belum membuka jadwal pada waktu tersebut."},409); }
+          const conflict = await c.query(
+            'SELECT 1 FROM "Booking" WHERE "providerId"=$1 AND "status" IN (\'PENDING_PROVIDER\',\'ACCEPTED\',\'AWAITING_PAYMENT\',\'PAID\',\'IN_PROGRESS\',\'AWAITING_CONFIRMATION\') AND "startsAt"<$3 AND "endsAt">$2 LIMIT 1',
+            [service.providerUserId,startsAt,endsAt]);
+          if (conflict.rowCount) { await c.query("ROLLBACK"); return json({success:false,message:"Jadwal provider sudah terisi."},409); }
+          const rawFee = Math.floor(Number(service.priceAmount) * Number(service.rateBps) / 10000);
+          const platformFee = Math.min(service.maxFee === null ? Number.MAX_SAFE_INTEGER : Number(service.maxFee),Math.max(Number(service.minFee || 0),rawFee));
+          const totalAmount = Number(service.priceAmount) + platformFee + travelFee;
+          const status = bookingMode === "INSTANT" ? "AWAITING_PAYMENT" : "PENDING_PROVIDER";
+          const created = await c.query(
+            'INSERT INTO "Booking" ("id","customerId","providerId","serviceId","status","startsAt","endsAt","durationMinutes","attendeeCount","serviceMode","currency","serviceAmount","platformFee","travelFee","totalAmount","customerNote","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),NOW()) RETURNING *',
+            [crypto.randomUUID(),user.id,service.providerUserId,service.id,status,startsAt,endsAt,Math.ceil((endsAt.getTime()-startsAt.getTime())/60000),attendeeCount,service.mode,service.currency,service.priceAmount,platformFee,travelFee,totalAmount,customerNote || null]);
+          await c.query("COMMIT");
+          return json({success:true,data:created.rows[0]},201);
+        } catch(e) {
+          await c.query("ROLLBACK").catch(()=>undefined);
+          if (typeof e === "object" && e !== null && "code" in e && e.code === "40001") return json({success:false,message:"Jadwal baru saja dipesan pengguna lain. Pilih waktu lain."},409);
+          throw e;
+        }
+      });
+    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Create booking failed",e); return json({success:false,message:"Booking gagal dibuat."},503); }
+  }
+  const bookingMatch = path.match(/^\/api\/v1\/bookings\/([0-9a-f-]{36})$/i);
+  if (bookingMatch && request.method === "GET") {
+    try {
+      return await db(env,async c=>{
+        const user=await getSessionUser(c,request);
+        if(!user) return json({success:false,message:"Silakan login kembali."},401);
+        const r=await c.query(
+          'SELECT b.*,s."title" AS "serviceTitle",s."city",s."province",p."status" AS "paymentStatus",pp."status" AS "payoutStatus",pp."netAmount" AS "payoutNetAmount" FROM "Booking" b JOIN "Service" s ON s."id"=b."serviceId" LEFT JOIN "Payment" p ON p."bookingId"=b."id" LEFT JOIN "ProviderPayout" pp ON pp."bookingId"=b."id" WHERE b."id"=$1 AND (b."customerId"=$2 OR b."providerId"=$2) LIMIT 1',
+          [bookingMatch[1],user.id]);
+        if(!r.rows[0]) return json({success:false,message:"Booking tidak ditemukan."},404);
+        return json({success:true,data:r.rows[0]});
+      });
+    } catch(e) { console.error("Booking detail failed",e); return json({success:false,message:"Detail booking gagal dimuat."},503); }
+  }
+  const bookingAction = path.match(/^\/api\/v1\/bookings\/([0-9a-f-]{36})\/(accept|reject|start|complete|confirm)$/i);
+  if (bookingAction && request.method === "POST") {
+    try {
+      return await db(env,async c=>{
+        const user=await getSessionUser(c,request);
+        if(!user) return json({success:false,message:"Silakan login kembali."},401);
+        const limited=await userActionRateLimit(env,user.id,"booking-"+bookingAction[2]);
+        if(limited) return limited;
+        const id=bookingAction[1], action=bookingAction[2].toLowerCase();
+        if(action==="accept" || action==="reject") {
+          const next=action==="accept" ? "AWAITING_PAYMENT" : "REJECTED";
+          const r=await c.query('UPDATE "Booking" SET "status"=$1,"updatedAt"=NOW() WHERE "id"=$2 AND "providerId"=$3 AND "status"=\'PENDING_PROVIDER\' RETURNING *',[next,id,user.id]);
+          if(!r.rowCount) return json({success:false,message:"Booking tidak ditemukan atau sudah diproses."},409);
+          return json({success:true,data:r.rows[0]});
+        }
+        if(action==="start") {
+          const r=await c.query('UPDATE "Booking" SET "status"=\'IN_PROGRESS\',"updatedAt"=NOW() WHERE "id"=$1 AND "providerId"=$2 AND "status"=\'PAID\' RETURNING *',[id,user.id]);
+          if(!r.rowCount) return json({success:false,message:"Booking harus sudah dibayar dan belum dimulai."},409);
+          return json({success:true,data:r.rows[0]});
+        }
+        if(action==="complete") {
+          await c.query("BEGIN");
+          try {
+            const r=await c.query('UPDATE "Booking" SET "status"=\'AWAITING_CONFIRMATION\',"updatedAt"=NOW() WHERE "id"=$1 AND "providerId"=$2 AND "status"=\'IN_PROGRESS\' AND EXISTS(SELECT 1 FROM "Payment" p WHERE p."bookingId"="Booking"."id" AND p."status"=\'SUCCEEDED\') RETURNING *',[id,user.id]);
+            if(!r.rowCount) { await c.query("ROLLBACK"); return json({success:false,message:"Booking belum dibayar atau tidak sedang berjalan."},409); }
+            const booking=r.rows[0], net=Number(booking.serviceAmount)-Number(booking.platformFee);
+            await c.query('INSERT INTO "ProviderPayout" ("id","bookingId","providerUserId","grossAmount","platformFee","netAmount","currency","status","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,\'PENDING_RELEASE\',NOW(),NOW()) ON CONFLICT ("bookingId") DO UPDATE SET "status"=\'PENDING_RELEASE\',"releasedAt"=NULL,"updatedAt"=NOW()',
+              [crypto.randomUUID(),id,user.id,booking.serviceAmount,booking.platformFee,net,booking.currency]);
+            await c.query("COMMIT");
+            return json({success:true,data:booking});
+          } catch(e) { await c.query("ROLLBACK").catch(()=>undefined); throw e; }
+        }
+        if(action==="confirm") {
+          await c.query("BEGIN");
+          try {
+            const r=await c.query('UPDATE "Booking" SET "status"=\'COMPLETED\',"updatedAt"=NOW() WHERE "id"=$1 AND "customerId"=$2 AND "status"=\'AWAITING_CONFIRMATION\' AND EXISTS(SELECT 1 FROM "Payment" p WHERE p."bookingId"="Booking"."id" AND p."status"=\'SUCCEEDED\') RETURNING *',[id,user.id]);
+            if(!r.rowCount) { await c.query("ROLLBACK"); return json({success:false,message:"Booking belum menunggu konfirmasi atau tidak ditemukan."},409); }
+            const booking=r.rows[0], net=Number(booking.serviceAmount)-Number(booking.platformFee);
+            await c.query('UPDATE "ProviderPayout" SET "status"=\'READY\',"releasedAt"=NOW(),"updatedAt"=NOW() WHERE "bookingId"=$1 AND "status"=\'PENDING_RELEASE\'',[id]);
+            await c.query('INSERT INTO "LedgerEntry" ("id","accountRef","bookingId","entryType","amount","currency","description","idempotencyKey","createdAt") VALUES ($1,$2,$3,\'CREDIT\',$4,$5,$6,$7,NOW()) ON CONFLICT ("idempotencyKey") DO NOTHING',
+              [crypto.randomUUID(),"provider:"+booking.providerId,id,net,booking.currency,"Pendapatan provider setelah customer mengonfirmasi layanan selesai","booking:"+id+":provider-credit"]);
+            await c.query('INSERT INTO "LedgerEntry" ("id","accountRef","bookingId","entryType","amount","currency","description","idempotencyKey","createdAt") VALUES ($1,$2,$3,\'CREDIT\',$4,$5,$6,$7,NOW()) ON CONFLICT ("idempotencyKey") DO NOTHING',
+              [crypto.randomUUID(),"platform:revenue",id,booking.platformFee,booking.currency,"Komisi platform MAVO setelah customer mengonfirmasi layanan selesai","booking:"+id+":platform-credit"]);
+            await c.query("COMMIT");
+            return json({success:true,data:booking});
+          } catch(e) { await c.query("ROLLBACK").catch(()=>undefined); throw e; }
+        }
+        return json({success:false,message:"Aksi booking tidak didukung."},400);
+      });
+    } catch(e) { console.error("Booking action failed",e); return json({success:false,message:"Aksi booking gagal."},503); }
+  }
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "MAVO-api-worker", status: "ok" });
   if (path === "/health/db" || path === "/api/health/db") {
