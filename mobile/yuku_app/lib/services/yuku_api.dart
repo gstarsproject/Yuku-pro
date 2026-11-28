@@ -1,8 +1,22 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class YukuApi {
   static const String baseUrl = 'https://mavo-api-preview.gstars-business.workers.dev';
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+
+  static Future<void> initialize() async {
+    _accessToken = await _secureStorage.read(key: 'mavo_access_token');
+    if (!isSignedIn) return;
+    try {
+      final response = await _request('GET', '/api/v1/auth/me');
+      final user = response['data'];
+      _currentUser = user is Map ? Map<String, dynamic>.from(user) : null;
+    } catch (_) {
+      // Keep the encrypted token when offline; the API will reject it if expired.
+    }
+  }
   static String? _accessToken;
   static Map<String, dynamic>? _currentUser;
   static Map<String, dynamic>? get currentUser => _currentUser;
@@ -34,7 +48,7 @@ class YukuApi {
     return decoded;
   }
 
-  static Map<String, dynamic> _applySession(Map<String, dynamic> response) {
+  static Future<Map<String, dynamic>> _applySession(Map<String, dynamic> response) async {
     final session = response['data'] is Map
         ? Map<String, dynamic>.from(response['data'])
         : response;
@@ -43,12 +57,13 @@ class YukuApi {
         ? Map<String, dynamic>.from(session['user'])
         : null;
     if (!isSignedIn) throw Exception('Server tidak mengembalikan token sesi');
+    await _secureStorage.write(key: 'mavo_access_token', value: _accessToken);
     return session;
   }
 
   static Future<Map<String, dynamic>> register({required String email, required String password, required String displayName}) async {
     final result = await _request('POST', '/api/v1/auth/register', body: {'email': email.trim(), 'password': password, 'displayName': displayName.trim()});
-    return _applySession(result);
+    return await _applySession(result);
   }
 
   static Future<Map<String, dynamic>> login({required String email, required String password}) async {
@@ -56,7 +71,14 @@ class YukuApi {
     return _applySession(result);
   }
 
-  static void signOut() { _accessToken = null; _currentUser = null; }
+  static Future<void> signOut() async {
+    try {
+      if (isSignedIn) await _request('POST', '/api/v1/auth/logout');
+    } catch (_) {}
+    _accessToken = null;
+    _currentUser = null;
+    await _secureStorage.delete(key: 'mavo_access_token');
+  }
   static Future<Map<String, dynamic>> health() => _request('GET', '/health');
 
   static Future<List<Map<String, dynamic>>> categories() async {
