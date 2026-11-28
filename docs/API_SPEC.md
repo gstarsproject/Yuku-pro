@@ -54,11 +54,12 @@ Format: JSON over HTTPS. Timestamps: ISO-8601 UTC. IDs: UUID.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/creator-verification/me` | Get current creator verification status |
-| POST | `/creator-verification` | Submit or resubmit creator verification request |
+| POST | `/creator-verification/document-upload-url` | Create a short-lived upload URL for a private evidence image (JPG/PNG/WEBP, max 10 MB) |
+| POST | `/creator-verification` | Submit or resubmit creator verification request with 1–3 uploaded evidence keys |
 | GET | `/admin/creators/pending` | Admin review queue |
 | POST | `/admin/creators/:id/review` | Approve or reject a creator verification request |
 
-A creator badge is displayed only when the server returns `creatorVerificationStatus: VERIFIED`. A rejected request includes a reason and may be resubmitted. Requests in `PENDING` or `VERIFIED` cannot be duplicated.
+Evidence is uploaded to the private `mavo-media` bucket under the authenticated user's `creator-verification/<userId>/` prefix. The API verifies ownership and object existence before accepting a request. Only admins receive short-lived evidence download URLs in the review queue. A creator badge is displayed only when the server returns `creatorVerificationStatus: VERIFIED` / `authorVerified: true`. A rejected request includes a reason and may be resubmitted. Requests in `PENDING` or `VERIFIED` cannot be duplicated.
 
 ## Admin endpoints (role protected)
 | Method | Path | Purpose |
