@@ -64,11 +64,69 @@ class _ServiceCard extends StatelessWidget {
  }
 }
 
-class _ServiceDetails extends StatelessWidget {
+class _ServiceDetails extends StatefulWidget {
  final Map<String,dynamic> item;
  const _ServiceDetails({required this.item});
  @override
+ State<_ServiceDetails> createState() => _ServiceDetailsState();
+}
+
+class _ServiceDetailsState extends State<_ServiceDetails> {
+ bool _booking = false;
+
+ Future<void> _book() async {
+  final now = DateTime.now();
+  final date = await showDatePicker(
+   context: context,
+   initialDate: now.add(const Duration(days: 1)),
+   firstDate: DateUtils.dateOnly(now),
+   lastDate: now.add(const Duration(days: 365)),
+  );
+  if (date == null || !mounted) return;
+  final time = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 9, minute: 0));
+  if (time == null || !mounted) return;
+  final mode = await showDialog<String>(
+   context: context,
+   builder: (dialogContext) => AlertDialog(
+    title: const Text('Pilih metode booking'),
+    content: const Text('Instant Booking langsung menuju pembayaran. Request Booking menunggu persetujuan provider.'),
+    actions: [
+     TextButton(onPressed: () => Navigator.pop(dialogContext, 'REQUEST'), child: const Text('Request Booking')),
+     FilledButton(onPressed: () => Navigator.pop(dialogContext, 'INSTANT'), child: const Text('Instant Booking')),
+    ],
+   ),
+  );
+  if (mode == null || !mounted) return;
+  final start = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  final duration = (widget.item['durationMinutes'] as num?)?.toInt() ?? 60;
+  final end = start.add(Duration(minutes: duration));
+  setState(() => _booking = true);
+  try {
+   await MAVOApi.createBooking(
+    serviceId: widget.item['id'].toString(),
+    startsAt: start,
+    endsAt: end,
+    bookingMode: mode,
+   );
+   if (!mounted) return;
+   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(mode == 'INSTANT'
+      ? 'Booking dibuat. Lanjutkan pembayaran dari Booking Saya.'
+      : 'Permintaan booking dikirim ke provider.'),
+   ));
+   Navigator.pop(context);
+  } catch (e) {
+   if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+   );
+  } finally {
+   if (mounted) setState(() => _booking = false);
+  }
+ }
+
+ @override
  Widget build(BuildContext context) {
+  final item = widget.item;
   final name=(item['providerName']??'MAVO Provider').toString();
   final title=(item['title']??'Layanan').toString();
   final description=(item['description']??'Belum ada deskripsi.').toString();
@@ -81,13 +139,19 @@ class _ServiceDetails extends StatelessWidget {
    const SizedBox(height:16),
    Text(description,style:const TextStyle(height:1.5,color:MAVOColors.ink)),
    const SizedBox(height:14),
-   Text('Kategori: ${item['categoryName']??'Layanan'}'),
-   Text('Lokasi: ${item['city']??'Online'}'),
-   Text('Harga: Rp ${price.toString()} ${item['priceUnit']??''}',style:const TextStyle(fontWeight:FontWeight.w800,color:MAVOColors.blue)),
+   Text('Kategori: \${item['categoryName']??'Layanan'}'),
+   Text('Pilar: \${item['pillar']??'Marketplace'}'),
+   Text('Lokasi: \${item['city']??'Online'}'),
+   Text('Harga: Rp \${price.toString()} \${item['priceUnit']??''}',style:const TextStyle(fontWeight:FontWeight.w800,color:MAVOColors.blue)),
    const SizedBox(height:18),
-   const Text('Pemesanan melalui aplikasi sedang disiapkan. Jangan melakukan pembayaran di luar alur resmi MAVO.',style:TextStyle(fontSize:12,color:MAVOColors.muted,height:1.4)),
+   const Text('Jadwal akan diperiksa kembali oleh server sebelum booking dibuat. Jangan melakukan pembayaran di luar alur resmi MAVO.',style:TextStyle(fontSize:12,color:MAVOColors.muted,height:1.4)),
    const SizedBox(height:14),
-   SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>Navigator.pop(context),child:const Text('Tutup'))),
+   SizedBox(width:double.infinity,child:FilledButton(
+    onPressed: _booking ? null : _book,
+    child: _booking ? const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)) : const Text('Buat Booking'),
+   )),
+   const SizedBox(height:6),
+   SizedBox(width:double.infinity,child:TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Tutup'))),
   ])));
  }
 }
