@@ -803,6 +803,33 @@ if (avatarMedia) {
     return json({ success: false, database: "disconnected", message: "Database connection failed" }, 503);
    }
   }
+  if (path === "/api/v1/bookings" && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const user = await getSessionUser(c, request);
+      if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+      if (!["CUSTOMER","PROVIDER"].includes(user.role)) return json({success:false,message:"Akses tidak diizinkan."},403);
+      const counterpartColumn = user.role === "PROVIDER" ? "customerId" : "providerId";
+      const result = await c.query(
+        `SELECT b."id",b."status",b."startsAt",b."endsAt",b."durationMinutes",b."attendeeCount",
+          b."serviceMode",b."currency",b."serviceAmount",b."platformFee",b."travelFee",b."totalAmount",
+          b."customerNote",b."createdAt",b."updatedAt",
+          json_build_object('id',s."id",'title',s."title",'mode',s."mode",'priceUnit',s."priceUnit") AS "service",
+          json_build_object('id',other."id",'profile',json_build_object('displayName',pr."displayName",'avatarUrl',pr."avatarUrl")) AS "otherParty",
+          CASE WHEN pay."id" IS NULL THEN NULL ELSE json_build_object('status',pay."status",'amount',pay."amount",'currency',pay."currency') END AS "payment"
+         FROM "Booking" b
+         JOIN "Service" s ON s."id"=b."serviceId"
+         JOIN "User" other ON other."id"=b."${counterpartColumn}"
+         LEFT JOIN "Profile" pr ON pr."userId"=other."id"
+         LEFT JOIN "Payment" pay ON pay."bookingId"=b."id"
+         WHERE b."${user.role === "PROVIDER" ? "providerId" : "customerId"}"=$1
+         ORDER BY b."createdAt" DESC LIMIT 100`,
+        [user.id],
+      );
+      return json({success:true,count:result.rowCount,data:result.rows});
+    });
+   } catch(e) { console.error("Bookings list failed",e); return json({success:false,message:"Booking gagal dimuat."},503); }
+  }
   if (path === "/api/v1/categories") {
    try {
     const r = await db(env, c => c.query('SELECT "id", "name", "slug", "pillar", "parentId" FROM "Category" WHERE "isActive" = TRUE ORDER BY "pillar", "name"'));
