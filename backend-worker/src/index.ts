@@ -332,7 +332,7 @@ export default {
   }
 
 
-  const adminUserMatch = path.match(/^\\/api\\/v1\\/admin\\/users\\/([0-9a-f-]{36})$/i);
+  const adminUserMatch = path.match(/^\/api\/v1\/admin\/users\/([0-9a-f-]{36})$/i);
   if (adminUserMatch && request.method === "PATCH") {
    try {
     const body = await readRequestBody(request);
@@ -341,7 +341,7 @@ export default {
       const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
       if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi Superadmin tidak valid."},401);
       const tokenHash = await sha256(token);
-      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\\'SUPERADMIN\\' AND u."status"=\\'ACTIVE\\' LIMIT 1',[tokenHash]);
+      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\'SUPERADMIN\' AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
       const actor = auth.rows[0];
       if (!actor) return json({success:false,message:"Fitur ini hanya dapat diakses SUPERADMIN."},403);
       const status = typeof body.status === "string" ? body.status.toUpperCase() : "";
@@ -351,7 +351,7 @@ export default {
       if (target.rows[0].id === actor.id) return json({success:false,message:"Kamu tidak dapat menonaktifkan akun sendiri."},400);
       const updated = await c.query('UPDATE "User" SET "status"=$2,"updatedAt"=NOW() WHERE "id"=$1 RETURNING "id","email","role","status"',[adminUserMatch[1],status]);
       if (status === "SUSPENDED") await c.query('DELETE FROM "UserSession" WHERE "userId"=$1',[adminUserMatch[1]]);
-      await c.query('INSERT INTO "AdminAuditLog" ("id","actorUserId","action","targetType","targetId","metadata","createdAt") VALUES ($1,$2,\\'ADMIN_STATUS_CHANGED\\',\\'USER\\',$3,$4::jsonb,NOW())',[crypto.randomUUID(),actor.id,adminUserMatch[1],JSON.stringify({email:target.rows[0].email,status})]);
+      await c.query('INSERT INTO "AdminAuditLog" ("id","actorUserId","action","targetType","targetId","metadata","createdAt") VALUES ($1,$2,\'ADMIN_STATUS_CHANGED\',\'USER\',$3,$4::jsonb,NOW())',[crypto.randomUUID(),actor.id,adminUserMatch[1],JSON.stringify({email:target.rows[0].email,status})]);
       return json({success:true,data:updated.rows[0],message:"Status Admin diperbarui."});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Admin status update failed",e); return json({success:false,message:"Status Admin gagal diperbarui."},503); }
