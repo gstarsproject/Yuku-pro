@@ -3,6 +3,7 @@ import '../theme/yuku_theme.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
 import 'create_post_screen.dart';
+import 'bookings_screen.dart';
 import 'profile_screen.dart';
 import 'inbox_screen.dart';
 
@@ -19,6 +20,7 @@ class _AppShellState extends State<AppShell> {
     HomeScreen(),
     ExploreScreen(),
     CreatePostScreen(),
+    BookingsScreen(),
     InboxScreen(),
     ProfileScreen(),
   ];
@@ -39,7 +41,8 @@ class _AppShellState extends State<AppShell> {
         NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
         NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore_rounded), label: 'Explore'),
         NavigationDestination(icon: Icon(Icons.add_circle_outline_rounded), selectedIcon: Icon(Icons.add_circle_rounded), label: 'Create'),
-        NavigationDestination(icon: Icon(Icons.chat_bubble_outline_rounded), selectedIcon: Icon(Icons.chat_bubble_rounded), label: 'Inbox'),
+        NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month_rounded), label: 'Bookings'),
+        NavigationDestination(icon: Icon(Icons.chat_bubble_outline_rounded), selectedIcon: Icon(Icons.chat_bubble_rounded), label: 'Chat'),
         NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Profile'),
       ],
     ),
