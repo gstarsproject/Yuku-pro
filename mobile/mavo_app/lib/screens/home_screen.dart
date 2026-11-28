@@ -300,6 +300,52 @@ class _PostCardState extends State<_PostCard> {
     } finally { if (mounted) setState(() => _busy = false); }
   }
 
+  Future<void> _reportPost() async {
+    const reasons = <String, String>{
+      'SPAM': 'Spam atau penipuan',
+      'HARASSMENT': 'Pelecehan atau perundungan',
+      'HATE': 'Ujaran kebencian',
+      'IMPERSONATION': 'Menyamar sebagai orang lain',
+      'INAPPROPRIATE': 'Konten tidak pantas',
+      'SCAM': 'Penipuan atau aktivitas mencurigakan',
+      'OTHER': 'Alasan lainnya',
+    };
+    String selected = 'SPAM';
+    final details = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+        title: const Text('Laporkan postingan'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Pilih alasan laporan. Tim MAVO akan meninjau konten ini.'),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: selected,
+            isExpanded: true,
+            items: reasons.entries.map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
+            onChanged: (value) { if (value != null) setDialogState(() => selected = value); },
+          ),
+          const SizedBox(height: 10),
+          TextField(controller: details, maxLength: 1000, maxLines: 3,
+            decoration: const InputDecoration(hintText: 'Detail tambahan (opsional)')),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Kirim laporan')),
+        ],
+      )),
+    );
+    if (confirmed != true || !mounted) { details.dispose(); return; }
+    try {
+      await MAVOApi.reportPost(postId: widget.post['id'].toString(), reason: selected, details: details.text);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan postingan terkirim. Terima kasih sudah membantu menjaga MAVO.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      details.dispose();
+    }
+  }
+
   Future<void> _openComments() async {
     final count = await showModalBottomSheet<int>(
       context: context, isScrollControlled: true, useSafeArea: true,
@@ -346,7 +392,16 @@ class _PostCardState extends State<_PostCard> {
               ])),
             ]),
           )),
-          const Icon(Icons.more_horiz, color: MavoColors.muted),
+          PopupMenuButton<String>(
+            tooltip: 'Opsi postingan',
+            icon: const Icon(Icons.more_horiz, color: MavoColors.muted),
+            onSelected: (value) { if (value == 'report') _reportPost(); },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(value: 'report', child: Row(children: [
+                Icon(Icons.flag_outlined, size: 18), SizedBox(width: 10), Text('Laporkan postingan'),
+              ])),
+            ],
+          ),
         ]),
         const SizedBox(height: 13),
         if (content.isNotEmpty) Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
