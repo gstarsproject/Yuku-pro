@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 
 type Report = {
   id: string;
+  reportType: string;
+  postId: string | null;
+  postContent: string | null;
   reason: string;
   details: string | null;
   status: string;
@@ -104,9 +107,9 @@ export default function SafetyReportsPage() {
       <section className="card">
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
           <div>
-            <div className="eyebrow">USER REPORTS</div>
-            <h2>Daftar laporan pengguna</h2>
-            <p>Periksa laporan, lalu tandai sedang ditinjau, selesai, atau ditolak.</p>
+            <div className="eyebrow">TRUST & SAFETY</div>
+            <h2>Daftar laporan akun & postingan</h2>
+            <p>Periksa konteks laporan, lalu tandai sedang ditinjau, selesai, atau ditolak.</p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <select aria-label="Filter status" value={filter} onChange={(e) => { setFilter(e.target.value); if (token) load(token, e.target.value); }}>
@@ -128,7 +131,9 @@ export default function SafetyReportsPage() {
               <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
                 <div>
                   <strong>{labels[report.reason] || report.reason}</strong>
-                  <p style={{ margin: '6px 0' }}>Dilaporkan: <strong>{report.targetName || 'Akun tidak bernama'}</strong> ({report.targetEmail})</p>
+                  <p style={{ margin: '6px 0' }}>Jenis: <strong>{report.reportType === 'POST' ? 'Postingan' : 'Akun'}</strong></p>
+                  <p style={{ margin: '6px 0' }}>Akun terkait: <strong>{report.targetName || 'Akun tidak bernama'}</strong> ({report.targetEmail})</p>
+                  {report.reportType === 'POST' && <div style={{ marginTop: 10, padding: 12, borderRadius: 10, background: '#f5f8fc' }}><strong>Konten yang dilaporkan</strong><p style={{ margin: '6px 0 0', whiteSpace: 'pre-wrap' }}>{report.postContent || 'Postingan sudah tidak tersedia.'}</p></div>}
                   <p style={{ margin: '6px 0' }}>Pelapor: {report.reporterName || 'Pengguna MAVO'}</p>
                   <p style={{ margin: '6px 0', color: '#667085' }}>{new Date(report.createdAt).toLocaleString('id-ID')}</p>
                   {report.details && <p style={{ margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>{report.details}</p>}
