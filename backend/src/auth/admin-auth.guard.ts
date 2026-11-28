@@ -36,7 +36,7 @@ export class AdminAuthGuard implements CanActivate {
     if (!user || user.role !== 'ADMIN' || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Akun admin tidak aktif');
     }
-    request.user = payload;
+    request.user = { ...payload, role: 'ADMIN' };
     return true;
   }
 }

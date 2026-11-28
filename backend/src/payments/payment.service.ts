@@ -1,7 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
+
+type MidtransNotification = {
+  order_id: string;
+  status_code: string;
+  gross_amount: string;
+  signature_key: string;
+  transaction_status: string;
+  transaction_id: string;
+};
 
 @Injectable()
 export class PaymentService {
@@ -10,46 +19,90 @@ export class PaymentService {
   async createCheckout(customerId: string, bookingId: string) {
     const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, customerId }, include: { customer: { include: { profile: true } } } });
     if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
-    if (!['AWAITING_PAYMENT'].includes(booking.status)) throw new BadRequestException('Booking belum siap dibayar.');
+    if (booking.status !== 'AWAITING_PAYMENT') throw new BadRequestException('Booking belum siap dibayar.');
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     if (!serverKey || serverKey === 'replace_me') throw new BadRequestException('Konfigurasi Midtrans Sandbox belum diisi.');
     const base = process.env.MIDTRANS_IS_PRODUCTION === 'true' ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
-    const orderId = `YUKU-${booking.id}`;
+    const orderId = `MAVO-${booking.id}`;
     const response = await axios.post(`${base}/v2/charge`, {
       payment_type: 'bank_transfer',
       transaction_details: { order_id: orderId, gross_amount: booking.totalAmount },
-      customer_details: { first_name: booking.customer.profile?.displayName ?? 'YUKU Customer', email: booking.customer.email ?? undefined, phone: booking.customer.phone ?? undefined },
+      customer_details: { first_name: booking.customer.profile?.displayName ?? 'MAVO Customer', email: booking.customer.email ?? undefined, phone: booking.customer.phone ?? undefined },
       bank_transfer: { bank: 'bca' },
-    }, { auth: { username: serverKey, password: '' } });
+    }, { auth: { username: serverKey, password: '' }, timeout: 15000 });
 
     await this.prisma.payment.upsert({
       where: { bookingId },
-      create: { bookingId, gateway: 'MIDTRANS', gatewayReference: orderId, amount: booking.totalAmount, status: 'PENDING' },
-      update: { gatewayReference: orderId, status: 'PENDING' },
+      create: { bookingId, gateway: 'MIDTRANS', gatewayReference: orderId, amount: booking.totalAmount, currency: booking.currency, status: 'PENDING' },
+      update: { gatewayReference: orderId, amount: booking.totalAmount, currency: booking.currency, status: 'PENDING' },
     });
     return { orderId, gateway: 'MIDTRANS', transaction: response.data };
   }
 
-  async handleMidtransWebhook(payload: any) {
+  async handleMidtransWebhook(input: unknown) {
+    const payload = input as Partial<MidtransNotification> | null;
     const key = process.env.MIDTRANS_SERVER_KEY;
     if (!key) throw new BadRequestException('Webhook key belum dikonfigurasi.');
-    const expected = createHash('sha512').update(`${payload.order_id}${payload.status_code}${payload.gross_amount}${key}`).digest('hex');
-    if (expected !== payload.signature_key) throw new BadRequestException('Signature webhook tidak valid.');
-    const eventKey = `${payload.order_id}:${payload.transaction_status}:${payload.transaction_id}`;
-    const existing = await this.prisma.paymentWebhookEvent.findUnique({ where: { eventKey } });
-    if (existing) return { received: true, duplicate: true };
+    if (!payload || typeof payload.order_id !== 'string' ||
+        typeof payload.status_code !== 'string' || typeof payload.gross_amount !== 'string' ||
+        typeof payload.signature_key !== 'string' || typeof payload.transaction_status !== 'string' ||
+        typeof payload.transaction_id !== 'string') {
+      throw new BadRequestException('Payload webhook tidak lengkap.');
+    }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.paymentWebhookEvent.create({ data: { gateway: 'MIDTRANS', eventKey, gatewayOrderId: payload.order_id, eventType: payload.transaction_status, payload } });
-      const payment = await tx.payment.findFirst({ where: { gatewayReference: payload.order_id }, include: { booking: true } });
+    const expected = createHash('sha512').update(`${payload.order_id}${payload.status_code}${payload.gross_amount}${key}`).digest();
+    const received = Buffer.from(payload.signature_key, 'hex');
+    if (received.length !== expected.length || !timingSafeEqual(expected, received)) {
+      throw new BadRequestException('Signature webhook tidak valid.');
+    }
+
+    const orderId = payload.order_id;
+    const transactionStatus = payload.transaction_status;
+    const transactionId = payload.transaction_id;
+    const grossAmount = payload.gross_amount;
+    const eventKey = `${orderId}:${transactionStatus}:${transactionId}`;
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.paymentWebhookEvent.findUnique({ where: { eventKey } });
+      if (existing?.processedAt) return { received: true, duplicate: true };
+
+      const payment = await tx.payment.findFirst({
+        where: { gatewayReference: orderId, gateway: 'MIDTRANS' },
+        include: { booking: true },
+      });
       if (!payment) throw new NotFoundException('Payment untuk order ini tidak ditemukan.');
-      const paid = ['settlement', 'capture'].includes(payload.transaction_status);
-      const failed = ['deny', 'cancel', 'expire'].includes(payload.transaction_status);
-      await tx.payment.update({ where: { id: payment.id }, data: { status: paid ? 'SUCCEEDED' : failed ? (payload.transaction_status === 'expire' ? 'EXPIRED' : 'FAILED') : 'PENDING', paidAt: paid ? new Date() : null } });
-      if (paid) await tx.booking.update({ where: { id: payment.bookingId }, data: { status: 'PAID' } });
-      if (failed) await tx.booking.update({ where: { id: payment.bookingId }, data: { status: 'AWAITING_PAYMENT' } });
+      if (Number(grossAmount) !== payment.amount) {
+        throw new BadRequestException('Nominal webhook tidak sesuai dengan nominal booking.');
+      }
+
+      if (!existing) {
+        await tx.paymentWebhookEvent.create({
+          data: { gateway: 'MIDTRANS', eventKey, gatewayOrderId: orderId, eventType: transactionStatus, payload: input as object },
+        });
+      }
+
+      const paid = ['settlement', 'capture'].includes(transactionStatus);
+      const failed = ['deny', 'cancel', 'expire'].includes(transactionStatus);
+
+      // A successful payment is terminal here: delayed pending/failed notifications
+      // must never downgrade a paid booking or payment.
+      if (payment.status !== 'SUCCEEDED' && payment.status !== 'REFUNDED') {
+        if (paid) {
+          await tx.payment.update({ where: { id: payment.id }, data: { status: 'SUCCEEDED', paidAt: payment.paidAt ?? new Date() } });
+          await tx.booking.updateMany({
+            where: { id: payment.bookingId, status: 'AWAITING_PAYMENT' },
+            data: { status: 'PAID' },
+          });
+        } else if (failed) {
+          await tx.payment.update({ where: { id: payment.id }, data: { status: transactionStatus === 'expire' ? 'EXPIRED' : 'FAILED' } });
+          await tx.booking.updateMany({
+            where: { id: payment.bookingId, status: 'AWAITING_PAYMENT' },
+            data: { status: 'AWAITING_PAYMENT' },
+          });
+        }
+      }
+
       await tx.paymentWebhookEvent.update({ where: { eventKey }, data: { processedAt: new Date() } });
+      return { received: true, duplicate: false };
     });
-    return { received: true };
   }
 }

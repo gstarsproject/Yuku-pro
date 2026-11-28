@@ -1,50 +1,152 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class YukuApi {
-  static const String baseUrl = 'https://yuku-pro.gstars-business.workers.dev';
+  static const String baseUrl = 'https://mavo-api-preview.gstars-business.workers.dev';
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
-  static Future<Map<String, dynamic>> health() async {
-    final response = await http.get(Uri.parse('$baseUrl/health')).timeout(const Duration(seconds: 12));
-    if (response.statusCode != 200) throw Exception('API tidak merespons (${response.statusCode})');
-    return jsonDecode(response.body) as Map<String, dynamic>;
+  static Future<void> initialize() async {
+    _accessToken = await _secureStorage.read(key: 'mavo_access_token');
+    if (!isSignedIn) return;
+    try {
+      final response = await _request('GET', '/api/v1/auth/me');
+      final user = response['data'];
+      _currentUser = user is Map ? Map<String, dynamic>.from(user) : null;
+      authChanges.value++;
+    } catch (_) {
+      // Keep the encrypted token when offline; the API will reject it if expired.
+    }
   }
+  static String? _accessToken;
+  static Map<String, dynamic>? _currentUser;
+  static Map<String, dynamic>? get currentUser => _currentUser;
+  static final ValueNotifier<int> authChanges = ValueNotifier<int>(0);
+  static void setAccessToken(String? token) => _accessToken = token;
+  static bool get isSignedIn => _accessToken != null && _accessToken!.isNotEmpty;
+
+  static Map<String, String> get _headers => {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    if (isSignedIn) 'Authorization': 'Bearer ' + _accessToken!,
+  };
+
+  static Future<Map<String, dynamic>> _request(String method, String path, {
+    Map<String, dynamic>? body, Map<String, String>? query,
+  }) async {
+    final uri = Uri.parse(baseUrl + path).replace(queryParameters: query);
+    final request = http.Request(method, uri)..headers.addAll(_headers);
+    if (body != null) request.body = jsonEncode(body);
+    final streamed = await request.send().timeout(const Duration(seconds: 20));
+    final response = await http.Response.fromStream(streamed);
+    dynamic decoded;
+    try { decoded = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body); }
+    catch (_) { throw Exception('Respons server tidak valid (' + response.statusCode.toString() + ')'); }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = decoded is Map ? decoded['message'] : null;
+      throw Exception(message?.toString() ?? 'Permintaan gagal (' + response.statusCode.toString() + ')');
+    }
+    if (decoded is! Map<String, dynamic>) throw Exception('Format respons server tidak valid');
+    return decoded;
+  }
+
+  static Future<Map<String, dynamic>> _applySession(Map<String, dynamic> response) async {
+    final session = response['data'] is Map
+        ? Map<String, dynamic>.from(response['data'])
+        : response;
+    _accessToken = session['accessToken']?.toString();
+    _currentUser = session['user'] is Map
+        ? Map<String, dynamic>.from(session['user'])
+        : null;
+    if (!isSignedIn) throw Exception('Server tidak mengembalikan token sesi');
+    await _secureStorage.write(key: 'mavo_access_token', value: _accessToken);
+    authChanges.value++;
+    return session;
+  }
+
+  static Future<Map<String, dynamic>> register({required String email, required String password, required String displayName}) async {
+    final result = await _request('POST', '/api/v1/auth/register', body: {'email': email.trim(), 'password': password, 'displayName': displayName.trim()});
+    return await _applySession(result);
+  }
+
+  static Future<Map<String, dynamic>> login({required String email, required String password}) async {
+    final result = await _request('POST', '/api/v1/auth/user/login', body: {'email': email.trim(), 'password': password});
+    return _applySession(result);
+  }
+
+  static Future<void> signOut() async {
+    try {
+      if (isSignedIn) await _request('POST', '/api/v1/auth/logout');
+    } catch (_) {}
+    _accessToken = null;
+    _currentUser = null;
+    authChanges.value++;
+    await _secureStorage.delete(key: 'mavo_access_token');
+  }
+  static Future<Map<String, dynamic>> health() => _request('GET', '/health');
 
   static Future<List<Map<String, dynamic>>> categories() async {
-    final response = await http.get(Uri.parse('$baseUrl/api/v1/categories')).timeout(const Duration(seconds: 15));
-    if (response.statusCode != 200) throw Exception('Kategori gagal dimuat');
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception('Format respons kategori dari server tidak valid');
-    }
-    // Support both the current backend { data: [...] } and paginated { items: [...] } response shapes.
-    final rawItems = decoded['items'] ?? decoded['data'];
-    if (rawItems is! List) {
-      throw Exception('Data kategori tidak ditemukan dalam respons server');
-    }
-    return rawItems
-        .whereType<Map<String, dynamic>>()
-        .toList(growable: false);
+    final result = await _request('GET', '/api/v1/categories');
+    final raw = result['items'] ?? result['data'];
+    if (raw is! List) throw Exception('Data kategori tidak ditemukan');
+    return raw.whereType<Map<String, dynamic>>().toList(growable: false);
   }
 
-  static Future<List<Map<String, dynamic>>> services({String query = '', String pillar = '', String category = ''}) async {
-    final uri = Uri.parse('$baseUrl/api/v1/services').replace(queryParameters: {
+  static Future<List<Map<String, dynamic>>> services({String query = '', String pillar = '', String category = '', String city = ''}) async {
+    final result = await _request('GET', '/api/v1/services', query: {
       if (query.trim().isNotEmpty) 'q': query.trim(),
       if (pillar.isNotEmpty) 'pillar': pillar,
       if (category.isNotEmpty) 'category': category,
+      if (city.isNotEmpty) 'city': city,
     });
-    final response = await http.get(uri).timeout(const Duration(seconds: 15));
-    if (response.statusCode != 200) throw Exception('Layanan gagal dimuat');
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception('Format respons layanan dari server tidak valid');
+    final raw = result['items'] ?? result['data'];
+    if (raw is! List) throw Exception('Data layanan tidak ditemukan');
+    return raw.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  static Future<List<Map<String, dynamic>>> myBookings() async {
+    final uri = Uri.parse(baseUrl + '/api/v1/bookings').replace(queryParameters: {'limit': '50'});
+    final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 20));
+    dynamic decoded;
+    try { decoded = jsonDecode(response.body); }
+    catch (_) { throw Exception('Respons booking tidak valid'); }
+    if (response.statusCode == 404) {
+      throw Exception('API booking belum diaktifkan pada server preview MAVO.');
     }
-    final rawItems = decoded['items'] ?? decoded['data'];
-    if (rawItems is! List) {
-      throw Exception('Data layanan tidak ditemukan dalam respons server');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = decoded is Map ? decoded['message'] : null;
+      throw Exception(message?.toString() ?? 'Gagal memuat booking');
     }
-    return rawItems
-        .whereType<Map<String, dynamic>>()
-        .toList(growable: false);
+    final raw = decoded is List ? decoded : (decoded is Map ? (decoded['data'] ?? decoded['items']) : null);
+    if (raw is! List) throw Exception('Data booking tidak valid');
+    return raw.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  static Future<Map<String, dynamic>> bookingAction(String id, String action) =>
+    _request('POST', '/api/v1/bookings/' + id + '/' + action);
+
+  static Future<List<Map<String, dynamic>>> myProviderServices() async {
+    final result = await _request('GET', '/api/v1/provider/me/services');
+    final raw = result['data'] ?? result['items'] ?? result;
+    if (raw is! List) throw Exception('Data layanan provider tidak valid');
+    return raw.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  static Future<Map<String, dynamic>> createProviderService(Map<String, dynamic> service) => _request('POST', '/api/v1/provider/me/services', body: service);
+  static Future<Map<String, dynamic>> updateProviderService(String id, Map<String, dynamic> service) => _request('PATCH', '/api/v1/provider/me/services/' + id, body: service);
+
+  static Future<List<Map<String, dynamic>>> myAvailability() async {
+    final result = await _request('GET', '/api/v1/provider/me/availability');
+    final raw = result['data'] ?? result['items'] ?? result;
+    if (raw is! List) throw Exception('Data jadwal provider tidak valid');
+    return raw.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  static Future<Map<String, dynamic>> createAvailability({required DateTime startsAt, required DateTime endsAt, bool isBlocked = false}) =>
+    _request('POST', '/api/v1/provider/me/availability', body: {'startsAt': startsAt.toUtc().toIso8601String(), 'endsAt': endsAt.toUtc().toIso8601String(), 'isBlocked': isBlocked});
+
+  static Future<void> deleteAvailability(String id) async {
+    await _request('DELETE', '/api/v1/provider/me/availability/' + id);
   }
 }

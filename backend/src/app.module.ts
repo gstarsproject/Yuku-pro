@@ -7,6 +7,7 @@ import { BookingModule } from './booking/booking.module';
 import { PaymentModule } from './payments/payment.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
+import { ProviderModule } from './provider/provider.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AdminModule } from './admin/admin.module';
     PaymentModule,
     AuthModule,
     AdminModule,
+    ProviderModule,
   ],
 })
 export class AppModule {}

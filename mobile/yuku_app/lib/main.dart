@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'screens/app_shell.dart';
 import 'theme/yuku_theme.dart';
+import 'services/yuku_api.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await YukuApi.initialize();
   runApp(const YukuApp());
 }
 

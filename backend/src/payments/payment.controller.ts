@@ -1,13 +1,31 @@
-import { Body, Controller, Headers, Post, BadRequestException } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Post, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
+import { IsUUID } from 'class-validator';
+import { UserAuthGuard, AppUser } from '../auth/user-auth.guard';
 import { PaymentService } from './payment.service';
+
+class CheckoutDto {
+  @IsUUID()
+  bookingId!: string;
+}
+
+type AuthRequest = Request & { user: AppUser };
+
 @Controller('payments')
 export class PaymentController {
   constructor(private readonly service: PaymentService) {}
+
   @Post('checkout')
-  checkout(@Headers('x-demo-user-id') userId: string, @Body() body: { bookingId: string }) {
-    if (!userId) throw new BadRequestException('JWT authentication required.');
-    return this.service.createCheckout(userId, body.bookingId);
+  @UseGuards(UserAuthGuard)
+  checkout(@Req() request: AuthRequest, @Body() body: CheckoutDto) {
+    if (request.user.role !== 'CUSTOMER') {
+      throw new ForbiddenException('Hanya customer yang dapat melakukan pembayaran.');
+    }
+    return this.service.createCheckout(request.user.sub, body.bookingId);
   }
+
   @Post('webhook/midtrans')
-  webhook(@Body() payload: any) { return this.service.handleMidtransWebhook(payload); }
+  webhook(@Body() payload: unknown) {
+    return this.service.handleMidtransWebhook(payload);
+  }
 }
