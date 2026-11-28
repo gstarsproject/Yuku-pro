@@ -1,5 +1,5 @@
 import { Client } from "pg";
-interface Env { HYPERDRIVE: Hyperdrive; AUTH_IP_LIMITER: RateLimit; AUTH_ID_LIMITER: RateLimit; USER_ACTION_LIMITER: RateLimit; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; APP_ENV?: string; ADMIN_BOOTSTRAP_TOKEN?: string; }
+interface Env { HYPERDRIVE: Hyperdrive; AUTH_IP_LIMITER: RateLimit; AUTH_ID_LIMITER: RateLimit; USER_ACTION_LIMITER: RateLimit; AWS_ACCESS_KEY_ID: string; AWS_SECRET_ACCESS_KEY: string; AWS_ENDPOINT_URL_S3: string; AWS_REGION: string; APP_ENV?: string; ADMIN_BOOTSTRAP_TOKEN?: string; MIDTRANS_SERVER_KEY?: string; MIDTRANS_IS_PRODUCTION?: string; }
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-bootstrap-token", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
 // Preview auth throttling: approximate IP and per-identifier limits; production remains unchanged.
@@ -1020,6 +1020,104 @@ if (avatarMedia) {
         return json({success:false,message:"Aksi booking tidak didukung."},400);
       });
     } catch(e) { console.error("Booking action failed",e); return json({success:false,message:"Aksi booking gagal."},503); }
+  }
+
+  if (path === "/api/v1/payments/checkout" && request.method === "POST") {
+    try {
+      const body = await readRequestBody(request);
+      const bookingId = typeof body.bookingId === "string" ? body.bookingId : "";
+      if (!/^[0-9a-f-]{36}$/i.test(bookingId)) return json({success:false,message:"ID booking tidak valid."},400);
+      return await db(env,async c=>{
+        const user=await getSessionUser(c,request);
+        if(!user) return json({success:false,message:"Silakan login kembali."},401);
+        const limited=await userActionRateLimit(env,user.id,"payment-checkout");
+        if(limited) return limited;
+        const bookingResult=await c.query(
+          'SELECT b."id",b."totalAmount",b."currency",b."status",p."gatewayPayload",p."status" AS "paymentStatus" FROM "Booking" b LEFT JOIN "Payment" p ON p."bookingId"=b."id" WHERE b."id"=$1 AND b."customerId"=$2 LIMIT 1',
+          [bookingId,user.id]);
+        const booking=bookingResult.rows[0];
+        if(!booking) return json({success:false,message:"Booking tidak ditemukan."},404);
+        if(booking.status!=="AWAITING_PAYMENT") return json({success:false,message:"Booking belum siap dibayar."},409);
+        if(booking.gatewayPayload) return json({success:true,data:booking.gatewayPayload});
+        if(!env.MIDTRANS_SERVER_KEY) return json({success:false,message:"Pembayaran sandbox belum dikonfigurasi. Checkout belum dapat diaktifkan."},503);
+        const production=env.MIDTRANS_IS_PRODUCTION==="true";
+        const gatewayBase=production ? "https://api.midtrans.com" : "https://api.sandbox.midtrans.com";
+        const orderId="MAVO-"+booking.id;
+        const gatewayResponse=await fetch(gatewayBase+"/v2/charge",{
+          method:"POST",
+          headers:{
+            "Authorization":"Basic "+btoa(env.MIDTRANS_SERVER_KEY+":"),
+            "Content-Type":"application/json",
+            "Accept":"application/json",
+          },
+          body:JSON.stringify({
+            payment_type:"bank_transfer",
+            transaction_details:{order_id:orderId,gross_amount:Number(booking.totalAmount)},
+            bank_transfer:{bank:"bca"},
+            custom_expiry:{expiry_duration:24,unit:"hour"},
+          }),
+        });
+        const gatewayData=await gatewayResponse.json().catch(()=>null) as Record<string,unknown>|null;
+        if(!gatewayResponse.ok || !gatewayData) {
+          console.error("Midtrans checkout rejected",{status:gatewayResponse.status,orderId});
+          return json({success:false,message:"Gateway pembayaran belum menerima permintaan. Silakan coba lagi."},502);
+        }
+        await c.query(
+          'INSERT INTO "Payment" ("id","bookingId","gateway","gatewayReference","amount","currency","status","gatewayPayload","createdAt") VALUES ($1,$2,\'MIDTRANS\',$3,$4,$5,\'PENDING\',$6::jsonb,NOW()) ON CONFLICT ("bookingId") DO UPDATE SET "gatewayReference"=EXCLUDED."gatewayReference","status"=\'PENDING\',"gatewayPayload"=EXCLUDED."gatewayPayload"',
+          [crypto.randomUUID(),booking.id,orderId,booking.totalAmount,booking.currency,JSON.stringify(gatewayData)]);
+        return json({success:true,data:gatewayData});
+      });
+    } catch(e) { if(e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Payment checkout failed",e); return json({success:false,message:"Checkout pembayaran gagal."},503); }
+  }
+  if (path === "/api/v1/payments/webhook/midtrans" && request.method === "POST") {
+    try {
+      const body=await readRequestBody(request);
+      const key=env.MIDTRANS_SERVER_KEY;
+      if(!key) return json({success:false,message:"Webhook payment belum dikonfigurasi."},503);
+      const orderId=String(body.order_id||"");
+      const statusCode=String(body.status_code||"");
+      const grossAmount=String(body.gross_amount||"");
+      const signature=String(body.signature_key||"").toLowerCase();
+      const transactionStatus=String(body.transaction_status||"");
+      const transactionId=String(body.transaction_id||"");
+      if(!orderId || !statusCode || !grossAmount || !signature || !transactionStatus || !transactionId) {
+        return json({success:false,message:"Payload webhook tidak lengkap."},400);
+      }
+      const signed=orderId+statusCode+grossAmount+key;
+      const digest=new Uint8Array(await crypto.subtle.digest("SHA-512",encoder.encode(signed)));
+      const expected=toHex(digest);
+      let mismatch=signature.length===expected.length?0:1;
+      if(signature.length===expected.length) for(let i=0;i<expected.length;i++) mismatch|=signature.charCodeAt(i)^expected.charCodeAt(i);
+      if(mismatch!==0) return json({success:false,message:"Signature webhook tidak valid."},401);
+      const eventKey=orderId+":"+transactionStatus+":"+transactionId;
+      return await db(env,async c=>{
+        await c.query("BEGIN");
+        try {
+          const inserted=await c.query(
+            'INSERT INTO "PaymentWebhookEvent" ("id","gateway","eventKey","gatewayOrderId","eventType","payload","createdAt") VALUES ($1,\'MIDTRANS\',$2,$3,$4,$5::jsonb,NOW()) ON CONFLICT ("eventKey") DO NOTHING RETURNING "id"',
+            [crypto.randomUUID(),eventKey,orderId,transactionStatus,JSON.stringify(body)]);
+          if(!inserted.rowCount) { await c.query("ROLLBACK"); return json({success:true,data:{received:true,duplicate:true}}); }
+          const paymentResult=await c.query(
+            'SELECT p."id",p."bookingId",p."amount",b."status" AS "bookingStatus" FROM "Payment" p JOIN "Booking" b ON b."id"=p."bookingId" WHERE p."gatewayReference"=$1 LIMIT 1',
+            [orderId]);
+          const payment=paymentResult.rows[0];
+          if(!payment || Math.round(Number(grossAmount))!==Number(payment.amount)) {
+            await c.query("ROLLBACK");
+            return json({success:false,message:"Payment order tidak ditemukan atau nominal tidak cocok."},404);
+          }
+          const paid=["settlement","capture"].includes(transactionStatus) && (transactionStatus!=="capture" || String(body.fraud_status||"accept")==="accept");
+          const failed=["deny","cancel","expire"].includes(transactionStatus);
+          const paymentStatus=paid ? "SUCCEEDED" : failed ? (transactionStatus==="expire" ? "EXPIRED" : "FAILED") : "PENDING";
+          await c.query('UPDATE "Payment" SET "status"=$1,"paidAt"=$2 WHERE "id"=$3',[paymentStatus,paid?new Date():null,payment.id]);
+          if(paid && payment.bookingStatus==="AWAITING_PAYMENT") {
+            await c.query('UPDATE "Booking" SET "status"=\'PAID\',"updatedAt"=NOW() WHERE "id"=$1 AND "status"=\'AWAITING_PAYMENT\'',[payment.bookingId]);
+          }
+          await c.query('UPDATE "PaymentWebhookEvent" SET "processedAt"=NOW() WHERE "eventKey"=$1',[eventKey]);
+          await c.query("COMMIT");
+          return json({success:true,data:{received:true,duplicate:false}});
+        } catch(e) { await c.query("ROLLBACK").catch(()=>undefined); throw e; }
+      });
+    } catch(e) { if(e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Midtrans webhook failed",e); return json({success:false,message:"Webhook gagal diproses."},503); }
   }
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "MAVO-api-worker", status: "ok" });
