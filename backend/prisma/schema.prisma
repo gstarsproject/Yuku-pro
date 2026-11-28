@@ -222,6 +222,7 @@ model Payment {
   amount            Int
   currency          String @default("IDR")
   status            PaymentStatus @default(CREATED)
+  gatewayPayload    Json?
   paidAt            DateTime?
   createdAt         DateTime @default(now())
   booking           Booking @relation(fields: [bookingId], references: [id])
