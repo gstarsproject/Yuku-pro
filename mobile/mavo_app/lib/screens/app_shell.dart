@@ -16,9 +16,18 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int index = 0;
   String _explorePillar = '';
+  int _homeRefreshKey = 0;
+
+  void _handlePostPublished() {
+    setState(() {
+      _homeRefreshKey++;
+      index = 0;
+    });
+  }
 
   List<Widget> get pages => [
     HomeScreen(
+      key: ValueKey(_homeRefreshKey),
       user: widget.user,
       onOpenProfile: () => setState(() => index = 4),
       onOpenExplore: (pillar) => setState(() {
@@ -27,7 +36,7 @@ class _AppShellState extends State<AppShell> {
       }),
     ),
     ExploreScreen(initialPillar: _explorePillar),
-    const CreatePostScreen(),
+    CreatePostScreen(onPublished: _handlePostPublished),
     const InboxScreen(),
     ProfileScreen(onLogout: widget.onLogout, user: widget.user),
   ];
