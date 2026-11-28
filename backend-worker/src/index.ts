@@ -1,6 +1,6 @@
 import { Client } from "pg";
-interface Env { HYPERDRIVE: Hyperdrive; }
-const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
+interface Env { HYPERDRIVE: Hyperdrive; BACKEND_API_URL?: string; }
+const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
 async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
   const c = new Client({ connectionString: env.HYPERDRIVE.connectionString });
@@ -10,6 +10,21 @@ export default {
  async fetch(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url), path = url.pathname;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  // Forward authenticated creator verification/admin requests to the NestJS API.
+  if (path.startsWith("/api/v1/creator-verification") || path.startsWith("/api/v1/admin/creators")) {
+   if (!env.BACKEND_API_URL) return json({ success:false, message:"Creator verification API belum dikonfigurasi. BACKEND_API_URL wajib diatur pada Worker." },503);
+   const upstream = new URL(path + url.search, env.BACKEND_API_URL);
+   const headers = new Headers(request.headers);
+   headers.delete("host");
+   try {
+    const response = await fetch(upstream.toString(), { method: request.method, headers, body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body, redirect: "manual" });
+    const outHeaders = new Headers(response.headers);
+    outHeaders.set("Access-Control-Allow-Origin", "*");
+    outHeaders.set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+    outHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    return new Response(response.body, { status: response.status, headers: outHeaders });
+   } catch (e) { console.error("Creator verification upstream failed", e); return json({ success:false, message:"Layanan verifikasi kreator sedang tidak dapat dihubungi." },502); }
+  }
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "yuku-api-worker", status: "ok" });
   if (path === "/health/db" || path === "/api/health/db") {
