@@ -7,7 +7,9 @@ import 'creator_profile_screen.dart';
 import 'inbox_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onOpenProfile;
+  final ValueChanged<String>? onOpenExplore;
+  const HomeScreen({super.key, this.onOpenProfile, this.onOpenExplore});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -63,10 +65,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   tooltip: 'Notifikasi',
                   icon: const Icon(Icons.notifications_none_rounded, color: MavoColors.midnight, size: 27),
                 ),
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: MavoColors.violetSoft,
-                  child: Icon(Icons.person_rounded, color: MavoColors.violet),
+                InkWell(
+                  onTap: widget.onOpenProfile,
+                  borderRadius: BorderRadius.circular(24),
+                  child: const CircleAvatar(
+                    radius: 18,
+                    backgroundColor: MavoColors.violetSoft,
+                    child: Icon(Icons.person_rounded, color: MavoColors.violet),
+                  ),
                 ),
               ]),
             ),
@@ -75,8 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
             sliver: SliverToBoxAdapter(
               child: TextField(
+                readOnly: true,
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _PeopleSearchScreen())),
                 decoration: InputDecoration(
-                  hintText: 'Cari orang, video, pengalaman...',
+                  hintText: 'Cari orang di MAVO...',
                   prefixIcon: const Icon(Icons.search_rounded, color: MavoColors.violet),
                   suffixIcon: const Icon(Icons.tune_rounded, color: MavoColors.muted),
                   contentPadding: const EdgeInsets.symmetric(vertical: 13),
@@ -169,7 +177,10 @@ class _HomeScreenState extends State<HomeScreen> {
             sliver: SliverToBoxAdapter(
               child: Row(children: [
                 const Expanded(child: Text('Explore MAVO', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: MavoColors.midnight))),
-                Text('See all', style: TextStyle(color: MavoColors.violet, fontWeight: FontWeight.w700, fontSize: 12)),
+                TextButton(
+                  onPressed: () => widget.onOpenExplore?.call(''),
+                  child: const Text('Lihat semua'),
+                ),
               ]),
             ),
           ),
@@ -700,4 +711,86 @@ class _MavoNetworkVideoState extends State<_MavoNetworkVideo> {
     if (!_controller.value.isInitialized) return const SizedBox(height: 180, child: Center(child: CircularProgressIndicator()));
     return ClipRRect(borderRadius: BorderRadius.circular(12), child: AspectRatio(aspectRatio: _controller.value.aspectRatio, child: Stack(alignment: Alignment.center, children: [VideoPlayer(_controller), IconButton(onPressed: () => setState(() => _controller.value.isPlaying ? _controller.pause() : _controller.play()), iconSize: 48, color: Colors.white, icon: Icon(_controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill))])));
   }
+}
+
+class _PeopleSearchScreen extends StatefulWidget {
+  const _PeopleSearchScreen();
+  @override
+  State<_PeopleSearchScreen> createState() => _PeopleSearchScreenState();
+}
+
+class _PeopleSearchScreenState extends State<_PeopleSearchScreen> {
+  final _controller = TextEditingController();
+  Future<List<Map<String, dynamic>>>? _results;
+  bool _searched = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _search() {
+    final query = _controller.text.trim();
+    if (query.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Masukkan minimal 2 karakter.')));
+      return;
+    }
+    setState(() {
+      _searched = true;
+      _results = MAVOApi.searchUsers(query);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Cari orang')),
+    body: Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _search(),
+          decoration: InputDecoration(
+            hintText: 'Nama atau username',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: IconButton(onPressed: _search, icon: const Icon(Icons.arrow_forward_rounded)),
+          ),
+        ),
+      ),
+      Expanded(
+        child: !_searched
+          ? const Center(child: Text('Cari dan temukan orang di komunitas MAVO.'))
+          : FutureBuilder<List<Map<String, dynamic>>>(
+              future: _results,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                if (snapshot.hasError) return Center(child: Text(snapshot.error.toString().replaceFirst('Exception: ', '')));
+                final users = snapshot.data ?? [];
+                if (users.isEmpty) return const Center(child: Text('Pengguna tidak ditemukan.'));
+                return ListView.separated(
+                  itemCount: users.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    final id = (user['id'] ?? '').toString();
+                    final name = (user['displayName'] ?? user['name'] ?? 'Pengguna MAVO').toString();
+                    return ListTile(
+                      leading: const CircleAvatar(backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)),
+                      title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text((user['username'] ?? '').toString()),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: id.isEmpty ? null : () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => CreatorProfileScreen(creatorName: name, creatorUserId: id),
+                      )),
+                    );
+                  },
+                );
+              },
+            ),
+      ),
+    ]),
+  );
 }
