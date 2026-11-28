@@ -15,10 +15,17 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int index = 0;
+  String _explorePillar = '';
 
   List<Widget> get pages => [
-    const HomeScreen(),
-    const ExploreScreen(),
+    HomeScreen(
+      onOpenProfile: () => setState(() => index = 4),
+      onOpenExplore: (pillar) => setState(() {
+        _explorePillar = pillar;
+        index = 1;
+      }),
+    ),
+    ExploreScreen(initialPillar: _explorePillar),
     const CreatePostScreen(),
     const InboxScreen(),
     ProfileScreen(onLogout: widget.onLogout, user: widget.user),
