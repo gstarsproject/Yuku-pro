@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Req, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards, ForbiddenException } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './booking.dto';
 import { AuthenticatedRequest, UserAuthGuard } from '../auth/user-auth.guard';
@@ -7,6 +7,11 @@ import { AuthenticatedRequest, UserAuthGuard } from '../auth/user-auth.guard';
 @UseGuards(UserAuthGuard)
 export class BookingController {
   constructor(private readonly service: BookingService) {}
+
+  @Get()
+  list(@Req() req: AuthenticatedRequest) {
+    return this.service.listForUser(req.user!.sub, req.user!.role);
+  }
 
   @Post()
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateBookingDto) {
