@@ -40,7 +40,7 @@ jobs:
 
   deploy-preview:
     name: Deploy isolated MAVO preview Workers
-    if: github.ref == 'refs/heads/feature/mavo-user-auth' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: (github.ref == 'refs/heads/feature/mavo-user-auth' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feature/mavo-user-auth' && github.event.pull_request.head.repo.full_name == 'gstarsproject/Yuku-pro')
     needs: validate
     runs-on: ubuntu-latest
     permissions:
