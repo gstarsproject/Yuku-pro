@@ -156,7 +156,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: MavoColors.line),
+                      border: Border.all(color: const Color(0xFFEAE8F2)),
                     ),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
