@@ -18,7 +18,16 @@ class _BookingsScreenState extends State<BookingsScreen> {
   @override
   void initState() {
     super.initState();
+    YukuApi.authChanges.addListener(_onAuthChanged);
     _load();
+  }
+
+  void _onAuthChanged() => _load();
+
+  @override
+  void dispose() {
+    YukuApi.authChanges.removeListener(_onAuthChanged);
+    super.dispose();
   }
 
   Future<void> _load() async {
