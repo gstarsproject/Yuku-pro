@@ -542,6 +542,10 @@ if (avatarMedia) {
       const media = result.rows[0];
       if (!media) return json({success:false,message:"Media tidak ditemukan."},404);
       let visible = media.ownerId === user.id;
+      if (media.ownerId !== user.id) {
+        const blocked = await c.query('SELECT 1 FROM "UserBlock" WHERE ("blockerId"=$1 AND "blockedId"=$2) OR ("blockerId"=$2 AND "blockedId"=$1) LIMIT 1',[user.id,media.ownerId]);
+        if (blocked.rowCount) return json({success:false,message:"Media tidak tersedia."},404);
+      }
       if (media.postAuthor) visible = visible || media.postAudience === "PUBLIC" || (media.postAudience === "FOLLOWERS" && !!(await c.query('SELECT 1 FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2',[user.id,media.postAuthor])).rows[0]);
       if (media.storyAuthor && new Date(media.storyExpires).getTime() > Date.now()) visible = visible || media.storyAudience === "PUBLIC" || (media.storyAudience === "FOLLOWERS" && !!(await c.query('SELECT 1 FROM "Follow" WHERE "followerId"=$1 AND "followingId"=$2',[user.id,media.storyAuthor])).rows[0]);
       if (!visible) return json({success:false,message:"Kamu tidak memiliki akses ke media ini."},403);
