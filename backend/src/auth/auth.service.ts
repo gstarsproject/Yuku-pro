@@ -2,14 +2,23 @@ import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  ConflictException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac, timingSafeEqual, scrypt as scryptCallback } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual, scrypt as scryptCallback } from 'crypto';
 import { promisify } from 'util';
 import { PrismaService } from '../prisma/prisma.service';
 
 const scrypt = promisify(scryptCallback);
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 8;
+
+type SessionTokenPayload = {
+  sub: string;
+  email: string;
+  role: 'CUSTOMER' | 'PROVIDER' | 'ADMIN';
+  iat: number;
+  exp: number;
+};
 
 type AdminTokenPayload = {
   sub: string;
@@ -26,6 +35,52 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
+  async register(input: { email: string; password: string; displayName: string; role?: 'CUSTOMER' | 'PROVIDER' }) {
+    const email = input.email.trim().toLowerCase();
+    const displayName = input.displayName.trim();
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) throw new ConflictException('Email sudah terdaftar');
+    const passwordHash = await this.hashPassword(input.password);
+    const role = input.role ?? 'CUSTOMER';
+    const user = await this.prisma.user.create({
+      data: {
+        email, passwordHash, role,
+        profile: { create: { displayName } },
+        ...(role === 'PROVIDER' ? { provider: { create: {} } } : {}),
+      },
+      include: { profile: true },
+    });
+    return this.createUserSession(user.id, email, role, user.profile?.displayName ?? displayName);
+  }
+
+  async userLogin(emailInput: string, password: string) {
+    const email = emailInput.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email }, include: { profile: true } });
+    if (!user || (user.role !== 'CUSTOMER' && user.role !== 'PROVIDER') || user.status !== 'ACTIVE' || !(await this.verifyPassword(password, user.passwordHash))) {
+      throw new UnauthorizedException('Email atau password tidak valid');
+    }
+    return this.createUserSession(user.id, email, user.role, user.profile?.displayName ?? '');
+  }
+
+  private async hashPassword(password: string) {
+    const salt = randomBytes(16);
+    const derived = (await scrypt(password, salt, 64)) as Buffer;
+    return 'scrypt:' + salt.toString('hex') + ':' + derived.toString('hex');
+  }
+
+  private createUserSession(userId: string, email: string, role: 'CUSTOMER' | 'PROVIDER', displayName: string) {
+    const secret = this.config.get<string>('JWT_ACCESS_SECRET');
+    if (!secret || secret.length < 32 || secret === 'replace_with_a_long_random_secret_before_use') {
+      throw new InternalServerErrorException('JWT_ACCESS_SECRET belum dikonfigurasi dengan aman');
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const header = this.base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload: SessionTokenPayload = { sub: userId, email, role, iat: now, exp: now + ACCESS_TOKEN_TTL_SECONDS };
+    const body = this.base64Url(JSON.stringify(payload));
+    const unsigned = header + '.' + body;
+    const signature = createHmac('sha256', secret).update(unsigned).digest('base64url');
+    return { accessToken: unsigned + '.' + signature, tokenType: 'Bearer', expiresIn: ACCESS_TOKEN_TTL_SECONDS, user: { id: userId, email, role, displayName } };
+  }
   async login(emailInput: string, password: string) {
     const email = emailInput.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({ where: { email } });
