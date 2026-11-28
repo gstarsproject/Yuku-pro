@@ -7,6 +7,21 @@ import { CreateBookingDto } from './booking.dto';
 export class BookingService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async listForUser(userId: string, role: 'CUSTOMER' | 'PROVIDER') {
+    const where = role === 'PROVIDER' ? { providerId: userId } : { customerId: userId };
+    return this.prisma.booking.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        service: { select: { id: true, title: true, mode: true, priceUnit: true } },
+        customer: { select: { id: true, profile: { select: { displayName: true, avatarUrl: true } } } },
+        provider: { select: { id: true, profile: { select: { displayName: true, avatarUrl: true } } } },
+        payment: { select: { status: true, amount: true, currency: true } },
+      },
+    });
+  }
+
   async create(customerId: string, dto: CreateBookingDto) {
     const startsAt = new Date(dto.startsAt), endsAt = new Date(dto.endsAt);
     if (!(endsAt > startsAt)) throw new BadRequestException('Waktu selesai harus setelah waktu mulai.');
