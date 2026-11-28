@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class YukuApi {
-  static const String baseUrl = 'https://yuku-pro.gstars-business.workers.dev';
+  static const String baseUrl = 'https://mavo-api-preview.gstars-business.workers.dev';
   static String? _accessToken;
   static Map<String, dynamic>? _currentUser;
   static Map<String, dynamic>? get currentUser => _currentUser;
@@ -34,18 +34,26 @@ class YukuApi {
     return decoded;
   }
 
-  static Future<Map<String, dynamic>> register({required String email, required String password, required String displayName, String role = 'CUSTOMER'}) async {
-    final result = await _request('POST', '/api/v1/auth/register', body: {'email': email.trim(), 'password': password, 'displayName': displayName.trim(), 'role': role});
-    _accessToken = result['accessToken']?.toString();
-    _currentUser = result['user'] is Map ? Map<String, dynamic>.from(result['user']) : null;
-    return result;
+  static Map<String, dynamic> _applySession(Map<String, dynamic> response) {
+    final session = response['data'] is Map
+        ? Map<String, dynamic>.from(response['data'])
+        : response;
+    _accessToken = session['accessToken']?.toString();
+    _currentUser = session['user'] is Map
+        ? Map<String, dynamic>.from(session['user'])
+        : null;
+    if (!isSignedIn) throw Exception('Server tidak mengembalikan token sesi');
+    return session;
+  }
+
+  static Future<Map<String, dynamic>> register({required String email, required String password, required String displayName}) async {
+    final result = await _request('POST', '/api/v1/auth/register', body: {'email': email.trim(), 'password': password, 'displayName': displayName.trim()});
+    return _applySession(result);
   }
 
   static Future<Map<String, dynamic>> login({required String email, required String password}) async {
     final result = await _request('POST', '/api/v1/auth/user/login', body: {'email': email.trim(), 'password': password});
-    _accessToken = result['accessToken']?.toString();
-    _currentUser = result['user'] is Map ? Map<String, dynamic>.from(result['user']) : null;
-    return result;
+    return _applySession(result);
   }
 
   static void signOut() { _accessToken = null; _currentUser = null; }
