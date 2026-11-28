@@ -6,7 +6,7 @@ type RequestItem = {
   id: string; creatorName: string; handle: string; category: string; reason: string;
   documents: { objectKey: string; downloadUrl: string }[]; submittedAt: string; user: { id: string; email: string | null; displayName: string | null };
 };
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\\/$/, '') || '';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || '';
 
 export default function CreatorVerificationPage() {
   const [token, setToken] = useState('');
