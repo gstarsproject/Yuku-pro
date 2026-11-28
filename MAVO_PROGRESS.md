@@ -699,3 +699,9 @@ Status yang dipakai:
 - [ ] Periksa angka Followers/Following pada kedua profil dan pastikan bertambah/berkurang sesuai aksi Follow/Unfollow.
 - [ ] Uji dua akun/perangkat dan refresh feed untuk memastikan konten audience FOLLOWERS mengikuti perubahan relasi.
 - Status: Follow, Unfollow, dan persistensi status setelah aplikasi dibuka ulang telah dikonfirmasi pengguna. Hitungan relasi dan pemeriksaan privasi setelah Unfollow masih menunggu.
+
+
+## Pembaruan tes hitungan relasi — 2026-11-28
+- [x] Pengguna mengonfirmasi angka Followers dan Following sesuai setelah aksi Follow/Unfollow.
+- [ ] Uji dua akun/perangkat dan refresh feed untuk memastikan konten audience FOLLOWERS mengikuti perubahan relasi.
+- Status: Follow, Unfollow, persistensi setelah aplikasi dibuka ulang, dan hitungan relasi telah dikonfirmasi pengguna. Pemeriksaan feed lintas akun setelah perubahan relasi masih menunggu.
