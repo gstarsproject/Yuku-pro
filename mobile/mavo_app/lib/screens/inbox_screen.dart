@@ -92,7 +92,7 @@ class _InboxScreenState extends State<InboxScreen> {
         child: Row(children: [
           const Expanded(child: Text('Pesan', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900, color: MavoColors.ink))),
           IconButton(onPressed: _refresh, tooltip: 'Muat ulang pesan', icon: const Icon(Icons.refresh_rounded, color: MavoColors.violet)),
-          IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _NotificationsScreen())),
+          IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
             icon: const Icon(Icons.notifications_none_rounded, color: MavoColors.violet)),
           IconButton(onPressed: _newChat, icon: const Icon(Icons.edit_square, color: MavoColors.violet)),
         ]),
@@ -283,12 +283,12 @@ class _ChatScreenState extends State<_ChatScreen> {
 }
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen();
+  const NotificationsScreen({super.key});
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<_NotificationsScreen> {
+class _NotificationsScreenState extends State<NotificationsScreen> {
   late Future<List<Map<String, dynamic>>> _future = MAVOApi.notifications();
   Future<void> _refresh() async => setState(() => _future = MAVOApi.notifications());
 
