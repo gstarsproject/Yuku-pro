@@ -97,6 +97,8 @@ export default function SafetyReportsPage() {
         <a href="/payments/">Payments</a>
         <a href="/disputes/">Disputes</a>
         <a className="active" href="/reports/">Safety reports</a>
+        <a href="/admins/">Admin management</a>
+        <a href="/audit/">Audit log</a>
       </nav>
     </aside>
     <main>
