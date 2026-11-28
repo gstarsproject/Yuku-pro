@@ -124,7 +124,7 @@ export class SocialService {
   async profile(viewerId: string, userId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, status: 'ACTIVE' },
-      include: { profile: true, _count: { select: { socialPosts: true, socialFollowers: true, socialFollows: true } } },
+      include: { profile: true, creatorVerification: true, _count: { select: { socialPosts: true, socialFollowers: true, socialFollows: true } } },
     });
     if (!user) throw new NotFoundException('Profil tidak ditemukan.');
     const following = viewerId === userId ? false : !!(await this.prisma.socialFollow.findUnique({
@@ -136,6 +136,8 @@ export class SocialService {
       city: user.profile?.city ?? null, province: user.profile?.province ?? null,
       postsCount: user._count.socialPosts, followersCount: user._count.socialFollowers,
       followingCount: user._count.socialFollows, following,
+      creatorVerificationStatus: user.creatorVerification?.status ?? 'NOT_STARTED',
+      creatorVerificationRejectionReason: user.creatorVerification?.rejectionReason ?? null,
     };
   }
 
