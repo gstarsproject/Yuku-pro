@@ -93,7 +93,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
         Expanded(child: RefreshIndicator(
           onRefresh: _load,
           child: Builder(builder: (context) {
-            if (loading) return const ListView(children: [SizedBox(height: 140), Center(child: CircularProgressIndicator())]);
+            if (loading) return ListView(children: [const SizedBox(height: 140), Center(child: CircularProgressIndicator())]);
             if (error != null) return ListView(padding: const EdgeInsets.all(24), children: [
               const SizedBox(height: 70), const Icon(Icons.cloud_off_outlined, size: 46, color: MavoColors.muted),
               const SizedBox(height: 12), Text(error!, textAlign: TextAlign.center),
