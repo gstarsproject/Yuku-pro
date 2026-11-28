@@ -10,7 +10,8 @@ import 'inbox_screen.dart';
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onOpenProfile;
   final ValueChanged<String>? onOpenExplore;
-  const HomeScreen({super.key, this.onOpenProfile, this.onOpenExplore});
+  final Map<String, dynamic>? user;
+  const HomeScreen({super.key, this.onOpenProfile, this.onOpenExplore, this.user});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -69,10 +70,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 InkWell(
                   onTap: widget.onOpenProfile,
                   borderRadius: BorderRadius.circular(24),
-                  child: const CircleAvatar(
+                  child: CircleAvatar(
                     radius: 18,
                     backgroundColor: MavoColors.violetSoft,
-                    child: Icon(Icons.person_rounded, color: MavoColors.violet),
+                    backgroundImage: (widget.user?['avatarUrl'] ?? '').toString().startsWith('https://')
+                        ? NetworkImage(widget.user!['avatarUrl'].toString())
+                        : null,
+                    child: (widget.user?['avatarUrl'] ?? '').toString().startsWith('https://')
+                        ? null
+                        : const Icon(Icons.person_rounded, color: MavoColors.violet),
                   ),
                 ),
               ]),
