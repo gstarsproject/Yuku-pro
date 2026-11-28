@@ -174,6 +174,17 @@ class MavoApi {
     return data['objectKey'] as String;
   }
 
+  static Future<List<Map<String, dynamic>>> bookings() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/v1/bookings'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
   static Future<List<Map<String, dynamic>>> conversations() async {
     final response = await http.get(Uri.parse('$baseUrl/api/v1/conversations'), headers: await _headers()).timeout(const Duration(seconds: 20));
     final body = await _decode(response);
