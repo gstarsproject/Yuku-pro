@@ -39,6 +39,18 @@ jobs:
         working-directory: mobile/yuku_app
         run: sed -i 's/android:label="yuku_app"/android:label="MAVO"/' android/app/src/main/AndroidManifest.xml
 
+      - name: Apply MAVO launcher icon
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          for spec in "mdpi 48" "hdpi 72" "xhdpi 96" "xxhdpi 144" "xxxhdpi 192"; do
+            set -- $spec
+            density="$1"
+            size="$2"
+            mkdir -p "mobile/yuku_app/android/app/src/main/res/mipmap-$density"
+            rsvg-convert -w "$size" -h "$size" "mobile/yuku_app/assets/branding/mavo_launcher.svg" > "mobile/yuku_app/android/app/src/main/res/mipmap-$density/ic_launcher.png"
+          done
+
       - name: Install dependencies
         working-directory: mobile/yuku_app
         run: flutter pub get
