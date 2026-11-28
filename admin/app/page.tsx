@@ -123,6 +123,7 @@ export default function DashboardPage() {
           <a href="/bookings/">Bookings</a>
           <a href="/payments/">Payments</a>
           <a href="/disputes/">Disputes</a>
+          <a href="/reports/">Safety reports</a>
         </nav>
       </aside>
       <main>
