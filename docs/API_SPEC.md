@@ -50,6 +50,16 @@ Format: JSON over HTTPS. Timestamps: ISO-8601 UTC. IDs: UUID.
 | GET | `/provider/earnings` | Earnings summary |
 | POST | `/provider/payout-requests` | Request payout |
 
+## Creator verification
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/creator-verification/me` | Get current creator verification status |
+| POST | `/creator-verification` | Submit or resubmit creator verification request |
+| GET | `/admin/creators/pending` | Admin review queue |
+| POST | `/admin/creators/:id/review` | Approve or reject a creator verification request |
+
+A creator badge is displayed only when the server returns `creatorVerificationStatus: VERIFIED`. A rejected request includes a reason and may be resubmitted. Requests in `PENDING` or `VERIFIED` cannot be duplicated.
+
 ## Admin endpoints (role protected)
 | Method | Path | Purpose |
 |---|---|---|
