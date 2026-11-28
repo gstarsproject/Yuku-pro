@@ -376,6 +376,7 @@ model Post {
   likes     PostLike[]
   comments  PostComment[]
   media     MediaAsset[]
+  reports   ContentReport[]
   locationName String? @db.VarChar(200)
   latitude Float?
   longitude Float?
@@ -411,15 +412,18 @@ model ContentReport {
   id           String   @id @default(uuid()) @db.Uuid
   reporterId   String   @db.Uuid
   targetUserId String   @db.Uuid
+  postId       String?  @db.Uuid
+  reportType   String   @default("USER") @db.VarChar(20)
   reason       String   @db.VarChar(80)
   details      String?  @db.VarChar(1000)
   status       String   @default("OPEN") @db.VarChar(20)
   createdAt    DateTime @default(now())
   reporter     User     @relation("ReportsSubmitted", fields: [reporterId], references: [id], onDelete: Cascade)
   targetUser   User     @relation("ReportsAgainst", fields: [targetUserId], references: [id], onDelete: Cascade)
-  @@unique([reporterId, targetUserId])
+  post         Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
   @@index([status, createdAt])
   @@index([targetUserId, createdAt])
+  @@index([postId, createdAt])
 }
 
 model UserSession {
