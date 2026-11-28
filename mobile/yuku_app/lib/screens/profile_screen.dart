@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
+import '../services/yuku_api.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,6 +13,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _tab = 0;
   String _name = 'Nama Pengguna';
   String _bio = 'Mulai ceritakan perjalananmu bersama MAVO.';
+
+  Future<void> _authenticate() async {
+    final email = TextEditingController();
+    final password = TextEditingController();
+    final name = TextEditingController();
+    bool register = false;
+    bool busy = false;
+    String role = 'CUSTOMER';
+    String? error;
+    final success = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(builder: (context, refresh) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.of(context).viewInsets.bottom + 22),
+        child: SingleChildScrollView(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(register ? 'Buat akun MAVO' : 'Masuk ke MAVO', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: MavoColors.navy)),
+            const SizedBox(height: 6),
+            const Text('Gunakan akunmu untuk mengelola booking dan layanan.', style: TextStyle(color: MavoColors.muted, fontSize: 12)),
+            const SizedBox(height: 16),
+            if (register) ...[
+              TextField(controller: name, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Nama tampilan')),
+              const SizedBox(height: 10),
+            ],
+            TextField(controller: email, keyboardType: TextInputType.emailAddress, autocorrect: false, decoration: const InputDecoration(labelText: 'Email')),
+            const SizedBox(height: 10),
+            TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (minimal 8 karakter)')),
+            if (register) ...[
+              const SizedBox(height: 12),
+              const Text('Daftar sebagai', style: TextStyle(fontWeight: FontWeight.w700, color: MavoColors.ink)),
+              const SizedBox(height: 5),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'CUSTOMER', label: Text('Customer')),
+                  ButtonSegment(value: 'PROVIDER', label: Text('Provider')),
+                ],
+                selected: {role},
+                onSelectionChanged: (value) => refresh(() => role = value.first),
+              ),
+            ],
+            if (error != null) ...[
+              const SizedBox(height: 10),
+              Text(error!, style: const TextStyle(color: MavoColors.danger, fontSize: 12)),
+            ],
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: busy ? null : () async {
+                if (email.text.trim().isEmpty || password.text.length < 8 || (register && name.text.trim().length < 2)) {
+                  refresh(() => error = 'Lengkapi data. Password minimal 8 karakter.');
+                  return;
+                }
+                refresh(() { busy = true; error = null; });
+                try {
+                  if (register) {
+                    await YukuApi.register(email: email.text, password: password.text, displayName: name.text, role: role);
+                  } else {
+                    await YukuApi.login(email: email.text, password: password.text);
+                  }
+                  if (sheetContext.mounted) Navigator.pop(sheetContext, true);
+                } catch (e) {
+                  refresh(() { busy = false; error = e.toString().replaceFirst('Exception: ', ''); });
+                }
+              },
+              child: Text(busy ? 'Memproses...' : (register ? 'Buat akun' : 'Masuk')),
+            ),
+            TextButton(
+              onPressed: busy ? null : () => refresh(() { register = !register; error = null; }),
+              child: Text(register ? 'Sudah punya akun? Masuk' : 'Belum punya akun? Daftar'),
+            ),
+          ],
+        )),
+      )),
+    );
+    email.dispose();
+    password.dispose();
+    name.dispose();
+    if (success == true && mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Berhasil masuk ke MAVO.')));
+    }
+  }
 
   Future<void> _editProfile() async {
     final nameController = TextEditingController(text: _name);
@@ -71,7 +157,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Expanded(child: _ProfileStat(value: '0', label: 'Mengikuti')),
         ]),
         const SizedBox(height: 16),
-        Text(_name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: MavoColors.midnight)),
+        Text(YukuApi.currentUser?['displayName']?.toString() ?? _name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: MavoColors.midnight)),
+        const SizedBox(height: 5),
+        Text(YukuApi.isSignedIn ? (YukuApi.currentUser?['email']?.toString() ?? 'Akun MAVO') : 'Belum masuk', style: const TextStyle(fontSize: 11, color: MavoColors.muted)),
+        const SizedBox(height: 10),
+        if (!YukuApi.isSignedIn)
+          SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _authenticate, icon: const Icon(Icons.login_rounded), label: const Text('Masuk / Daftar')))
+        else
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () => setState(() => YukuApi.signOut()), icon: const Icon(Icons.logout_rounded), label: const Text('Keluar dari akun'))),
         const SizedBox(height: 5),
         Text(_bio, style: const TextStyle(fontSize: 12, color: MavoColors.muted, height: 1.4)),
         const SizedBox(height: 16),
