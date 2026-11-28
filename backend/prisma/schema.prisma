@@ -11,6 +11,7 @@ enum UserRole {
   CUSTOMER
   PROVIDER
   ADMIN
+  SUPERADMIN
 }
 enum UserStatus {
   ACTIVE
@@ -104,6 +105,7 @@ model User {
   blocksReceived UserBlock[] @relation("UserBlocksReceived")
   reportsSubmitted ContentReport[] @relation("ReportsSubmitted")
   reportsAgainst ContentReport[] @relation("ReportsAgainst")
+  adminAuditLogs AdminAuditLog[]
 }
 
 model Profile {
@@ -494,4 +496,19 @@ model MediaAsset {
   @@index([postId, sortOrder])
   @@index([storyId, sortOrder])
   @@index([ownerId, createdAt])
+}
+
+
+model AdminAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String   @db.Uuid
+  action      String   @db.VarChar(80)
+  targetType  String   @db.VarChar(80)
+  targetId    String?  @db.VarChar(100)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId])
 }
