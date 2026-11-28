@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
 import '../services/mavo_api.dart';
+import 'creator_verification_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -100,7 +101,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (_loading) const LinearProgressIndicator(minHeight: 2),
         if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Profil belum bisa dimuat: $_error', style: const TextStyle(color: Colors.redAccent, fontSize: 11))),
         const SizedBox(height: 16),
-        Text(_name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: MavoColors.midnight)),
+        Row(children: [
+          Flexible(child: Text(_name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: MavoColors.midnight))),
+          if (_profile['creatorVerificationStatus'] == 'VERIFIED') ...[
+            const SizedBox(width: 5), const Icon(Icons.verified_rounded, color: MavoColors.violet, size: 19),
+          ],
+        ]),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () async { await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreatorVerificationScreen())); if (mounted) _loadProfile(); },
+          icon: Icon(_profile['creatorVerificationStatus'] == 'VERIFIED' ? Icons.verified_rounded : Icons.verified_user_outlined),
+          label: Text(_profile['creatorVerificationStatus'] == 'VERIFIED' ? 'Creator Verified' : 'Ajukan Creator Verified'),
+        ),
         const SizedBox(height: 5),
         Text(_bio, style: const TextStyle(fontSize: 12, color: MavoColors.muted, height: 1.4)),
         const SizedBox(height: 16),
