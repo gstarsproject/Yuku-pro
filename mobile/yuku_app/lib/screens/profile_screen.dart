@@ -20,7 +20,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final name = TextEditingController();
     bool register = false;
     bool busy = false;
-    String role = 'CUSTOMER';
     String? error;
     final success = await showModalBottomSheet<bool>(
       context: context,
@@ -43,20 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
             TextField(controller: email, keyboardType: TextInputType.emailAddress, autocorrect: false, decoration: const InputDecoration(labelText: 'Email')),
             const SizedBox(height: 10),
-            TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (minimal 8 karakter)')),
-            if (register) ...[
-              const SizedBox(height: 12),
-              const Text('Daftar sebagai', style: TextStyle(fontWeight: FontWeight.w700, color: MavoColors.ink)),
-              const SizedBox(height: 5),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'CUSTOMER', label: Text('Customer')),
-                  ButtonSegment(value: 'PROVIDER', label: Text('Provider')),
-                ],
-                selected: {role},
-                onSelectionChanged: (value) => refresh(() => role = value.first),
-              ),
-            ],
+            TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (minimal 10 karakter)')),
             if (error != null) ...[
               const SizedBox(height: 10),
               Text(error!, style: const TextStyle(color: MavoColors.danger, fontSize: 12)),
@@ -64,14 +50,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: busy ? null : () async {
-                if (email.text.trim().isEmpty || password.text.length < 8 || (register && name.text.trim().length < 2)) {
+                if (email.text.trim().isEmpty || password.text.length < 10 || (register && name.text.trim().length < 2)) {
                   refresh(() => error = 'Lengkapi data. Password minimal 8 karakter.');
                   return;
                 }
                 refresh(() { busy = true; error = null; });
                 try {
                   if (register) {
-                    await YukuApi.register(email: email.text, password: password.text, displayName: name.text, role: role);
+                    await YukuApi.register(email: email.text, password: password.text, displayName: name.text);
                   } else {
                     await YukuApi.login(email: email.text, password: password.text);
                   }
