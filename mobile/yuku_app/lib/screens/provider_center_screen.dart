@@ -216,7 +216,7 @@ class _ProviderCenterScreenState extends State<ProviderCenterScreen> {
 
   String _price(Map<String, dynamic> item) {
     final amount = int.tryParse(item['priceAmount']?.toString() ?? '') ?? 0;
-    final formatted = amount.toString().replaceAllMapped(RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (m) => '.');
+    final formatted = amount.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.');
     return 'Rp $formatted / ${item['priceUnit'] ?? 'SESSION'}';
   }
 
