@@ -26,7 +26,7 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] Perbaiki matcher route Follow yang sempat gagal TypeScript; Worker CI dan Backend CI lulus pada commit `fe53f0ead914d43eba8606b3edd7972f3787899b`.
 - [ ] Tunggu hasil GitHub CI Backend, Flutter, dan Worker untuk integrasi profil dari feed pada commit `6d2a2af98c008fe290b507f00bed935527a3dd88`.
 - [x] Verifikasi database branch `mavo-test`: tabel `Follow` tersedia dengan kolom `id`, `followerId`, `followingId`, `createdAt`.
-- [ ] Uji Unfollow lintas akun dan pastikan jumlah pengikut konsisten; status Follow berhasil dikonfirmasi pengguna pada 2026-11-28, tetapi Unfollow dan hitungan setelah refresh masih menunggu.
+- [ ] Uji Unfollow lintas akun dan pastikan jumlah pengikut konsisten setelah refresh; pengguna mengonfirmasi tombol berubah kembali dari Following menjadi Follow pada 2026-11-28.
 - [x] Uji FOLLOWERS lintas akun: setelah akun kedua mengikuti akun pertama, postingan FOLLOWERS muncul di Home akun kedua.
 - [x] Perbaiki widget test Inbox agar dirender di dalam Scaffold seperti struktur aplikasi sebenarnya.
 - [x] GitHub CI pada commit `69b8aafca472b451ac48c369c3a612848ad2f308`: Backend CI PASS, Flutter Mobile CI PASS, Cloudflare Worker CI PASS.
@@ -683,3 +683,12 @@ Status yang dipakai:
 - [x] Pengguna mengonfirmasi tombol Follow berubah menjadi Following.
 - [ ] Lanjutkan uji Unfollow, jumlah Followers/Following, dan persistensi status setelah aplikasi ditutup lalu dibuka kembali.
 - Catatan: ini adalah konfirmasi pengguna atas hasil UI/runtime; belum dianggap bukti seluruh skenario Follow/Unfollow dua akun telah lulus.
+
+
+## Pembaruan tes Follow/Unfollow — 2026-11-28
+- [x] Pengguna mengonfirmasi Follow berhasil dan tombol berubah menjadi Following.
+- [x] Pengguna mengonfirmasi Unfollow berhasil dan tombol berubah kembali menjadi Follow.
+- [ ] Verifikasi angka Followers/Following berkurang/bertambah dengan benar pada kedua akun.
+- [ ] Tutup dan buka kembali aplikasi; pastikan status relasi tetap konsisten dengan server.
+- [ ] Lakukan pengujian dua akun/perangkat dan refresh feed untuk memastikan konten audience FOLLOWERS mengikuti perubahan relasi.
+- Status: Follow dan Unfollow UI/runtime terkonfirmasi pengguna; skenario hitungan, persistensi, dan privasi setelah Unfollow belum dinyatakan lulus.
