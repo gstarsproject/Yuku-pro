@@ -368,6 +368,21 @@ class MAVOApi {
     await _decode(response);
   }
 
+  static Future<void> reportPost({
+    required String postId,
+    required String reason,
+    String details = '',
+  }) async {
+    final token = await _storage.read(key: _tokenKey);
+    if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/reports'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'postId': postId, 'reason': reason, 'details': details.trim()}),
+    ).timeout(const Duration(seconds: 20));
+    await _decode(response);
+  }
+
   static Future<List<Map<String, dynamic>>> stories() async {
     final token = await _storage.read(key: _tokenKey);
     if (token == null || token.isEmpty) throw Exception('Silakan login kembali.');
