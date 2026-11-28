@@ -16,6 +16,7 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://feature-mavo-
 
 export default function AuditPage() {
   const [token, setToken] = useState('');
+  const [role, setRole] = useState('');
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,11 +43,16 @@ export default function AuditPage() {
     const saved = sessionStorage.getItem('MAVO_admin_token');
     if (saved) {
       setToken(saved);
+      const currentRole = sessionStorage.getItem('MAVO_admin_role') || 'ADMIN';
+      setRole(currentRole);
+      if (currentRole !== 'SUPERADMIN') { setError('Audit Log hanya dapat diakses Superadmin.'); return; }
       load(saved);
     } else {
       setError('Login Superadmin diperlukan. Kembali ke halaman Overview.');
     }
   }, []);
+
+  if (role && role !== 'SUPERADMIN') return <main className="login-wrap"><section className="login-card"><div className="brand login-brand">MAVO</div><h1>Akses khusus Superadmin</h1><p className="login-description">Audit Log hanya tersedia untuk Superadmin.</p><a className="primary-button" href="/">Kembali ke dashboard</a></section></main>;
 
   return <div className="shell">
     <aside className="sidebar">
