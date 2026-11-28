@@ -147,9 +147,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 itemBuilder: (context, index) {
                   final item = items[index];
                   final service = Map<String, dynamic>.from(item['service'] as Map? ?? {});
-                  final provider = Map<String, dynamic>.from(item['provider'] as Map? ?? {});
-                  final customer = Map<String, dynamic>.from(item['customer'] as Map? ?? {});
-                  final other = provider['id'] == null ? customer : provider;
+                  final other = Map<String, dynamic>.from(item['otherParty'] as Map? ?? {});
                   final profile = Map<String, dynamic>.from(other['profile'] as Map? ?? {});
                   final status = item['status']?.toString() ?? '';
                   final isDone = status == 'COMPLETED';
