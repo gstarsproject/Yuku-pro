@@ -8,7 +8,8 @@ import '../theme/mavo_theme.dart';
 class StoriesScreen extends StatefulWidget {
   final String initialStory;
   final String? initialUserId;
-  const StoriesScreen({super.key, this.initialStory = 'Discover', this.initialUserId});
+  final bool autoCompose;
+  const StoriesScreen({super.key, this.initialStory = 'Discover', this.initialUserId, this.autoCompose = false});
 
   @override
   State<StoriesScreen> createState() => _StoriesScreenState();
@@ -21,6 +22,11 @@ class _StoriesScreenState extends State<StoriesScreen> {
   void initState() {
     super.initState();
     _storiesFuture = MAVOApi.stories();
+    if (widget.autoCompose) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _composeStory();
+      });
+    }
   }
 
   Future<void> _refresh() async {
