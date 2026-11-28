@@ -150,7 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (!YukuApi.isSignedIn)
           SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _authenticate, icon: const Icon(Icons.login_rounded), label: const Text('Masuk / Daftar')))
         else
-          SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () => setState(() => YukuApi.signOut()), icon: const Icon(Icons.logout_rounded), label: const Text('Keluar dari akun'))),
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () async { await YukuApi.signOut(); if (mounted) setState(() {}); }, icon: const Icon(Icons.logout_rounded), label: const Text('Keluar dari akun'))),
         const SizedBox(height: 5),
         Text(_bio, style: const TextStyle(fontSize: 12, color: MavoColors.muted, height: 1.4)),
         const SizedBox(height: 16),
