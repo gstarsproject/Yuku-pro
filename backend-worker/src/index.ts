@@ -319,6 +319,48 @@ export default {
    } catch(e) { console.error("Admin overview failed",e); return json({success:false,message:"Data dashboard admin gagal dimuat."},503); }
   }
 
+  if (path === "/api/v1/provider/me" && request.method === "GET") {
+    try {
+      return await db(env, async c => {
+        const user = await getSessionUser(c, request);
+        if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+        if (user.role !== "PROVIDER") return json({success:false,message:"Akun ini belum menjadi provider."},403);
+        const result = await c.query(
+          'SELECT pp."id",pp."verificationStatus",pp."headline",pp."languages",pp."experienceYears",pp."averageRating",pp."reviewCount",pp."completedBookings",pr."displayName",pr."bio" FROM "ProviderProfile" pp JOIN "Profile" pr ON pr."userId"=pp."userId" WHERE pp."userId"=$1 LIMIT 1',
+          [user.id],
+        );
+        if (!result.rows[0]) return json({success:false,message:"Profil provider belum tersedia."},404);
+        const services = await c.query('SELECT COUNT(*)::int AS count FROM "Service" WHERE "providerId"=$1',[result.rows[0].id]);
+        return json({success:true,data:{...result.rows[0],serviceCount:services.rows[0]?.count ?? 0}});
+      });
+    } catch(e) { console.error("Provider profile failed",e); return json({success:false,message:"Profil provider gagal dimuat."},503); }
+  }
+  if (path === "/api/v1/provider/onboard" && request.method === "POST") {
+    try {
+      return await db(env, async c => {
+        const user = await getSessionUser(c, request);
+        if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+        if (user.role === "ADMIN") return json({success:false,message:"Akun admin tidak dapat menjadi provider."},403);
+        const limited = await userActionRateLimit(env, user.id, "provider-onboard"); if (limited) return limited;
+        const body = await readRequestBody(request);
+        const headline = typeof body.headline === "string" ? body.headline.trim().slice(0,120) : "";
+        const experienceYears = Number.isInteger(body.experienceYears) ? Number(body.experienceYears) : 0;
+        const languages = Array.isArray(body.languages) ? body.languages.filter((v: unknown) => typeof v === "string").slice(0,10).map((v: string) => v.trim().slice(0,40)).filter(Boolean) : [];
+        if (headline.length < 5 || experienceYears < 0 || experienceYears > 60) return json({success:false,message:"Headline minimal 5 karakter dan pengalaman harus 0–60 tahun."},400);
+        await c.query("BEGIN");
+        try {
+          await c.query('UPDATE "User" SET "role"=\'PROVIDER\',"updatedAt"=NOW() WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role" IN (\'CUSTOMER\',\'PROVIDER\')',[user.id]);
+          const provider = await c.query(
+            'INSERT INTO "ProviderProfile" ("id","userId","verificationStatus","headline","languages","experienceYears") VALUES ($1,$2,\'NOT_STARTED\',$3,$4,$5) ON CONFLICT ("userId") DO UPDATE SET "headline"=EXCLUDED."headline","languages"=EXCLUDED."languages","experienceYears"=EXCLUDED."experienceYears" RETURNING "id","verificationStatus","headline","languages","experienceYears"',
+            [crypto.randomUUID(),user.id,headline,languages,experienceYears],
+          );
+          await c.query("COMMIT");
+          return json({success:true,message:"Pendaftaran provider berhasil. Profil menunggu proses verifikasi.",data:provider.rows[0]},201);
+        } catch(e) { await c.query("ROLLBACK"); throw e; }
+      });
+    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Provider onboarding failed",e); return json({success:false,message:"Pendaftaran provider gagal diproses."},503); }
+  }
+
   if (path === "/api/v1/auth/logout" && request.method === "POST") {
    try {
     const header = request.headers.get("authorization") || "";
