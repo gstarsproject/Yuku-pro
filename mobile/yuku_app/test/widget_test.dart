@@ -23,7 +23,7 @@ void main() {
 
     await tester.tap(find.text('Bookings'));
     await tester.pump();
-    expect(find.text('Belum ada booking'), findsOneWidget);
+    expect(find.text('Masuk untuk melihat booking'), findsOneWidget);
 
     await tester.tap(find.text('Chat'));
     await tester.pump();
