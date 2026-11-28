@@ -67,7 +67,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
       (match) => '.',
     );
-    return '${currency ?? 'IDR'} $digits';
+    return "${currency ?? 'IDR'} $digits";
   }
 
   @override
