@@ -689,6 +689,13 @@ Status yang dipakai:
 - [x] Pengguna mengonfirmasi Follow berhasil dan tombol berubah menjadi Following.
 - [x] Pengguna mengonfirmasi Unfollow berhasil dan tombol berubah kembali menjadi Follow.
 - [ ] Verifikasi angka Followers/Following berkurang/bertambah dengan benar pada kedua akun.
-- [ ] Tutup dan buka kembali aplikasi; pastikan status relasi tetap konsisten dengan server.
+- [x] Pengguna mengonfirmasi status Following tetap tersimpan setelah aplikasi ditutup sepenuhnya dan dibuka kembali.
 - [ ] Lakukan pengujian dua akun/perangkat dan refresh feed untuk memastikan konten audience FOLLOWERS mengikuti perubahan relasi.
 - Status: Follow dan Unfollow UI/runtime terkonfirmasi pengguna; skenario hitungan, persistensi, dan privasi setelah Unfollow belum dinyatakan lulus.
+
+
+## Pembaruan tes persistensi Follow — 2026-11-28
+- [x] Pengguna mengonfirmasi setelah Follow kembali, menutup aplikasi sepenuhnya, lalu membuka ulang, tombol tetap menunjukkan Following.
+- [ ] Periksa angka Followers/Following pada kedua profil dan pastikan bertambah/berkurang sesuai aksi Follow/Unfollow.
+- [ ] Uji dua akun/perangkat dan refresh feed untuk memastikan konten audience FOLLOWERS mengikuti perubahan relasi.
+- Status: Follow, Unfollow, dan persistensi status setelah aplikasi dibuka ulang telah dikonfirmasi pengguna. Hitungan relasi dan pemeriksaan privasi setelah Unfollow masih menunggu.
