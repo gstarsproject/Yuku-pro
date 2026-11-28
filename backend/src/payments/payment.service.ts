@@ -59,9 +59,7 @@ export class PaymentService {
     const orderId = payload.order_id;
     const transactionStatus = payload.transaction_status;
     const transactionId = payload.transaction_id;
-    const statusCode = payload.status_code;
     const grossAmount = payload.gross_amount;
-    const signatureKey = payload.signature_key;
     const eventKey = `${orderId}:${transactionStatus}:${transactionId}`;
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.paymentWebhookEvent.findUnique({ where: { eventKey } });
@@ -83,7 +81,7 @@ export class PaymentService {
       }
 
       const paid = ['settlement', 'capture'].includes(transactionStatus);
-      const failed = ['deny', 'cancel', 'expire'].includes(payload.transaction_status);
+      const failed = ['deny', 'cancel', 'expire'].includes(transactionStatus);
 
       // A successful payment is terminal here: delayed pending/failed notifications
       // must never downgrade a paid booking or payment.
