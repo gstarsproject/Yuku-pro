@@ -26,7 +26,7 @@ export class SocialService {
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
-        author: { include: { profile: true } },
+        author: { include: { profile: true, creatorVerification: true } },
         media: { orderBy: { position: 'asc' } },
         _count: { select: { likes: true, comments: true } },
         likes: { where: { userId }, select: { id: true }, take: 1 },
@@ -36,6 +36,7 @@ export class SocialService {
       id: post.id,
       authorId: post.authorId,
       authorName: post.author.profile?.displayName ?? 'Pengguna MAVO',
+      authorVerified: post.author.creatorVerification?.status === 'VERIFIED',
       authorAvatar: post.author.profile?.avatarUrl ?? null,
       content: post.content,
       audience: post.audience,
