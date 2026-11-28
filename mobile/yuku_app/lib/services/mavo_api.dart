@@ -125,6 +125,28 @@ class MavoApi {
     return Map<String, dynamic>.from(body['data'] as Map);
   }
 
+  static Future<Map<String, dynamic>?> creatorVerificationStatus() async {
+    final response = await http.get(Uri.parse('$baseUrl/api/v1/creator-verification/me'), headers: await _headers()).timeout(const Duration(seconds: 15));
+    final body = await _decode(response);
+    if (body['data'] == null) return null;
+    return Map<String, dynamic>.from(body['data'] as Map);
+  }
+
+  static Future<Map<String, dynamic>> submitCreatorVerification({
+    required String creatorName,
+    required String handle,
+    required String category,
+    required String reason,
+    List<String> documentKeys = const [],
+  }) async {
+    final response = await http.post(Uri.parse('$baseUrl/api/v1/creator-verification'),
+      headers: await _headers(),
+      body: jsonEncode({'creatorName': creatorName.trim(), 'handle': handle.trim(), 'category': category.trim(), 'reason': reason.trim(), 'documentKeys': documentKeys}))
+      .timeout(const Duration(seconds: 25));
+    final body = await _decode(response);
+    return Map<String, dynamic>.from(body['data'] as Map);
+  }
+
   static Future<List<Map<String, dynamic>>> conversations() async {
     final response = await http.get(Uri.parse('$baseUrl/api/v1/conversations'), headers: await _headers()).timeout(const Duration(seconds: 20));
     final body = await _decode(response);
