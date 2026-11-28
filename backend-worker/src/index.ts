@@ -380,7 +380,7 @@ export default {
       const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
       if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi admin tidak valid."},401);
       const tokenHash = await sha256(token);
-      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role" IN (\'ADMIN\',\'SUPERADMIN\') AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
+      const auth = await c.query('SELECT u."id",u."role" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role" IN (\'ADMIN\',\'SUPERADMIN\') AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
       if (!auth.rows[0]) return json({success:false,message:"Akses khusus admin. Silakan login kembali."},401);
       const [users, providers, bookings, disputes] = await Promise.all([
         c.query('SELECT COUNT(*)::int AS count FROM "User"'),
@@ -388,7 +388,7 @@ export default {
         c.query('SELECT COUNT(*)::int AS count FROM "Booking" WHERE "createdAt">=date_trunc(\'day\',NOW())'),
         c.query('SELECT COUNT(*)::int AS count FROM "Dispute" WHERE "status"=\'OPEN\'')
       ]);
-      return json({success:true,data:{totalUsers:users.rows[0].count,activeProviders:providers.rows[0].count,bookingsToday:bookings.rows[0].count,openDisputes:disputes.rows[0].count,generatedAt:new Date().toISOString()}});
+      return json({success:true,data:{role:auth.rows[0].role,totalUsers:users.rows[0].count,activeProviders:providers.rows[0].count,bookingsToday:bookings.rows[0].count,openDisputes:disputes.rows[0].count,generatedAt:new Date().toISOString()}});
     });
    } catch(e) { console.error("Admin overview failed",e); return json({success:false,message:"Data dashboard admin gagal dimuat."},503); }
   }
