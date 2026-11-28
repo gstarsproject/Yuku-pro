@@ -8,6 +8,7 @@ import { PaymentModule } from './payments/payment.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
 import { SocialModule } from './social/social.module';
+import { CreatorVerificationModule } from './creator-verification/creator-verification.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SocialModule } from './social/social.module';
     AuthModule,
     AdminModule,
     SocialModule,
+    CreatorVerificationModule,
   ],
 })
 export class AppModule {}
