@@ -335,7 +335,7 @@ export default {
     return await db(env, async c => {
       const viewer = await getSessionUser(c,request);
       if (!viewer) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
-      const blockedViewer = await c.query('SELECT EXISTS(SELECT 1 FROM "UserBlock" WHERE "blockerId"=$1 AND "blockedId"=$2) AS blocked',[profileMatch[1],viewer.id]);
+      const blockedViewer = await c.query('SELECT EXISTS(SELECT 1 FROM "UserBlock" WHERE ("blockerId"=$1 AND "blockedId"=$2) OR ("blockerId"=$2 AND "blockedId"=$1)) AS blocked',[profileMatch[1],viewer.id]);
       if (blockedViewer.rows[0]?.blocked) return json({success:false,message:"Profil ini tidak tersedia."},404);
       const result = await c.query(`SELECT u."id",pr."displayName",pr."avatarUrl",(SELECT ma."id" FROM "MediaAsset" ma WHERE ma."ownerId"=u."id" AND ma."objectKey"=pr."avatarUrl" LIMIT 1) AS "avatarMediaId",pr."bio",(SELECT COUNT(*)::int FROM "Post" p WHERE p."authorId"=u."id") AS "postsCount",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followingId"=u."id") AS "followers",(SELECT COUNT(*)::int FROM "Follow" f WHERE f."followerId"=u."id") AS "followingCount",COALESCE(pp."verificationStatus"='VERIFIED',FALSE) AS "isVerified" FROM "User" u LEFT JOIN "Profile" pr ON pr."userId"=u."id" LEFT JOIN "ProviderProfile" pp ON pp."userId"=u."id" WHERE u."id"=$1 AND u."status"='ACTIVE' AND u."role"<>'ADMIN' LIMIT 1`,[profileMatch[1]]);
       if (!result.rows[0]) return json({success:false,message:"Profil tidak ditemukan."},404);
@@ -455,8 +455,8 @@ if (avatarMedia) {
       const targetId = relationMatch[1];
       const type = url.searchParams.get("type") === "following" ? "following" : "followers";
       const result = type === "followers"
-        ? await c.query('SELECT u."id",p."displayName",p."avatarUrl",EXISTS(SELECT 1 FROM "Follow" mine WHERE mine."followerId"=$1 AND mine."followingId"=u."id") AS "following" FROM "Follow" f JOIN "User" u ON u."id"=f."followerId" JOIN "Profile" p ON p."userId"=u."id" WHERE f."followingId"=$2 AND u."status"=\'ACTIVE\' ORDER BY f."createdAt" DESC LIMIT 200',[viewer.id,targetId])
-        : await c.query('SELECT u."id",p."displayName",p."avatarUrl",EXISTS(SELECT 1 FROM "Follow" mine WHERE mine."followerId"=$1 AND mine."followingId"=u."id") AS "following" FROM "Follow" f JOIN "User" u ON u."id"=f."followingId" JOIN "Profile" p ON p."userId"=u."id" WHERE f."followerId"=$2 AND u."status"=\'ACTIVE\' ORDER BY f."createdAt" DESC LIMIT 200',[viewer.id,targetId]);
+        ? await c.query('SELECT u."id",p."displayName",p."avatarUrl",EXISTS(SELECT 1 FROM "Follow" mine WHERE mine."followerId"=$1 AND mine."followingId"=u."id") AS "following" FROM "Follow" f JOIN "User" u ON u."id"=f."followerId" JOIN "Profile" p ON p."userId"=u."id" WHERE f."followingId"=$2 AND u."status"=\'ACTIVE\' AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$1 AND b."blockedId"=u."id") OR (b."blockerId"=u."id" AND b."blockedId"=$1)) ORDER BY f."createdAt" DESC LIMIT 200',[viewer.id,targetId])
+        : await c.query('SELECT u."id",p."displayName",p."avatarUrl",EXISTS(SELECT 1 FROM "Follow" mine WHERE mine."followerId"=$1 AND mine."followingId"=u."id") AS "following" FROM "Follow" f JOIN "User" u ON u."id"=f."followingId" JOIN "Profile" p ON p."userId"=u."id" WHERE f."followerId"=$2 AND u."status"=\'ACTIVE\' AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$1 AND b."blockedId"=u."id") OR (b."blockerId"=u."id" AND b."blockedId"=$1)) ORDER BY f."createdAt" DESC LIMIT 200',[viewer.id,targetId]);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User relations request failed",e); return json({success:false,message:"Daftar pengikut gagal dimuat."},503); }
@@ -681,7 +681,7 @@ if (avatarMedia) {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
       const postId = postInteractionMatch[1], action = postInteractionMatch[2].toLowerCase();
-      const visible = await c.query('SELECT p."id",p."authorId" FROM "Post" p JOIN "User" u ON u."id"=p."authorId" WHERE p."id"=$1 AND u."status"=\'ACTIVE\' AND (p."audience"=\'PUBLIC\' OR p."authorId"=$2 OR (p."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$2 AND f."followingId"=p."authorId"))) LIMIT 1',[postId,user.id]);
+      const visible = await c.query('SELECT p."id",p."authorId" FROM "Post" p JOIN "User" u ON u."id"=p."authorId" WHERE p."id"=$1 AND u."status"=\'ACTIVE\' AND (p."audience"=\'PUBLIC\' OR p."authorId"=$2 OR (p."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$2 AND f."followingId"=p."authorId"))) AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$2 AND b."blockedId"=p."authorId") OR (b."blockerId"=p."authorId" AND b."blockedId"=$2)) LIMIT 1',[postId,user.id]);
       if (!visible.rows[0]) return json({success:false,message:"Postingan tidak ditemukan atau tidak dapat diakses."},404);
       if (request.method !== "GET") { const limited = await userActionRateLimit(env, user.id, "post-interaction"); if (limited) return limited; }
       if (action === "like") {
@@ -698,7 +698,7 @@ if (avatarMedia) {
         return json({success:true,data:state.rows[0]});
       }
       if (request.method === "GET") {
-        const comments = await c.query('SELECT cm."id",cm."content",cm."createdAt",cm."userId",pr."displayName" AS "authorName",pr."avatarUrl" AS "authorAvatar" FROM "PostComment" cm LEFT JOIN "Profile" pr ON pr."userId"=cm."userId" WHERE cm."postId"=$1 ORDER BY cm."createdAt" ASC LIMIT 100',[postId]);
+        const comments = await c.query('SELECT cm."id",cm."content",cm."createdAt",cm."userId",pr."displayName" AS "authorName",pr."avatarUrl" AS "authorAvatar" FROM "PostComment" cm LEFT JOIN "Profile" pr ON pr."userId"=cm."userId" WHERE cm."postId"=$1 AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$2 AND b."blockedId"=cm."userId") OR (b."blockerId"=cm."userId" AND b."blockedId"=$2)) ORDER BY cm."createdAt" ASC LIMIT 100',[postId]);
         return json({success:true,count:comments.rowCount,data:comments.rows});
       }
       if (request.method !== "POST") return json({success:false,message:"Method not allowed"},405);
