@@ -73,18 +73,40 @@ export class BookingService {
       if (booking.status !== 'IN_PROGRESS' || booking.payment?.status !== 'SUCCEEDED') {
         throw new BadRequestException('Hanya pesanan berjalan yang sudah dibayar dapat diselesaikan.');
       }
-      const completed = await tx.booking.update({ where: { id: bookingId }, data: { status: 'COMPLETED' } });
+      const completed = await tx.booking.update({ where: { id: bookingId }, data: { status: 'AWAITING_CONFIRMATION' } });
       const net = booking.serviceAmount - booking.platformFee;
       await tx.providerPayout.upsert({
         where: { bookingId },
-        create: { bookingId, providerUserId, grossAmount: booking.serviceAmount, platformFee: booking.platformFee, netAmount: net, status: 'READY' },
+        create: { bookingId, providerUserId, grossAmount: booking.serviceAmount, platformFee: booking.platformFee, netAmount: net, status: 'PENDING_RELEASE' },
+        update: { status: 'PENDING_RELEASE', releasedAt: null },
+      });
+      return completed;
+    });
+  }
+
+  async confirmByCustomer(customerId: string, bookingId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findFirst({ where: { id: bookingId, customerId }, include: { payment: true, payout: true } });
+      if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
+      if (booking.status !== 'AWAITING_CONFIRMATION' || booking.payment?.status !== 'SUCCEEDED') {
+        throw new BadRequestException('Booking belum menunggu konfirmasi customer.');
+      }
+      const changed = await tx.booking.updateMany({ where: { id: bookingId, customerId, status: 'AWAITING_CONFIRMATION' }, data: { status: 'COMPLETED' } });
+      if (changed.count !== 1) throw new ConflictException('Status booking sudah berubah. Muat ulang halaman.');
+      const net = booking.serviceAmount - booking.platformFee;
+      await tx.providerPayout.upsert({
+        where: { bookingId },
+        create: { bookingId, providerUserId: booking.providerId, grossAmount: booking.serviceAmount, platformFee: booking.platformFee, netAmount: net, status: 'READY', releasedAt: new Date() },
         update: { status: 'READY', releasedAt: new Date() },
       });
-      await tx.ledgerEntry.createMany({ data: [
-        { accountRef: `provider:${providerUserId}`, bookingId, entryType: 'CREDIT', amount: net, description: 'Pendapatan provider setelah booking selesai' },
-        { accountRef: 'platform:revenue', bookingId, entryType: 'CREDIT', amount: booking.platformFee, description: 'Komisi platform YUKU' },
-      ]});
-      return completed;
+      const existingLedger = await tx.ledgerEntry.findFirst({ where: { bookingId, accountRef: `provider:${booking.providerId}` } });
+      if (!existingLedger) {
+        await tx.ledgerEntry.createMany({ data: [
+          { accountRef: `provider:${booking.providerId}`, bookingId, entryType: 'CREDIT', amount: net, currency: booking.currency, description: 'Pendapatan provider setelah konfirmasi customer' },
+          { accountRef: 'platform:revenue', bookingId, entryType: 'CREDIT', amount: booking.platformFee, currency: booking.currency, description: 'Komisi platform MAVO' },
+        ] });
+      }
+      return tx.booking.findUnique({ where: { id: bookingId } });
     });
   }
 }
