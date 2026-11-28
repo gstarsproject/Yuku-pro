@@ -10,7 +10,12 @@ class ExploreScreen extends StatefulWidget {
 }
 class _ExploreScreenState extends State<ExploreScreen> {
   final search = TextEditingController();
-  late String pillar = widget.initialPillar;
+  late String pillar;
+  @override
+  void initState() {
+    super.initState();
+    pillar = widget.initialPillar;
+  }
   late Future<List<Map<String, dynamic>>> results = MAVOApi.services();
   void reload() => setState(() => results = MAVOApi.services(query: search.text, pillar: pillar));
   @override
