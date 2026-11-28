@@ -40,4 +40,10 @@ export class BookingController {
     if (request.user.role !== 'PROVIDER') throw new ForbiddenException('Aksi khusus provider');
     return this.service.complete(request.user.sub, id);
   }
+
+  @Post(':id/confirm')
+  confirm(@Req() request: AuthRequest, @Param('id') id: string) {
+    if (request.user.role !== 'CUSTOMER') throw new ForbiddenException('Aksi khusus customer');
+    return this.service.confirmByCustomer(request.user.sub, id);
+  }
 }
