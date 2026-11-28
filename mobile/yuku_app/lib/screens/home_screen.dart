@@ -204,22 +204,78 @@ class _PostsFeedState extends State<_PostsFeed> {
   );
 }
 
-class _PostCard extends StatelessWidget {
+class _PostCard extends StatefulWidget {
   final Map<String, dynamic> post;
   const _PostCard({required this.post});
   @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  late bool _liked;
+  late int _likes;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _liked = widget.post['likedByMe'] == true;
+    _likes = (widget.post['likesCount'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> _toggleLike() async {
+    if (_busy) return;
+    final oldLiked = _liked;
+    final oldLikes = _likes;
+    setState(() {
+      _busy = true;
+      _liked = !oldLiked;
+      _likes = oldLikes + (_liked ? 1 : -1);
+    });
+    try {
+      if (_liked) {
+        await MavoApi.likePost(widget.post['id'].toString());
+      } else {
+        await MavoApi.unlikePost(widget.post['id'].toString());
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() { _liked = oldLiked; _likes = oldLikes; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _openComments() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CommentsSheet(postId: widget.post['id'].toString()),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final post = widget.post;
     final author = post['authorName']?.toString() ?? 'Pengguna MAVO';
     final content = post['content']?.toString() ?? '';
-    final likes = post['likesCount'] ?? 0;
-    final comments = post['commentsCount'] ?? 0;
+    final comments = (post['commentsCount'] as num?)?.toInt() ?? 0;
     final created = post['createdAt']?.toString() ?? '';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFEDEBF3)),
-        boxShadow: [BoxShadow(color: MavoColors.midnight.withValues(alpha: .035), blurRadius: 14, offset: const Offset(0, 4))]),
+        boxShadow: [BoxShadow(color: MavoColors.midnight.withValues(alpha: .035), blurRadius: 14, offset: const Offset(0, 4))],
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)),
@@ -235,19 +291,160 @@ class _PostCard extends StatelessWidget {
           padding: const EdgeInsets.only(top: 13),
           child: Text(content, style: const TextStyle(color: MavoColors.ink, fontSize: 13, height: 1.45)),
         ),
+        if ((post['media'] as List<dynamic>? ?? const []).isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: MavoColors.violetSoft, borderRadius: BorderRadius.circular(12)),
+              child: const Row(children: [
+                Icon(Icons.perm_media_outlined, color: MavoColors.violet),
+                SizedBox(width: 8),
+                Text('Lampiran media', style: TextStyle(color: MavoColors.violet, fontWeight: FontWeight.w700, fontSize: 12)),
+              ]),
+            ),
+          ),
         const Divider(height: 25),
         Row(children: [
-          const Icon(Icons.favorite_border_rounded, color: MavoColors.muted, size: 19),
-          const SizedBox(width: 5),
-          Text('$likes', style: const TextStyle(color: MavoColors.muted, fontSize: 11)),
+          InkWell(
+            onTap: _busy ? null : _toggleLike,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 3),
+              child: Row(children: [
+                Icon(_liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: _liked ? MavoColors.coral : MavoColors.muted, size: 20),
+                const SizedBox(width: 6),
+                Text('$_likes', style: const TextStyle(color: MavoColors.muted, fontSize: 11)),
+              ]),
+            ),
+          ),
           const SizedBox(width: 18),
-          const Icon(Icons.mode_comment_outlined, color: MavoColors.muted, size: 18),
-          const SizedBox(width: 5),
-          Text('$comments', style: const TextStyle(color: MavoColors.muted, fontSize: 11)),
+          InkWell(
+            onTap: _openComments,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 3),
+              child: Row(children: [
+                const Icon(Icons.mode_comment_outlined, color: MavoColors.muted, size: 19),
+                const SizedBox(width: 6),
+                Text('$comments', style: const TextStyle(color: MavoColors.muted, fontSize: 11)),
+              ]),
+            ),
+          ),
+          const Spacer(),
+          const Icon(Icons.share_outlined, color: MavoColors.muted, size: 19),
         ]),
       ]),
     );
   }
+}
+
+class _CommentsSheet extends StatefulWidget {
+  final String postId;
+  const _CommentsSheet({required this.postId});
+  @override
+  State<_CommentsSheet> createState() => _CommentsSheetState();
+}
+
+class _CommentsSheetState extends State<_CommentsSheet> {
+  final _controller = TextEditingController();
+  late Future<List<Map<String, dynamic>>> _future;
+  bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = MavoApi.comments(widget.postId);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      await MavoApi.addComment(widget.postId, text);
+      _controller.clear();
+      setState(() => _future = MavoApi.comments(widget.postId));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: MediaQuery.of(context).size.height * .72,
+    decoration: const BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    child: Column(children: [
+      const SizedBox(height: 14),
+      Container(width: 38, height: 4, decoration: BoxDecoration(color: MavoColors.muted.withValues(alpha: .3), borderRadius: BorderRadius.circular(4))),
+      const Padding(
+        padding: EdgeInsets.all(18),
+        child: Text('Komentar', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: MavoColors.midnight)),
+      ),
+      Expanded(
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+            if (snapshot.hasError) return Center(child: Text('Komentar belum bisa dimuat: ${snapshot.error}', textAlign: TextAlign.center));
+            final items = snapshot.data ?? const <Map<String, dynamic>>[];
+            if (items.isEmpty) return const Center(child: Text('Belum ada komentar. Mulai percakapan!', style: TextStyle(color: MavoColors.muted)));
+            return ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const Divider(height: 18),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const CircleAvatar(radius: 16, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person, size: 17, color: MavoColors.violet)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(item['authorName']?.toString() ?? 'Pengguna MAVO', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: MavoColors.midnight)),
+                    const SizedBox(height: 4),
+                    Text(item['content']?.toString() ?? '', style: const TextStyle(fontSize: 13, color: MavoColors.ink)),
+                  ])),
+                ]);
+              },
+            );
+          },
+        ),
+      ),
+      SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(14, 10, 14, MediaQuery.of(context).viewInsets.bottom + 12),
+          child: Row(children: [
+            Expanded(child: TextField(
+              controller: _controller,
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(hintText: 'Tulis komentar...', isDense: true),
+            )),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              onPressed: _sending ? null : _send,
+              icon: _sending ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded),
+            ),
+          ]),
+        ),
+      ),
+    ]),
+  );
 }
 
 class StoryStrip extends StatefulWidget {
