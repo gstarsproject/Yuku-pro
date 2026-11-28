@@ -162,7 +162,7 @@ async function getSessionUser(c: Client, request: Request) {
   if (!/^[a-f0-9]{64}$/i.test(token)) return null;
   const tokenHash = await sha256(token);
   const result = await c.query(
-    'SELECT u."id",u."email",u."phone",u."role",p."displayName",p."avatarUrl",p."bio",p."city",p."province",u."createdAt" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."status"=\'ACTIVE\' AND u."role"<>\'ADMIN\' LIMIT 1',
+    'SELECT u."id",u."email",u."phone",u."role",p."displayName",p."avatarUrl",p."bio",p."city",p."province",u."createdAt" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."status"=\'ACTIVE\' AND u."role" NOT IN (\'ADMIN\',\'SUPERADMIN\') LIMIT 1',
     [tokenHash]);
   return result.rows[0] || null;
 }
@@ -215,7 +215,7 @@ export default {
     return await db(env, async c => {
       const result = await c.query('SELECT u."id",u."email",u."passwordHash",u."role",u."status",p."displayName" FROM "User" u LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE u."email"=$1 LIMIT 1',[email]);
       const user = result.rows[0];
-      if (!user || user.role === "ADMIN" || user.status !== "ACTIVE" || !(await checkPassword(password,user.passwordHash)))
+      if (!user || ["ADMIN", "SUPERADMIN"].includes(user.role) || user.status !== "ACTIVE" || !(await checkPassword(password,user.passwordHash)))
         return json({success:false,message:"Email atau password tidak valid"},401);
       return json({success:true,data:await createUserSession(c,{id:user.id,email:user.email,role:user.role,displayName:user.displayName})});
     });
@@ -244,7 +244,8 @@ export default {
     return await db(env, async c => {
       await c.query("BEGIN");
       try {
-       const existingAdmins = await c.query('SELECT COUNT(*)::int AS count FROM "User" WHERE "role"=\'ADMIN\'');
+       await c.query("SELECT pg_advisory_xact_lock(73020128)");
+       const existingAdmins = await c.query('SELECT COUNT(*)::int AS count FROM "User" WHERE "role" IN (\'ADMIN\',\'SUPERADMIN\')');
        if (Number(existingAdmins.rows[0].count) > 0) {
         await c.query("ROLLBACK");
         return json({success:false,message:"Admin sudah ada. Bootstrap satu kali telah dikunci."},409);
@@ -255,10 +256,11 @@ export default {
         return json({success:false,message:"Email sudah terdaftar. Tidak ada perubahan akun."},409);
        }
        const id = crypto.randomUUID();
-       await c.query('INSERT INTO "User" ("id","email","passwordHash","role","status","updatedAt") VALUES ($1,$2,$3,\'ADMIN\',\'ACTIVE\',NOW())',[id,email,passwordHash]);
+       await c.query('INSERT INTO "User" ("id","email","passwordHash","role","status","updatedAt") VALUES ($1,$2,$3,\'SUPERADMIN\',\'ACTIVE\',NOW())',[id,email,passwordHash]);
        await c.query('INSERT INTO "Profile" ("id","userId","displayName","updatedAt") VALUES ($1,$2,$3,NOW())',[crypto.randomUUID(),id,displayName]);
+       await c.query('INSERT INTO "AdminAuditLog" ("id","actorUserId","action","targetType","targetId","metadata","createdAt") VALUES ($1,$2,\'SUPERADMIN_BOOTSTRAP\',\'USER\',$3,$4::jsonb,NOW())',[crypto.randomUUID(),id,id,JSON.stringify({email,role:"SUPERADMIN"})]);
        await c.query("COMMIT");
-       return json({success:true,message:"Akun admin Preview berhasil dibuat.",data:{id,email,role:"ADMIN",status:"ACTIVE"}},201);
+       return json({success:true,message:"Akun SUPERADMIN Preview berhasil dibuat.",data:{id,email,role:"SUPERADMIN",status:"ACTIVE"}},201);
       } catch(e) {
        await c.query("ROLLBACK");
        if ((e as {code?:string})?.code === "23505") return json({success:false,message:"Email sudah terdaftar."},409);
@@ -281,12 +283,68 @@ export default {
     return await db(env, async c => {
       const result = await c.query('SELECT u."id",u."email",u."passwordHash",u."role",u."status",p."displayName" FROM "User" u LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE u."email"=$1 LIMIT 1',[email]);
       const user = result.rows[0];
-      if (!user || user.role !== "ADMIN" || user.status !== "ACTIVE" || !(await checkPassword(password,user.passwordHash)))
+      if (!user || !["ADMIN", "SUPERADMIN"].includes(user.role) || user.status !== "ACTIVE" || !(await checkPassword(password,user.passwordHash)))
         return json({success:false,message:"Email atau password admin tidak valid"},401);
       const session = await createUserSession(c,{id:user.id,email:user.email,role:user.role,displayName:user.displayName});
+      await c.query('INSERT INTO "AdminAuditLog" ("id","actorUserId","action","targetType","targetId","metadata","createdAt") VALUES ($1,$2,\'ADMIN_LOGIN\',\'SESSION\',$3,$4::jsonb,NOW())',[crypto.randomUUID(),user.id,crypto.randomUUID(),JSON.stringify({role:user.role})]);
       return json({success:true,data:session});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Admin login failed",e); return json({success:false,message:"Login admin gagal. Coba lagi."},503); }
+  }
+
+
+  if (path === "/api/v1/admin/users" && ["GET","POST"].includes(request.method)) {
+   try {
+    const body = request.method === "POST" ? await readRequestBody(request) : {};
+    return await db(env, async c => {
+      const header = request.headers.get("authorization") || "";
+      const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+      if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi Superadmin tidak valid."},401);
+      const tokenHash = await sha256(token);
+      const auth = await c.query('SELECT u."id",u."role" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\'SUPERADMIN\' AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
+      const actor = auth.rows[0];
+      if (!actor) return json({success:false,message:"Fitur ini hanya dapat diakses SUPERADMIN."},403);
+      if (request.method === "GET") {
+        const result = await c.query('SELECT u."id",u."email",u."role",u."status",u."createdAt",p."displayName" FROM "User" u LEFT JOIN "Profile" p ON p."userId"=u."id" WHERE u."role" IN (\'ADMIN\',\'SUPERADMIN\') ORDER BY CASE WHEN u."role"=\'SUPERADMIN\' THEN 0 ELSE 1 END,u."createdAt" ASC');
+        return json({success:true,count:result.rowCount,data:result.rows});
+      }
+      const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+      const password = typeof body.password === "string" ? body.password : "";
+      const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
+      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || password.length < 16 || password.length > 128 || displayName.length < 2 || displayName.length > 60)
+        return json({success:false,message:"Email/nama tidak valid. Password minimal 16 karakter."},400);
+      const passwordHash = await makePasswordHash(password);
+      await c.query("BEGIN");
+      try {
+        const id = crypto.randomUUID();
+        await c.query('INSERT INTO "User" ("id","email","passwordHash","role","status","updatedAt") VALUES ($1,$2,$3,\'ADMIN\',\'ACTIVE\',NOW())',[id,email,passwordHash]);
+        await c.query('INSERT INTO "Profile" ("id","userId","displayName","updatedAt") VALUES ($1,$2,$3,NOW())',[crypto.randomUUID(),id,displayName]);
+        await c.query('INSERT INTO "AdminAuditLog" ("id","actorUserId","action","targetType","targetId","metadata","createdAt") VALUES ($1,$2,\'ADMIN_CREATED\',\'USER\',$3,$4::jsonb,NOW())',[crypto.randomUUID(),actor.id,id,JSON.stringify({email,role:"ADMIN"})]);
+        await c.query("COMMIT");
+        return json({success:true,message:"Akun Admin berhasil dibuat.",data:{id,email,role:"ADMIN",status:"ACTIVE"}},201);
+      } catch(e) {
+        await c.query("ROLLBACK");
+        if ((e as {code?:string})?.code === "23505") return json({success:false,message:"Email sudah terdaftar."},409);
+        throw e;
+      }
+    });
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Admin user management failed",e); return json({success:false,message:"Pengelolaan Admin gagal."},503); }
+  }
+
+  if (path === "/api/v1/admin/audit-logs" && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const header = request.headers.get("authorization") || "";
+      const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+      if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi Superadmin tidak valid."},401);
+      const tokenHash = await sha256(token);
+      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\'SUPERADMIN\' AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
+      if (!auth.rows[0]) return json({success:false,message:"Audit Log hanya dapat diakses SUPERADMIN."},403);
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 100),1),200);
+      const result = await c.query('SELECT l."id",l."action",l."targetType",l."targetId",l."metadata",l."createdAt",u."email" AS "actorEmail" FROM "AdminAuditLog" l JOIN "User" u ON u."id"=l."actorUserId" ORDER BY l."createdAt" DESC LIMIT $1',[limit]);
+      return json({success:true,count:result.rowCount,data:result.rows});
+    });
+   } catch(e) { console.error("Admin audit log failed",e); return json({success:false,message:"Audit Log gagal dimuat."},503); }
   }
 
   if (path === "/api/v1/admin/overview" && request.method === "GET") {
@@ -296,7 +354,7 @@ export default {
       const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
       if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi admin tidak valid."},401);
       const tokenHash = await sha256(token);
-      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\'ADMIN\' AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
+      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role" IN (\'ADMIN\',\'SUPERADMIN\') AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
       if (!auth.rows[0]) return json({success:false,message:"Akses khusus admin. Silakan login kembali."},401);
       const [users, providers, bookings, disputes] = await Promise.all([
         c.query('SELECT COUNT(*)::int AS count FROM "User"'),
@@ -316,7 +374,7 @@ export default {
       const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
       if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi admin tidak valid."},401);
       const tokenHash = await sha256(token);
-      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\'ADMIN\' AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
+      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role" IN (\'ADMIN\',\'SUPERADMIN\') AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
       if (!auth.rows[0]) return json({success:false,message:"Akses khusus admin. Silakan login kembali."},401);
       const status = (url.searchParams.get("status") || "OPEN").toUpperCase();
       if (!["OPEN","REVIEWING","RESOLVED","DISMISSED","ALL"].includes(status)) return json({success:false,message:"Filter status tidak valid."},400);
@@ -335,12 +393,13 @@ export default {
       const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
       if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi admin tidak valid."},401);
       const tokenHash = await sha256(token);
-      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\'ADMIN\' AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
+      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role" IN (\'ADMIN\',\'SUPERADMIN\') AND u."status"=\'ACTIVE\' LIMIT 1',[tokenHash]);
       if (!auth.rows[0]) return json({success:false,message:"Akses khusus admin. Silakan login kembali."},401);
       const status = typeof body.status === "string" ? body.status.toUpperCase() : "";
       if (!["REVIEWING","RESOLVED","DISMISSED"].includes(status)) return json({success:false,message:"Status penanganan tidak valid."},400);
       const result = await c.query('UPDATE "ContentReport" SET "status"=$2 WHERE "id"=$1 RETURNING "id","status","createdAt"',[adminReportMatch[1],status]);
       if (!result.rows[0]) return json({success:false,message:"Laporan tidak ditemukan."},404);
+      await c.query('INSERT INTO "AdminAuditLog" ("id","actorUserId","action","targetType","targetId","metadata","createdAt") VALUES ($1,$2,\'REPORT_STATUS_CHANGED\',\'CONTENT_REPORT\',$3,$4::jsonb,NOW())',[crypto.randomUUID(),auth.rows[0].id,adminReportMatch[1],JSON.stringify({status})]);
       return json({success:true,data:result.rows[0],message:"Status laporan diperbarui."});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Admin report update failed",e); return json({success:false,message:"Status laporan gagal diperbarui."},503); }
@@ -596,7 +655,7 @@ if (avatarMedia) {
       const limited = await userActionRateLimit(env, user.id, "user-search"); if (limited) return limited;
       const query = (url.searchParams.get("q") || "").trim();
       if (query.length < 2 || query.length > 60) return json({success:true,count:0,data:[]});
-      const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\'ACTIVE\' AND u."role"<>\'ADMIN\' AND u."id"<>$1 AND p."displayName" ILIKE $2 AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$1 AND b."blockedId"=u."id") OR (b."blockerId"=u."id" AND b."blockedId"=$1)) ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query + '%']);
+      const result = await c.query('SELECT u."id",p."displayName",p."avatarUrl" FROM "User" u JOIN "Profile" p ON p."userId"=u."id" WHERE u."status"=\'ACTIVE\' AND u."role" NOT IN (\'ADMIN\',\'SUPERADMIN\') AND u."id"<>$1 AND p."displayName" ILIKE $2 AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$1 AND b."blockedId"=u."id") OR (b."blockerId"=u."id" AND b."blockedId"=$1)) ORDER BY p."displayName" ASC LIMIT 20',[user.id,'%' + query + '%']);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("User search failed",e); return json({success:false,message:"Pencarian pengguna gagal."},503); }
