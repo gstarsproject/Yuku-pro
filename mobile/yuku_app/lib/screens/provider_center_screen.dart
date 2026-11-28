@@ -122,7 +122,7 @@ class _ProviderCenterScreenState extends State<ProviderCenterScreen> {
             if (_isProvider) ...[
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: MavoColors.line)),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFEAE8F2))),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('Status provider', style: TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight)),
                   const SizedBox(height: 8),
@@ -176,7 +176,7 @@ class _StepTile extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 10),
     child: Container(
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: MavoColors.line)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFFEAE8F2))),
       child: Row(children: [
         CircleAvatar(radius: 14, backgroundColor: MavoColors.violetSoft, child: Text(number, style: const TextStyle(color: MavoColors.violet, fontWeight: FontWeight.w800))),
         const SizedBox(width: 11),
