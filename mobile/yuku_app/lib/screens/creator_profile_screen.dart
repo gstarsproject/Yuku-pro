@@ -46,8 +46,6 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Flexible(child: Text(widget.creatorName, textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: MavoColors.midnight))),
-          const SizedBox(width: 5),
-          const Icon(Icons.verified_rounded, color: MavoColors.violet, size: 18),
         ]),
         const SizedBox(height: 7),
         Text(widget.bio, textAlign: TextAlign.center,
