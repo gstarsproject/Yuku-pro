@@ -74,6 +74,38 @@ class MavoApi {
     final body = await _decode(response);
     return Map<String, dynamic>.from(body['data'] as Map);
   }
+  static Future<void> likePost(String postId) async {
+    final response = await http.post(Uri.parse('$baseUrl/api/v1/posts/$postId/like'), headers: await _headers(), body: jsonEncode({}));
+    await _decode(response);
+  }
+
+  static Future<void> unlikePost(String postId) async {
+    final response = await http.delete(Uri.parse('$baseUrl/api/v1/posts/$postId/like'), headers: await _headers());
+    await _decode(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> comments(String postId) async {
+    final response = await http.get(Uri.parse('$baseUrl/api/v1/posts/$postId/comments'), headers: await _headers());
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  static Future<void> addComment(String postId, String content) async {
+    final response = await http.post(Uri.parse('$baseUrl/api/v1/posts/$postId/comments'),
+      headers: await _headers(), body: jsonEncode({'content': content.trim()}));
+    await _decode(response);
+  }
+
+  static Future<void> followUser(String userId) async {
+    final response = await http.post(Uri.parse('$baseUrl/api/v1/users/$userId/follow'), headers: await _headers(), body: jsonEncode({}));
+    await _decode(response);
+  }
+
+  static Future<void> unfollowUser(String userId) async {
+    final response = await http.delete(Uri.parse('$baseUrl/api/v1/users/$userId/follow'), headers: await _headers());
+    await _decode(response);
+  }
+
   static Future<Map<String, dynamic>> profile(String userId) async {
     final response = await http.get(Uri.parse('$baseUrl/api/v1/users/$userId/profile'),
       headers: await _headers()).timeout(const Duration(seconds: 15));
