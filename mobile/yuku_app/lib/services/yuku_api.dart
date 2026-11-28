@@ -44,6 +44,7 @@ class YukuApi {
   static Future<Map<String, dynamic>> login({required String email, required String password}) async {
     final result = await _request('POST', '/api/v1/auth/user/login', body: {'email': email.trim(), 'password': password});
     _accessToken = result['accessToken']?.toString();
+    _currentUser = result['user'] is Map ? Map<String, dynamic>.from(result['user']) : null;
     return result;
   }
 
