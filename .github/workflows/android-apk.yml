@@ -43,6 +43,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y librsvg2-bin
+          # Use the flat MAVO artwork for all Android launcher densities.
+          # Remove Flutter's generated adaptive icon so Android uses these PNGs consistently.
+          rm -rf mobile/yuku_app/android/app/src/main/res/mipmap-anydpi-v26
           for spec in "mdpi 48" "hdpi 72" "xhdpi 96" "xxhdpi 144" "xxxhdpi 192"; do
             set -- $spec
             density="$1"
