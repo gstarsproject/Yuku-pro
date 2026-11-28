@@ -26,7 +26,7 @@ Arah produk tetap satu ekosistem; bukan marketplace saja.
 - [x] Perbaiki matcher route Follow yang sempat gagal TypeScript; Worker CI dan Backend CI lulus pada commit `fe53f0ead914d43eba8606b3edd7972f3787899b`.
 - [ ] Tunggu hasil GitHub CI Backend, Flutter, dan Worker untuk integrasi profil dari feed pada commit `6d2a2af98c008fe290b507f00bed935527a3dd88`.
 - [x] Verifikasi database branch `mavo-test`: tabel `Follow` tersedia dengan kolom `id`, `followerId`, `followingId`, `createdAt`.
-- [ ] Uji Unfollow lintas akun dan pastikan jumlah pengikut konsisten; pengujian hilangnya postingan setelah refresh menunggu APK terbaru.
+- [ ] Uji Unfollow lintas akun dan pastikan jumlah pengikut konsisten; status Follow berhasil dikonfirmasi pengguna pada 2026-11-28, tetapi Unfollow dan hitungan setelah refresh masih menunggu.
 - [x] Uji FOLLOWERS lintas akun: setelah akun kedua mengikuti akun pertama, postingan FOLLOWERS muncul di Home akun kedua.
 - [x] Perbaiki widget test Inbox agar dirender di dalam Scaffold seperti struktur aplikasi sebenarnya.
 - [x] GitHub CI pada commit `69b8aafca472b451ac48c369c3a612848ad2f308`: Backend CI PASS, Flutter Mobile CI PASS, Cloudflare Worker CI PASS.
@@ -676,3 +676,10 @@ Status yang dipakai:
 - Jangan meminta pengguna menginstal APK untuk setiap perubahan kecil; kumpulkan perubahan mobile menjadi batch APK yang layak diuji.
 - Jangan menyatakan fitur selesai hanya berdasarkan source code, CI, atau deployment saja; wajib ada tes runtime sesuai fiturnya.
 - Setiap sesi kerja harus memperbarui bagian status teknis dan checklist di dokumen ini agar keputusan/progres tidak tercecer.
+
+
+## Catatan pengujian perangkat — 2026-11-28
+- [x] Pengguna mengonfirmasi pencarian akun dan aksi Follow berhasil pada aplikasi Android yang sedang diuji.
+- [x] Pengguna mengonfirmasi tombol Follow berubah menjadi Following.
+- [ ] Lanjutkan uji Unfollow, jumlah Followers/Following, dan persistensi status setelah aplikasi ditutup lalu dibuka kembali.
+- Catatan: ini adalah konfirmasi pengguna atas hasil UI/runtime; belum dianggap bukti seluruh skenario Follow/Unfollow dua akun telah lulus.
