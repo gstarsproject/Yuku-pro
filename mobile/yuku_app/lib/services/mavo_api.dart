@@ -174,6 +174,67 @@ class MavoApi {
     return data['objectKey'] as String;
   }
 
+  static Future<List<Map<String, dynamic>>> categories() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/v1/categories'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 15));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  static Future<List<Map<String, dynamic>>> providerServices() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/v1/provider/services'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    return (body['data'] as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> createProviderService({
+    required String categoryId,
+    required String title,
+    required String description,
+    required String mode,
+    required int priceAmount,
+    required String priceUnit,
+    int? durationMinutes,
+    String? city,
+    String? province,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/v1/provider/services'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'categoryId': categoryId,
+        'title': title.trim(),
+        'description': description.trim(),
+        'mode': mode,
+        'priceAmount': priceAmount,
+        'priceUnit': priceUnit,
+        'durationMinutes': durationMinutes,
+        'city': city?.trim(),
+        'province': province?.trim(),
+      }),
+    ).timeout(const Duration(seconds: 25));
+    final body = await _decode(response);
+    return Map<String, dynamic>.from(body['data'] as Map);
+  }
+
+  static Future<void> setProviderServicePublished(String serviceId, bool published) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/v1/provider/services/$serviceId'),
+      headers: await _headers(),
+      body: jsonEncode({'isPublished': published}),
+    ).timeout(const Duration(seconds: 20));
+    await _decode(response);
+  }
+
   static Future<Map<String, dynamic>> providerMe() async {
     final response = await http.get(
       Uri.parse('$baseUrl/api/v1/provider/me'),
