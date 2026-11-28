@@ -31,6 +31,7 @@ export class AdminAuthGuard implements CanActivate {
     if (!token) throw new UnauthorizedException('Token tidak valid');
 
     const payload = this.authService.verifyAccessToken(token);
+    if (payload.role !== 'ADMIN') throw new UnauthorizedException('Akses khusus admin');
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || user.role !== 'ADMIN' || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Akun admin tidak aktif');
