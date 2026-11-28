@@ -1,13 +1,24 @@
-import { Body, Controller, Headers, Post, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
+import { AuthTokenPayload } from '../auth/auth.service';
+import { UserAuthGuard } from '../auth/user-auth.guard';
 import { PaymentService } from './payment.service';
+
+type AuthRequest = Request & { user: AuthTokenPayload };
+
 @Controller('payments')
 export class PaymentController {
   constructor(private readonly service: PaymentService) {}
+
+  @UseGuards(UserAuthGuard)
   @Post('checkout')
-  checkout(@Headers('x-demo-user-id') userId: string, @Body() body: { bookingId: string }) {
-    if (!userId) throw new BadRequestException('JWT authentication required.');
-    return this.service.createCheckout(userId, body.bookingId);
+  checkout(@Req() request: AuthRequest, @Body() body: { bookingId: string }) {
+    return this.service.createCheckout(request.user.sub, body.bookingId)
+      .then((data) => ({ success: true, data }));
   }
+
   @Post('webhook/midtrans')
-  webhook(@Body() payload: any) { return this.service.handleMidtransWebhook(payload); }
+  webhook(@Body() payload: any) {
+    return this.service.handleMidtransWebhook(payload);
+  }
 }
