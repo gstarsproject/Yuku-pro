@@ -458,3 +458,221 @@ Status awal tahap 1:
 - [x] Rechecked Neon TEST storage after deployment; no successful upload/object exists yet. No new storage log records in the last hour.
 - [ ] Await a fresh real-device upload attempt to determine whether 403 is resolved. If it persists, capture the exact failing stage and S3 response body/request ID from the app/Worker rather than guessing further.
 - Production remains untouched.
+
+
+---
+
+# MASTER ROADMAP MAVO — CATATAN UTAMA PRODUK & PENYELESAIAN
+Terakhir diperbarui: 2026-11-28
+Status dokumen: roadmap induk; tahap dikerjakan berurutan, tidak menghapus ruang lingkup fitur yang telah disepakati.
+
+## 1. Visi dan ruang lingkup produk
+MAVO adalah satu aplikasi dan satu ekosistem yang menggabungkan:
+1. Social Media — pengguna membuat dan menemukan konten serta membangun komunitas.
+2. Chat — komunikasi pribadi dan komunitas.
+3. MAVO LIVE — siaran langsung, interaksi penonton, hadiah virtual, dan pendapatan kreator.
+4. Global Marketplace — pemesanan layanan melalui tiga pilar FRIEND, EXPERIENCE, dan PRO.
+
+Keempat pilar tersebut tetap berada dalam satu aplikasi, satu identitas pengguna, satu sistem notifikasi, dan satu fondasi akun. Jangan mengubah MAVO menjadi marketplace saja atau menghilangkan Social, LIVE, maupun Chat.
+
+## 2. Navigasi dan pengalaman pengguna
+Navigasi utama aplikasi:
+- Home: feed, Stories, pencarian, rekomendasi, dan akses LIVE.
+- Explore: penemuan konten, kreator, penyedia, dan layanan berdasarkan FRIEND / EXPERIENCE / PRO.
+- Create: membuat post, Story, dan nantinya memulai LIVE.
+- Inbox: percakapan, pesan, dan notifikasi.
+- Profile: profil pengguna/kreator/penyedia, postingan, pengikut, layanan, pengaturan, dan keamanan akun.
+
+Arah visual: premium, bersih, modern, dominan biru-putih dengan aksen oranye yang terukur. Palet kerja: #2563D9, #F28A36, #172B4D, #F5F8FC, #1B2A41, #718096, #EAF2FF, #FFF3E8. Tampilan harus konsisten, responsif, aksesibel, dan memiliki loading, empty, error, retry, serta success state yang jelas.
+
+## 3. Peran dan hak akses
+- CUSTOMER: menjelajah, membuat konten, chat, mengikuti akun, membeli/memesan layanan, memberi ulasan, dan mengelola akun.
+- PROVIDER: seluruh kemampuan customer ditambah onboarding penyedia, verifikasi, membuat/mengelola layanan, jadwal, menerima/menolak booking, menyelesaikan layanan, dan melihat saldo/pendapatan.
+- ADMIN: mengelola operasional sesuai izin, moderasi laporan, dan penanganan kasus yang diberikan.
+- SUPERADMIN: hak administratif tertinggi, mengelola akun Admin, hak akses, konfigurasi, audit log, dan kontrol operasional kritis.
+
+Dashboard Admin dan Superadmin menggunakan satu halaman login/dashboard bersama; menu dan aksi dibatasi menurut role. Pemeriksaan role wajib di backend/API, bukan hanya menyembunyikan menu di frontend. Akun Superadmin pertama dibuat melalui proses bootstrap satu kali yang aman; setelah itu Superadmin membuat akun Admin. Tidak boleh ada password/token bootstrap di source code, APK, atau repository.
+
+## 4. Roadmap fitur berdasarkan tahap
+
+### Tahap 0 — Fondasi, stabilitas, dan infrastruktur
+- [x] Fondasi aplikasi Flutter, backend API, autentikasi, dan shell navigasi.
+- [x] Registrasi/login, penyimpanan token aman di perangkat, pemulihan sesi, dan logout.
+- [x] Database schema/migrations dikelola melalui branch database TEST.
+- [x] CI terpisah untuk Backend, Worker, Admin, dan Flutter.
+- [x] Environment Preview terpisah dari Production.
+- [ ] Selesaikan audit konfigurasi environment, CORS domain resmi, secret management, dan health/monitoring sebelum rilis.
+- [ ] Siapkan backup dan prosedur pemulihan database/storage.
+- [ ] Pastikan seluruh endpoint penting memiliki validasi input, otorisasi server, rate limit, dan logging aman.
+
+### Tahap 1 — Social Media inti dan stabilisasi aplikasi
+- [x] Profil pengguna, edit nama/bio, dan alur avatar.
+- [x] Follow/Unfollow dan data relasi followers/following.
+- [x] Post dan feed dengan audience PUBLIC / FOLLOWERS / PRIVATE.
+- [x] Like/Unlike dan komentar.
+- [x] Story dengan masa aktif 24 jam dan audience.
+- [x] Composer media foto/video, feed media, dan Story media pada sisi aplikasi/source.
+- [x] Pencarian pengguna dan navigasi ke profil kreator.
+- [x] Galeri postingan pada profil dan filter audience di server.
+- [ ] Selesaikan konfigurasi kredensial Object Storage khusus Preview dan verifikasi upload/download end-to-end; jangan menganggap source UI berarti penyimpanan media sudah aktif.
+- [ ] Uji dua akun/perangkat untuk registrasi, login, profil, avatar, follow/unfollow, feed, audience, like, komentar, Story, upload, dan refresh.
+- [ ] Perbaiki seluruh bug runtime yang ditemukan sebelum menambah batch fitur besar.
+
+### Tahap 2 — Social Media lanjutan
+- [ ] Edit dan hapus post milik sendiri dengan audit/validasi kepemilikan.
+- [ ] Share post/profil dengan deep link dan aturan privasi.
+- [ ] Hashtag, pencarian konten, topik, trending, dan rekomendasi feed.
+- [ ] Interaksi Story: reply, reaction, daftar viewers, dan kontrol privasi.
+- [ ] Galeri profil lebih lengkap: tab post, media, dan konten yang relevan.
+- [ ] Moderasi konten, blokir kata/tautan berbahaya, dan kontrol komentar.
+- [ ] Feed For You/Following/Explore memakai aturan ranking dan filter yang nyata; jangan tampilkan tab demo seolah-olah aktif.
+
+### Tahap 3 — Chat dan komunikasi
+- [x] Chat pribadi 1:1, daftar percakapan, kirim/baca pesan, status read, dan notifikasi in-app.
+- [x] Aturan mutual-follow diterapkan di server untuk membuat/membaca/mengirim chat; Unfollow memblokir akses sesuai kebijakan yang tercatat.
+- [x] Tombol Pesan pada profil kreator dihubungkan ke alur chat.
+- [ ] Uji dua akun/perangkat: mutual-follow, create conversation, kirim pesan, unread/read, refresh, dan Unfollow.
+- [ ] Lampiran foto/video/file dengan pemeriksaan MIME, ukuran, akses, dan URL privat.
+- [ ] Voice note dan pemutaran audio.
+- [ ] Group chat, anggota, admin grup, undangan, keluar, dan pelaporan.
+- [ ] Typing indicator, online/presence, last seen dengan kontrol privasi.
+- [ ] Push notification OS (FCM/APNs) dan pengaturan notifikasi.
+- [ ] Panggilan suara/video, izin perangkat, koneksi, fallback, dan perlindungan penyalahgunaan.
+
+### Tahap 4 — MAVO LIVE
+- [ ] Infrastruktur streaming real-time dan pemilihan vendor/protokol setelah evaluasi biaya, kualitas, skala, dan wilayah.
+- [ ] Mulai/akhiri LIVE, judul/kategori, cover, status, dan hak akses host.
+- [ ] Viewer join/leave, jumlah penonton, live chat, mute/block/report.
+- [ ] Virtual gifts, katalog gift, animasi, dan pencatatan transaksi gift.
+- [ ] Battle/PK, skor, timer, dan aturan kemenangan.
+- [ ] Multi-guest/co-host dengan izin host dan kontrol moderator.
+- [ ] Moderator LIVE, mute, kick, ban, filter kata, dan pelaporan.
+- [ ] Riwayat LIVE, replay bila didukung, statistik, ranking, dan discovery LIVE.
+- [ ] Creator wallet, pendapatan gift, biaya/komisi, rekonsiliasi, dan withdrawal.
+- [ ] Uji jaringan buruk, reconnect, kualitas audio/video, beban, abuse, serta moderasi.
+Catatan: LIVE belum dinyatakan tersedia sampai streaming real-time dan seluruh alur diuji end-to-end.
+
+### Tahap 5 — Marketplace FRIEND / EXPERIENCE / PRO
+Fondasi umum:
+- [ ] Onboarding provider, profil penyedia, verifikasi, status aktif, dan kelengkapan data.
+- [ ] Buat/edit/nonaktifkan layanan, foto/portofolio, deskripsi, kategori, lokasi, harga, durasi, kapasitas, dan syarat.
+- [ ] Ketersediaan kalender/jadwal, zona waktu, blackout date, kapasitas, dan konflik jadwal.
+- [ ] Detail layanan, pencarian/filter/sort, lokasi, harga, rating, dan profil provider.
+- [ ] Booking flow, ringkasan harga, syarat, persetujuan, status, pembatalan, reschedule, dan notifikasi.
+- [ ] Riwayat pesanan customer/provider, bukti layanan selesai, ulasan, rating, dispute, dan dukungan.
+
+Pilar FRIEND:
+- [ ] Menemukan teman/pendamping aktivitas atau perjalanan.
+- [ ] Profil dan preferensi layanan, lokasi, jadwal, durasi, batasan, serta harga.
+- [ ] Request/approval dan komunikasi sesuai aturan keselamatan.
+- [ ] Check-in/konfirmasi penyelesaian dan mekanisme pelaporan keselamatan.
+
+Pilar EXPERIENCE:
+- [ ] Aktivitas, tur, perjalanan, kelas, hiburan, dan pengalaman lokal/global.
+- [ ] Lokasi, tanggal/jam, kapasitas, kuota, peserta, syarat, dan pembatalan.
+- [ ] Booking per slot/kuota dan konfirmasi penyedia.
+- [ ] Informasi meeting point, instruksi peserta, dan status kehadiran.
+
+Pilar PRO:
+- [ ] Jasa profesional, freelancer, konsultan, ahli, dan layanan berbasis proyek/sesi.
+- [ ] Portofolio, keahlian, pengalaman, verifikasi, paket, harga, dan deliverables.
+- [ ] Booking sesi atau request penawaran/proposal.
+- [ ] Persetujuan ruang lingkup, milestone bila relevan, serah terima, dan review.
+
+Aturan booking yang sudah dipilih:
+- Mode booking mendukung INSTANT dan REQUEST.
+- Mode pelaksanaan layanan mendukung ONLINE, OFFLINE, dan BOTH.
+- Jangan menganggap booking/payment siap hanya karena model database tersedia; seluruh endpoint, state transition, UI, dan uji transaksi harus selesai.
+
+### Tahap 6 — Wallet, pembayaran, komisi, refund, dan payout
+- [ ] Wallet customer/provider dan saldo yang dapat dibedakan dari saldo tertahan/pending.
+- [ ] Ledger double-entry atau model ledger yang dapat diaudit; setiap perubahan saldo harus berasal dari transaksi tercatat.
+- [ ] Integrasi payment gateway melalui sandbox terlebih dahulu.
+- [ ] Verifikasi signature webhook, idempotency, replay protection, reconciliation, dan penanganan callback terlambat/ganda.
+- [ ] Harga, biaya platform, pajak/biaya lain jika berlaku, total bayar, dan bukti pembayaran transparan.
+- [ ] CommissionRule per kategori/pilar; persentase/nilai final masih harus ditetapkan, jangan mengarang angka.
+- [ ] Payout provider dilakukan setelah layanan selesai dan syarat penyelesaian terpenuhi.
+- [ ] Refund penuh/parsial, pembatalan, no-show, dispute, chargeback, dan proses eskalasi.
+- [ ] Payout request, review, status, rekening tujuan, verifikasi pemilik, limit, dan audit.
+- [ ] Laporan transaksi, komisi, saldo tertahan, payout, refund, dan rekonsiliasi.
+- [ ] Uji semua skenario menggunakan sandbox/test money; jangan memakai uang sungguhan sebelum persetujuan dan audit.
+
+### Tahap 7 — Keamanan, kepercayaan, dan operasional
+- [x] Report akun/post dan block user pada API; enforcement akses diterapkan pada sejumlah alur sosial/chat/media.
+- [x] Dashboard Safety Reports dan update status laporan.
+- [x] Admin/Superadmin role model, Admin Management, dan Audit Log telah dibuat pada branch pengembangan.
+- [ ] Selesaikan bootstrap Superadmin secara aman pada Preview; secret bootstrap belum terpasang dan akun pertama belum dibuat.
+- [ ] Uji otorisasi semua endpoint Admin/Superadmin dengan token role yang berbeda.
+- [ ] Moderation queue lengkap, bukti, catatan tindakan, alasan, riwayat, banding, dan SLA.
+- [ ] Verifikasi email/telepon/identitas/provider sesuai tingkat risiko dan hukum yang berlaku.
+- [ ] Anti-spam, deteksi akun palsu/penipuan, rate limits, device/session management, dan suspicious activity.
+- [ ] Pengaturan privasi: audience, siapa dapat follow/chat/lihat Story, blokir, mute, dan kontrol data.
+- [ ] Kebijakan pelaporan, keselamatan pertemuan offline, perlindungan pengguna, dan jalur bantuan.
+- [ ] Audit keamanan: auth/session, IDOR, injection, upload, storage access, webhook, secrets, CORS, logging PII, dan dependency vulnerabilities.
+
+### Tahap 8 — AI, pertumbuhan, dan monetisasi
+- [ ] AI discovery/rekomendasi konten, kreator, provider, dan pengalaman dengan kontrol pengguna.
+- [ ] AI translation untuk komunikasi lintas bahasa; sediakan cara melihat teks asli.
+- [ ] AI safety assistance/moderation dengan human review untuk keputusan berdampak tinggi.
+- [ ] Reward/loyalty/referral dengan aturan anti-fraud dan ledger yang jelas.
+- [ ] Ads/sponsored placement dengan label jelas, kontrol relevansi, dan pengukuran.
+- [ ] Paket premium/berlangganan dan benefit yang terdefinisi.
+- [ ] Analytics funnel, retention, engagement, conversion, provider performance, dan monetisasi.
+Catatan: fitur AI/iklan/premium dikerjakan setelah fondasi sosial, chat, LIVE, marketplace, dan transaksi stabil.
+
+### Tahap 9 — QA, kesiapan, dan rilis
+- [ ] Test plan per role dan per modul; happy path, negative path, edge case, permission, dan abuse.
+- [ ] Regression test dua akun dan dua perangkat Android.
+- [ ] Uji jaringan lambat/putus, retry, duplikasi request, session expiry, dan upload gagal.
+- [ ] Uji performa feed, pencarian, chat, upload, LIVE, dan marketplace.
+- [ ] Uji keamanan dan privasi; pastikan tidak ada kebocoran konten PRIVATE/FOLLOWERS.
+- [ ] Uji payment sandbox, webhook, refund, dispute, ledger, dan payout.
+- [ ] Monitoring error, logs terstruktur tanpa secret/PII berlebihan, alert, backup, dan disaster recovery.
+- [ ] Review kebijakan privasi, syarat layanan, komunitas, refund, provider, dan konten.
+- [ ] Siapkan release candidate APK, versioning, signing key aman, changelog, dan rollback plan.
+- [ ] Rilis bertahap/staged rollout setelah persetujuan eksplisit pengguna.
+- [ ] Production migration/deploy hanya setelah persetujuan eksplisit pengguna.
+
+## 5. Status teknis terkini — 2026-11-28
+- PR kerja: #1, branch `feature/mavo-user-auth`; tetap satu PR, tidak membuat PR bertumpuk.
+- Database yang digunakan untuk pengembangan: Neon TEST branch `mavo-test`; Production tidak disentuh.
+- Preview Worker terbaru pada commit `e7b51409838a2d50b89d9615fadaeb7b7edd3b54` telah lolos Worker CI dan deploy Preview.
+- Backend CI dan Admin CI untuk commit tersebut PASS.
+- Flutter Mobile CI untuk commit tersebut masih berjalan pada pemeriksaan terakhir; APK baru belum dinyatakan siap dari commit ini.
+- APK preview sebelumnya telah berhasil dipasang dan digunakan untuk registrasi, masuk Home, dan pengeditan profil; pengujian fitur lanjutan harus memakai build yang sesuai dengan commit terbaru.
+- Report post telah diuji dan tercatat pada database TEST; status awal OPEN.
+- Admin dashboard satu login dengan menu berbasis role sudah ada di source. Admin Management dan Audit Log dibatasi Superadmin di UI dan API.
+- Akun Superadmin pertama belum ada di database TEST. Secret `ADMIN_BOOTSTRAP_TOKEN` belum dipasang pada Worker Preview; pembuatan akun belum dapat diuji.
+- Object Storage memakai bucket privat Neon. Secret akses storage tersedia pada konfigurasi Worker yang tercatat, tetapi upload media harus tetap diverifikasi runtime sebelum dinyatakan selesai.
+- Booking, payment gateway, ledger, commission calculation, refund/dispute, provider payout, dan LIVE real-time belum selesai end-to-end.
+
+## 6. Gerbang kelulusan setiap tahap
+Satu fitur hanya boleh diberi status SELESAI jika semua ini terpenuhi:
+1. Kebutuhan dan acceptance criteria tercatat.
+2. Backend/database/API dan UI sudah terhubung; tidak ada tombol demo yang menyamar sebagai fitur aktif.
+3. Pemeriksaan role, ownership, privacy, validasi, dan error handling dilakukan di server.
+4. CI terkait lulus (Backend, Worker, Admin, Flutter sesuai area perubahan).
+5. Preview deployment diverifikasi pada commit yang sama.
+6. Tes runtime berhasil pada APK/perangkat atau browser yang sesuai; gunakan minimal dua akun untuk fitur sosial/chat/marketplace.
+7. Tidak ada bug blocker/critical yang belum diselesaikan.
+8. Catatan progres diperbarui dengan commit, hasil CI, hasil runtime, batasan, dan pekerjaan tersisa.
+
+Status yang dipakai:
+- BELUM DIMULAI
+- DALAM PENGERJAAN
+- MENUNGGU KONFIGURASI
+- MENUNGGU CI
+- MENUNGGU UJI RUNTIME
+- LULUS PREVIEW
+- SELESAI TERUJI
+- DITAHAN / BLOCKED
+
+## 7. Aturan kerja dan batas persetujuan
+- Pertahankan seluruh visi dan fitur MAVO; jangan menghapus fitur untuk menyederhanakan roadmap.
+- Kerjakan bertahap; satu tahap diuji sebelum berpindah ke tahap besar berikutnya.
+- Semua perubahan kode berada di branch `feature/mavo-user-auth` dan PR #1 sampai pengguna mengubah instruksi.
+- Jangan membuat PR baru/bertumpuk, jangan merge ke `main`, jangan mengubah Production, dan jangan melakukan production deploy/migration tanpa persetujuan eksplisit.
+- Gunakan database TEST dan Preview untuk pengembangan/pengujian.
+- Jangan meminta pengguna menginstal APK untuk setiap perubahan kecil; kumpulkan perubahan mobile menjadi batch APK yang layak diuji.
+- Jangan menyatakan fitur selesai hanya berdasarkan source code, CI, atau deployment saja; wajib ada tes runtime sesuai fiturnya.
+- Setiap sesi kerja harus memperbarui bagian status teknis dan checklist di dokumen ini agar keputusan/progres tidak tercecer.
