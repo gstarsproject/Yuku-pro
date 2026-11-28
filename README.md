@@ -1,6 +1,6 @@
-# YUKU — All-in-One Project v1
+# MAVO — All-in-One Project v1
 
-Ini adalah satu paket utama untuk pengembangan YUKU. Gunakan folder `YUKU/` sebagai
+Ini adalah satu paket utama untuk pengembangan MAVO. Gunakan folder `MAVO/` sebagai
 satu-satunya root proyek di laptop.
 
 ## Keputusan produk yang sudah ditetapkan
@@ -15,7 +15,7 @@ satu-satunya root proyek di laptop.
 - Pembayaran: gateway; integrasi yang ada masih sandbox/starter.
 
 ## Isi utama
-- `mobile/yuku_app/` — Flutter starter.
+- `mobile/MAVO_app/` — Flutter starter.
 - `backend/` — NestJS API, booking, pembayaran Midtrans sandbox, Prisma.
 - `admin/` — Next.js admin starter.
 - `database/` — skema dan seed awal.
@@ -32,7 +32,7 @@ adalah `backend/prisma/schema.prisma` dan kode di `backend/src/`.
 ## Menjalankan di Windows
 Persyaratan: Git, VS Code, Node.js LTS, Flutter SDK, Android Studio, Docker Desktop.
 
-1. Buka PowerShell pada folder `YUKU/`.
+1. Buka PowerShell pada folder `MAVO/`.
 2. Jalankan database:
    ```powershell
    docker compose up -d db
@@ -55,7 +55,7 @@ Persyaratan: Git, VS Code, Node.js LTS, Flutter SDK, Android Studio, Docker Desk
    ```
 5. Mobile (terminal baru):
    ```powershell
-   cd mobile/yuku_app
+   cd mobile/MAVO_app
    flutter pub get
    flutter run
    ```

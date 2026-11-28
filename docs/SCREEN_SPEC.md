@@ -1,4 +1,4 @@
-# YUKU UI/UX Screen Specification v1.0
+# MAVO UI/UX Screen Specification v1.0
 
 ## Global navigation
 Mobile bottom navigation:
@@ -13,7 +13,7 @@ Provider Center is entered from Profile and can also be switched to from the acc
 ## Customer screens
 
 ### A. Onboarding and account
-- Splash: YUKU logo, slogan, loading state.
+- Splash: MAVO logo, slogan, loading state.
 - Intro: explain Friend, Experience, Pro; skip and continue.
 - Location permission explainer: request only when user uses nearby search; allow manual city selection.
 - Sign up: phone/email, password, terms and privacy consent.

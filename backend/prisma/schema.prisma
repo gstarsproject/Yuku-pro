@@ -11,6 +11,7 @@ enum UserRole {
   CUSTOMER
   PROVIDER
   ADMIN
+  SUPERADMIN
 }
 enum UserStatus {
   ACTIVE
@@ -89,6 +90,22 @@ model User {
   reviews        Review[]   @relation("ReviewAuthor")
   documents      VerificationDocument[]
   messages       Message[]
+  conversationParticipants ConversationParticipant[]
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsSent Notification[] @relation("NotificationActor")
+  posts          Post[]
+  postLikes      PostLike[]
+  postComments   PostComment[]
+  stories        Story[]
+  mediaAssets    MediaAsset[]
+  sessions       UserSession[]
+  following      Follow[] @relation("UserFollowing")
+  followers      Follow[] @relation("UserFollowers")
+  blocksMade     UserBlock[] @relation("UserBlocksMade")
+  blocksReceived UserBlock[] @relation("UserBlocksReceived")
+  reportsSubmitted ContentReport[] @relation("ReportsSubmitted")
+  reportsAgainst ContentReport[] @relation("ReportsAgainst")
+  adminAuditLogs AdminAuditLog[]
 }
 
 model Profile {
@@ -247,8 +264,10 @@ model VerificationDocument {
 model Conversation {
   id         String @id @default(uuid()) @db.Uuid
   bookingId  String? @db.Uuid
+  directKey  String? @unique
   createdAt  DateTime @default(now())
   messages   Message[]
+  participants ConversationParticipant[]
 }
 
 model Message {
@@ -257,9 +276,37 @@ model Message {
   senderId       String @db.Uuid
   body           String @db.VarChar(5000)
   createdAt      DateTime @default(now())
+  readAt         DateTime?
   conversation  Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User @relation(fields: [senderId], references: [id])
   @@index([conversationId, createdAt])
+}
+
+
+model ConversationParticipant {
+  id             String @id @default(uuid()) @db.Uuid
+  conversationId String @db.Uuid
+  userId         String @db.Uuid
+  joinedAt       DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([conversationId, userId])
+  @@index([userId, joinedAt])
+}
+
+model Notification {
+  id          String @id @default(uuid()) @db.Uuid
+  recipientId String @db.Uuid
+  actorId     String? @db.Uuid
+  type        String
+  entityId    String? @db.Uuid
+  message     String @db.VarChar(500)
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  recipient   User @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor       User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  @@index([recipientId, createdAt])
+  @@index([recipientId, readAt])
 }
 
 model Dispute {
@@ -317,4 +364,151 @@ model PaymentWebhookEvent {
   processedAt    DateTime?
   createdAt      DateTime @default(now())
   @@index([gatewayOrderId, createdAt])
+}
+
+
+model Post {
+  id        String   @id @default(uuid()) @db.Uuid
+  authorId  String   @db.Uuid
+  content   String   @db.VarChar(2000)
+  audience  String   @default("PUBLIC") // PUBLIC, FOLLOWERS, PRIVATE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     PostLike[]
+  comments  PostComment[]
+  media     MediaAsset[]
+  reports   ContentReport[]
+  locationName String? @db.VarChar(200)
+  latitude Float?
+  longitude Float?
+
+  @@index([createdAt])
+  @@index([authorId, createdAt])
+}
+model Follow {
+  id          String   @id @default(uuid()) @db.Uuid
+  followerId  String   @db.Uuid
+  followingId String   @db.Uuid
+  createdAt   DateTime @default(now())
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId, createdAt])
+  @@index([followingId, createdAt])
+}
+
+model UserBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  blockerId String   @db.Uuid
+  blockedId String   @db.Uuid
+  createdAt DateTime @default(now())
+  blocker   User     @relation("UserBlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("UserBlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+  @@unique([blockerId, blockedId])
+  @@index([blockedId, createdAt])
+}
+
+model ContentReport {
+  id           String   @id @default(uuid()) @db.Uuid
+  reporterId   String   @db.Uuid
+  targetUserId String   @db.Uuid
+  postId       String?  @db.Uuid
+  reportType   String   @default("USER") @db.VarChar(20)
+  reason       String   @db.VarChar(80)
+  details      String?  @db.VarChar(1000)
+  status       String   @default("OPEN") @db.VarChar(20)
+  createdAt    DateTime @default(now())
+  reporter     User     @relation("ReportsSubmitted", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser   User     @relation("ReportsAgainst", fields: [targetUserId], references: [id], onDelete: Cascade)
+  post         Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  @@index([status, createdAt])
+  @@index([targetUserId, createdAt])
+  @@index([postId, createdAt])
+}
+
+model UserSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+}
+
+model PostLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model PostComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @db.Uuid
+  userId    String   @db.Uuid
+  content   String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Story {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  content   String   @db.VarChar(500)
+  audience  String   @default("PUBLIC") // PUBLIC, FOLLOWERS
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media     MediaAsset[]
+  locationName String? @db.VarChar(200)
+  latitude Float?
+  longitude Float?
+  @@index([expiresAt])
+  @@index([userId, createdAt])
+}
+
+
+model MediaAsset {
+  id           String   @id @default(uuid()) @db.Uuid
+  ownerId      String   @db.Uuid
+  postId       String?  @db.Uuid
+  storyId      String?  @db.Uuid
+  mediaType    String   // IMAGE or VIDEO
+  objectKey    String   @unique
+  contentType  String
+  byteSize     BigInt
+  durationMs   Int?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  post         Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  story        Story?   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  @@index([postId, sortOrder])
+  @@index([storyId, sortOrder])
+  @@index([ownerId, createdAt])
+}
+
+
+model AdminAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String   @db.Uuid
+  action      String   @db.VarChar(80)
+  targetType  String   @db.VarChar(80)
+  targetId    String?  @db.VarChar(100)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId])
 }

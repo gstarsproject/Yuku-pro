@@ -1,4 +1,4 @@
-# YUKU Transactions v1 — keputusan bisnis
+# MAVO Transactions v1 — keputusan bisnis
 
 - Komisi berbeda per kategori; `CommissionRule.rateBps` memakai basis points (1000 = 10%).
 - Pencairan provider setelah layanan selesai. Penyelesaian booking membuat payout berstatus READY; transfer dana aktual masih membutuhkan integrasi disbursement gateway.

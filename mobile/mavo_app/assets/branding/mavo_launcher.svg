@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17152C"/><stop offset="1" stop-color="#08051B"/></linearGradient>
+ <linearGradient id="m" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#27C7D9"/><stop offset=".28" stop-color="#7557FF"/><stop offset=".62" stop-color="#FF3FA4"/><stop offset="1" stop-color="#FFB45E"/></linearGradient>
+ <linearGradient id="orbit" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#7557FF"/><stop offset=".48" stop-color="#FF4DA6"/><stop offset="1" stop-color="#27C7D9"/></linearGradient>
+ <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="20" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+<path d="M115 145 Q290 15 500 80" fill="none" stroke="#7557FF" stroke-width="26" opacity=".5" stroke-linecap="round"/>
+<path d="M215 735 L300 330 Q315 250 385 290 L512 405 L650 285 Q720 225 755 320 L850 730 Q870 815 790 835 Q720 850 695 770 L635 555 L535 650 Q505 680 475 650 L375 555 L335 770 Q320 850 245 830 Q180 810 215 735Z" fill="url(#m)" filter="url(#glow)"/>
+<path d="M92 700 C245 900 710 845 925 360" fill="none" stroke="url(#orbit)" stroke-width="34" stroke-linecap="round" opacity=".95"/>
+<path d="M470 440 Q455 430 455 455 L455 575 Q455 600 478 588 L585 530 Q610 515 585 500Z" fill="#fff"/>
+</svg>

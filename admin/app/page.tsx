@@ -3,13 +3,14 @@
 import { FormEvent, useEffect, useState } from 'react';
 
 type Overview = {
+  role: 'ADMIN' | 'SUPERADMIN';
   totalUsers: number;
   activeProviders: number;
   bookingsToday: number;
   openDisputes: number;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || '';
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://feature-mavo-user-auth-mavo-preview.gstars-business.workers.dev/api/v1').replace(/\/$/, '');
 
 export default function DashboardPage() {
   const [token, setToken] = useState('');
@@ -29,19 +30,23 @@ export default function DashboardPage() {
       cache: 'no-store',
     });
     if (response.status === 401) {
-      sessionStorage.removeItem('yuku_admin_token');
+      sessionStorage.removeItem('MAVO_admin_token');
       setToken('');
       setOverview(null);
       setError('Sesi berakhir. Silakan login kembali.');
       return;
     }
     if (!response.ok) throw new Error('Gagal mengambil data dashboard dari server.');
-    setOverview(await response.json());
+    const result = await response.json();
+    if (!result.success || !result.data) throw new Error(result.message || 'Respons dashboard tidak valid.');
+    if (!['ADMIN', 'SUPERADMIN'].includes(result.data.role)) throw new Error('Role akun tidak memiliki akses dashboard.');
+    sessionStorage.setItem('MAVO_admin_role', result.data.role);
+    setOverview(result.data);
     setError('');
   }
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('yuku_admin_token');
+    const saved = sessionStorage.getItem('MAVO_admin_token');
     if (saved) {
       setToken(saved);
       loadOverview(saved).catch((err: Error) => setError(err.message));
@@ -54,17 +59,18 @@ export default function DashboardPage() {
     setError('');
     try {
       if (!API_BASE) throw new Error('NEXT_PUBLIC_API_BASE_URL belum diatur di Cloudflare Pages.');
-      const response = await fetch(`${API_BASE}/auth/login`, {
+      const response = await fetch(`${API_BASE}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Email atau password tidak valid.');
-      sessionStorage.setItem('yuku_admin_token', result.accessToken);
-      setToken(result.accessToken);
+      if (!result.success || !result.data?.accessToken) throw new Error(result.message || 'Login admin gagal.');
+      sessionStorage.setItem('MAVO_admin_token', result.data.accessToken);
+      setToken(result.data.accessToken);
       setPassword('');
-      await loadOverview(result.accessToken);
+      await loadOverview(result.data.accessToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login gagal. Coba lagi.');
     } finally {
@@ -73,7 +79,9 @@ export default function DashboardPage() {
   }
 
   function logout() {
-    sessionStorage.removeItem('yuku_admin_token');
+    if (token) void fetch(`${API_BASE}/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
+    sessionStorage.removeItem('MAVO_admin_token');
+    sessionStorage.removeItem('MAVO_admin_role');
     setToken('');
     setOverview(null);
     setPassword('');
@@ -84,17 +92,17 @@ export default function DashboardPage() {
     return (
       <main className="login-wrap">
         <form className="login-card" onSubmit={handleLogin}>
-          <div className="brand login-brand">YUKU</div>
-          <p className="login-kicker">YUKU OPERATIONS</p>
+          <div className="brand login-brand">MAVO</div>
+          <p className="login-kicker">MAVO OPERATIONS</p>
           <h1>Admin Sign In</h1>
-          <p className="login-description">Masuk ke panel pengelolaan marketplace YUKU.</p>
+          <p className="login-description">Masuk ke panel pengelolaan marketplace MAVO.</p>
           <label htmlFor="email">Email admin</label>
           <input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <label htmlFor="password">Password</label>
           <input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           {error && <p className="error-message">{error}</p>}
           <button className="primary-button" type="submit" disabled={loading}>{loading ? 'Memproses…' : 'Masuk ke Dashboard'}</button>
-          <p className="login-footnote">Akses khusus administrator resmi YUKU.</p>
+          <p className="login-footnote">Akses khusus administrator resmi MAVO.</p>
         </form>
       </main>
     );
@@ -110,8 +118,8 @@ export default function DashboardPage() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">YUKU</div>
-        <div className="tagline">Yuk, Ketemu. · Admin</div>
+        <div className="brand">MAVO</div>
+        <div className="tagline">Yuk, Ketemu. · {overview.role === 'SUPERADMIN' ? 'Superadmin' : 'Admin'}</div>
         <nav className="nav">
           <a className="active" href="/">Overview</a>
           <a href="/users/">Users</a>
@@ -119,11 +127,13 @@ export default function DashboardPage() {
           <a href="/bookings/">Bookings</a>
           <a href="/payments/">Payments</a>
           <a href="/disputes/">Disputes</a>
+          <a href="/reports/">Safety reports</a>
+          {overview.role === 'SUPERADMIN' && <><a href="/admins/">Admin management</a><a href="/audit/">Audit log</a></>}
         </nav>
       </aside>
       <main>
         <div className="top">
-          <div><div className="eyebrow">YUKU OPERATIONS</div><h1>Business overview</h1></div>
+          <div><div className="eyebrow">MAVO OPERATIONS · {overview.role}</div><h1>Business overview</h1></div>
           <button className="logout-button" onClick={logout}>Keluar</button>
         </div>
         <section className="grid">
@@ -136,7 +146,7 @@ export default function DashboardPage() {
         </section>
         <section className="card" style={{ marginTop: 20 }}>
           <h2>Status dashboard</h2>
-          <p>Data ditarik langsung dari API YUKU. Waktu pembaruan: {new Date().toLocaleString('id-ID')}.</p>
+          <p>Data ditarik langsung dari API MAVO. Waktu pembaruan: {new Date().toLocaleString('id-ID')}.</p>
           {error && <p className="error-message">{error}</p>}
         </section>
       </main>

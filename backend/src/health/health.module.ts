@@ -4,7 +4,7 @@ import { Controller, Get, Module } from '@nestjs/common';
 class HealthController {
   @Get()
   getHealth() {
-    return { status: 'ok', service: 'yuku-api', version: '1.0.0' };
+    return { status: 'ok', service: 'MAVO-api', version: '1.0.0' };
   }
 }
 

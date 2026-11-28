@@ -1,4 +1,4 @@
-# YUKU API Specification v1.0
+# MAVO API Specification v1.0
 
 Base path: `/api/v1`  
 Format: JSON over HTTPS. Timestamps: ISO-8601 UTC. IDs: UUID.

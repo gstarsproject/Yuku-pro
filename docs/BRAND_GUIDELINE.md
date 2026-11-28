@@ -1,7 +1,7 @@
-# YUKU Brand Guideline v1.0
+# MAVO Brand Guideline v1.0
 
 ## Brand
-- Name: YUKU
+- Name: MAVO
 - Slogan: Yuk, Ketemu.
 - Category: Social & Professional Services Marketplace
 - Promise: Helping people find trusted people and book useful services with clarity and confidence.
@@ -9,10 +9,10 @@
 - Language at launch: Bahasa Indonesia
 
 ## Positioning
-YUKU brings three service pillars into one marketplace:
-1. YUKU Friend — paid social companionship for lawful activities such as conversation, meals, movies, study, sports, and public outings.
-2. YUKU Experience — local guides, trip planning, travel companions, photography experiences, and activities.
-3. YUKU Pro — skilled professional services such as tutoring, design, translation, photography, cleaning, and eligible care services.
+MAVO brings three service pillars into one marketplace:
+1. MAVO Friend — paid social companionship for lawful activities such as conversation, meals, movies, study, sports, and public outings.
+2. MAVO Experience — local guides, trip planning, travel companions, photography experiences, and activities.
+3. MAVO Pro — skilled professional services such as tutoring, design, translation, photography, cleaning, and eligible care services.
 
 ## Personality
 Warm, trustworthy, modern, inclusive, helpful, and professional. Avoid dating-app implications and avoid language suggesting sexual services.

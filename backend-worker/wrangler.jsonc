@@ -1,8 +1,9 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "yuku-pro",
+  "name": "mavo-pro",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-26",
+  "preview_urls": true,
   "compatibility_flags": [
     "nodejs_compat"
   ],
@@ -16,6 +17,19 @@
     "enabled": true,
     "traces": {
       "enabled": true
+    }
+  },
+  "previews": {
+    "hyperdrive": [
+      {
+        "binding": "HYPERDRIVE",
+        "id": "618629c1266146b5b4f898761552d004"
+      }
+    ],
+    "vars": {
+      "APP_ENV": "preview",
+      "AWS_ENDPOINT_URL_S3": "https://br-divine-shape-bi7a8pkw.storage.c-5.ap-southeast-1.aws.neon.tech",
+      "AWS_REGION": "ap-southeast-1"
     }
   }
 }

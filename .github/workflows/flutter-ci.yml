@@ -4,26 +4,48 @@ on:
   push:
     branches: [main]
     paths:
-      - "mobile/yuku_app/**"
+      - "mobile/mavo_app/**"
       - ".github/workflows/flutter-ci.yml"
   pull_request:
     branches: [main]
     paths:
-      - "mobile/yuku_app/**"
+      - "mobile/mavo_app/**"
       - ".github/workflows/flutter-ci.yml"
+
+concurrency:
+  group: flutter-mobile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
     defaults:
       run:
-        working-directory: mobile/yuku_app
+        working-directory: mobile/mavo_app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('mobile/mavo_app/**/gradle-wrapper.properties', 'mobile/mavo_app/**/build.gradle*', 'mobile/mavo_app/**/settings.gradle*') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      - name: Install SVG converter
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+      - name: Generate launcher icon source PNG
+        run: |
+          mkdir -p assets/branding
+          rsvg-convert -w 1024 -h 1024 assets/branding/mavo_launcher.svg -o assets/branding/mavo_launcher.png
       - name: Install Flutter dependencies
         run: flutter pub get
       - name: Analyze Flutter code
@@ -31,13 +53,42 @@ jobs:
       - name: Run Flutter tests
         run: flutter test
       - name: Generate Android platform files
-        run: flutter create --platforms=android --project-name yuku .
-      - name: Build optimized Android release APKs
-        run: flutter build apk --release --split-per-abi
+        run: flutter create --platforms=android --project-name mavo .
+      - name: Set MAVO Android app display name
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+          content = content.replace('android:label="MAVO"', 'android:label="MAVO"')
+          content = content.replace('android:label="mavo"', 'android:label="MAVO"')
+          if 'android:label="MAVO"' not in content:
+              content = content.replace("<application", '<application android:label="MAVO"', 1)
+          manifest.write_text(content)
+          if 'android:label="MAVO"' not in manifest.read_text():
+              raise SystemExit("MAVO app label was not set")
+          PY
+      - name: Generate MAVO Android launcher icons
+        run: dart run flutter_launcher_icons
+      - name: Ensure Android internet permission for release
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+          permission = '    <uses-permission android:name="android.permission.INTERNET" />'
+          if "android.permission.INTERNET" not in content:
+              content = content.replace("<application", permission + "\\n    <application", 1)
+              manifest.write_text(content)
+          if "android.permission.INTERNET" not in manifest.read_text():
+              raise SystemExit("INTERNET permission was not added to AndroidManifest.xml")
+          PY
+      - name: Build Samsung-compatible Android release APK
+        run: flutter build apk --release --target-platform android-arm64
       - name: Upload Samsung-compatible arm64 APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: yuku-android-arm64-release
-          path: mobile/yuku_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          name: mavo-android-arm64-preview
+          path: mobile/mavo_app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 7
