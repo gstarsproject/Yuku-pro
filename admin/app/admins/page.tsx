@@ -15,6 +15,7 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://feature-mavo-
 
 export default function AdminsPage() {
   const [token, setToken] = useState('');
+  const [role, setRole] = useState('');
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -37,6 +38,9 @@ export default function AdminsPage() {
     const saved = sessionStorage.getItem('MAVO_admin_token');
     if (saved) {
       setToken(saved);
+      const currentRole = sessionStorage.getItem('MAVO_admin_role') || 'ADMIN';
+      setRole(currentRole);
+      if (currentRole !== 'SUPERADMIN') { setError('Halaman ini hanya dapat diakses Superadmin.'); return; }
       load(saved).catch((err: Error) => setError(err.message));
     } else {
       setError('Login admin diperlukan. Kembali ke halaman Overview.');
@@ -87,6 +91,8 @@ export default function AdminsPage() {
       setLoading(false);
     }
   }
+
+  if (role && role !== 'SUPERADMIN') return <main className="login-wrap"><section className="login-card"><div className="brand login-brand">MAVO</div><h1>Akses khusus Superadmin</h1><p className="login-description">Akun Admin operasional tidak memiliki izin mengelola administrator.</p><a className="primary-button" href="/">Kembali ke dashboard</a></section></main>;
 
   return <div className="shell">
     <aside className="sidebar">
