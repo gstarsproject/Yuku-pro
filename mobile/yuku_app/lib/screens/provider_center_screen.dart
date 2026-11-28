@@ -70,7 +70,9 @@ class _ProviderCenterScreenState extends State<ProviderCenterScreen> {
       );
       if (!mounted) return;
       setState(() { _provider = data; _isProvider = true; _saving = false; });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pendaftaran provider berhasil. Silakan login ulang untuk memperbarui sesi akun.')));
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pendaftaran provider berhasil. Profil provider sudah aktif.')));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
