@@ -51,7 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             FilledButton(
               onPressed: busy ? null : () async {
                 if (email.text.trim().isEmpty || password.text.length < 10 || (register && name.text.trim().length < 2)) {
-                  refresh(() => error = 'Lengkapi data. Password minimal 8 karakter.');
+                  refresh(() => error = 'Lengkapi data. Password minimal 10 karakter.');
                   return;
                 }
                 refresh(() { busy = true; error = null; });
