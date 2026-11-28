@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Req, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Body, Controller, Param, Post, Req, UseGuards, ForbiddenException, Get, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { Request } from 'express';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './booking.dto';
@@ -10,6 +10,18 @@ type AuthRequest = Request & { user: AppUser };
 @UseGuards(UserAuthGuard)
 export class BookingController {
   constructor(private readonly service: BookingService) {}
+
+  @Get()
+  listMine(@Req() request: AuthRequest, @Query('limit', new DefaultValuePipe(30), ParseIntPipe) limit: number) {
+    if (request.user.role === 'ADMIN') throw new ForbiddenException('Gunakan endpoint admin.');
+    return this.service.listMine(request.user.sub, request.user.role, limit);
+  }
+
+  @Get(':id')
+  getMine(@Req() request: AuthRequest, @Param('id') id: string) {
+    if (request.user.role === 'ADMIN') throw new ForbiddenException('Gunakan endpoint admin.');
+    return this.service.getMine(request.user.sub, request.user.role, id);
+  }
 
   @Post()
   create(@Req() request: AuthRequest, @Body() dto: CreateBookingDto) {
