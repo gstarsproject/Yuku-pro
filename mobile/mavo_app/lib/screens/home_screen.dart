@@ -415,19 +415,6 @@ class _PostCardState extends State<_PostCard> {
   }
 
   @override
-  void didUpdateWidget(covariant _PostCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.post['id'] != widget.post['id'] ||
-        oldWidget.post['likedByMe'] != widget.post['likedByMe'] ||
-        oldWidget.post['likesCount'] != widget.post['likesCount'] ||
-        oldWidget.post['commentsCount'] != widget.post['commentsCount']) {
-      _liked = widget.post['likedByMe'] == true;
-      _likes = (widget.post['likesCount'] as num?)?.toInt() ?? 0;
-      _comments = (widget.post['commentsCount'] as num?)?.toInt() ?? 0;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final name = (widget.post['authorName'] ?? 'Pengguna MAVO').toString();
     final content = (widget.post['content'] ?? '').toString();
