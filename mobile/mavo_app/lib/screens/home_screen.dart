@@ -303,6 +303,30 @@ class _PostCardState extends State<_PostCard> {
     _comments = (widget.post['commentsCount'] as num?)?.toInt() ?? 0;
   }
 
+  @override
+  void didUpdateWidget(covariant _PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldId = (oldWidget.post['id'] ?? '').toString();
+    final newId = (widget.post['id'] ?? '').toString();
+    if (oldId != newId) {
+      _liked = widget.post['likedByMe'] == true;
+      _likes = (widget.post['likesCount'] as num?)?.toInt() ?? 0;
+      _comments = (widget.post['commentsCount'] as num?)?.toInt() ?? 0;
+      _busy = false;
+      return;
+    }
+    if (!_busy) {
+      final serverLiked = widget.post['likedByMe'] == true;
+      final serverLikes = (widget.post['likesCount'] as num?)?.toInt() ?? 0;
+      final serverComments = (widget.post['commentsCount'] as num?)?.toInt() ?? 0;
+      if (_liked != serverLiked || _likes != serverLikes || _comments != serverComments) {
+        _liked = serverLiked;
+        _likes = serverLikes;
+        _comments = serverComments;
+      }
+    }
+  }
+
   Future<void> _toggleLike() async {
     if (_busy) return;
     final previous = _liked;
