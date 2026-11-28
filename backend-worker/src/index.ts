@@ -1,5 +1,5 @@
 import { Client } from "pg";
-interface Env { HYPERDRIVE: Hyperdrive; }
+interface Env { HYPERDRIVE: Hyperdrive; BACKEND_API_URL?: string; }
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Content-Type": "application/json; charset=utf-8" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: cors });
 async function db<T>(env: Env, fn: (c: Client) => Promise<T>): Promise<T> {
@@ -10,6 +10,21 @@ export default {
  async fetch(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url), path = url.pathname;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  const backendRoute = /^\\/api\\/v1\\/(auth|bookings|provider\\/me)(\\/|$)/.test(path);
+  if (backendRoute) {
+   if (!env.BACKEND_API_URL) return json({ success: false, message: "Backend API belum dikonfigurasi" }, 503);
+   try {
+    const origin = env.BACKEND_API_URL.replace(/\\/$/, "");
+    const upstreamUrl = new URL(origin + path + url.search);
+    const upstream = await fetch(new Request(upstreamUrl.toString(), request));
+    const headers = new Headers(upstream.headers);
+    for (const [key, value] of Object.entries(cors)) headers.set(key, value);
+    return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers });
+   } catch (e) {
+    console.error("Backend proxy failed", e);
+    return json({ success: false, message: "Backend API tidak dapat dihubungi" }, 502);
+   }
+  }
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "yuku-api-worker", status: "ok" });
   if (path === "/health/db" || path === "/api/health/db") {
