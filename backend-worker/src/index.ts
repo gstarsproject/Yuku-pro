@@ -321,7 +321,7 @@ export default {
       const status = (url.searchParams.get("status") || "OPEN").toUpperCase();
       if (!["OPEN","REVIEWING","RESOLVED","DISMISSED","ALL"].includes(status)) return json({success:false,message:"Filter status tidak valid."},400);
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50),1),100);
-      const result = await c.query('SELECT r."id",r."reason",r."details",r."status",r."createdAt",reporter."id" AS "reporterId",rp."displayName" AS "reporterName",target."id" AS "targetUserId",tp."displayName" AS "targetName",target."email" AS "targetEmail" FROM "ContentReport" r JOIN "User" reporter ON reporter."id"=r."reporterId" LEFT JOIN "Profile" rp ON rp."userId"=reporter."id" JOIN "User" target ON target."id"=r."targetUserId" LEFT JOIN "Profile" tp ON tp."userId"=target."id" WHERE ($1=\'ALL\' OR r."status"=$1) ORDER BY r."createdAt" DESC LIMIT $2',[status,limit]);
+      const result = await c.query('SELECT r."id",r."reportType",r."postId",r."reason",r."details",r."status",r."createdAt",reporter."id" AS "reporterId",rp."displayName" AS "reporterName",target."id" AS "targetUserId",tp."displayName" AS "targetName",target."email" AS "targetEmail",p."content" AS "postContent" FROM "ContentReport" r JOIN "User" reporter ON reporter."id"=r."reporterId" LEFT JOIN "Profile" rp ON rp."userId"=reporter."id" JOIN "User" target ON target."id"=r."targetUserId" LEFT JOIN "Profile" tp ON tp."userId"=target."id" LEFT JOIN "Post" p ON p."id"=r."postId" WHERE ($1=\'ALL\' OR r."status"=$1) ORDER BY r."createdAt" DESC LIMIT $2',[status,limit]);
       return json({success:true,count:result.rowCount,data:result.rows});
     });
    } catch(e) { console.error("Admin reports list failed",e); return json({success:false,message:"Daftar laporan gagal dimuat."},503); }
@@ -469,15 +469,27 @@ if (avatarMedia) {
       const user = await getSessionUser(c,request);
       if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
       const limited = await userActionRateLimit(env,user.id,"content-report"); if (limited) return limited;
-      const targetUserId = typeof body.targetUserId === "string" ? body.targetUserId : "";
       const reason = typeof body.reason === "string" ? body.reason : "";
       const details = typeof body.details === "string" ? body.details.trim() : "";
+      const postId = typeof body.postId === "string" ? body.postId : "";
+      let targetUserId = typeof body.targetUserId === "string" ? body.targetUserId : "";
       const allowedReasons = ["SPAM","HARASSMENT","HATE","IMPERSONATION","INAPPROPRIATE","SCAM","OTHER"];
-      if (!/^[0-9a-f-]{36}$/i.test(targetUserId) || targetUserId === user.id || !allowedReasons.includes(reason) || details.length > 1000)
+      if (!allowedReasons.includes(reason) || details.length > 1000)
         return json({success:false,message:"Data laporan tidak valid."},400);
-      const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[targetUserId]);
-      if (!target.rows[0]) return json({success:false,message:"Akun yang dilaporkan tidak ditemukan."},404);
-      await c.query('INSERT INTO "ContentReport" ("id","reporterId","targetUserId","reason","details","status","createdAt") VALUES ($1,$2,$3,$4,$5,\'OPEN\',NOW()) ON CONFLICT ("reporterId","targetUserId") DO NOTHING',[crypto.randomUUID(),user.id,targetUserId,reason,details || null]);
+      if (postId) {
+        if (!/^[0-9a-f-]{36}$/i.test(postId)) return json({success:false,message:"Postingan tidak valid."},400);
+        const post = await c.query('SELECT p."id",p."authorId" FROM "Post" p JOIN "User" u ON u."id"=p."authorId" WHERE p."id"=$1 AND u."status"=\'ACTIVE\' AND (p."audience"=\'PUBLIC\' OR p."authorId"=$2 OR (p."audience"=\'FOLLOWERS\' AND EXISTS (SELECT 1 FROM "Follow" f WHERE f."followerId"=$2 AND f."followingId"=p."authorId"))) AND NOT EXISTS (SELECT 1 FROM "UserBlock" b WHERE (b."blockerId"=$2 AND b."blockedId"=p."authorId") OR (b."blockerId"=p."authorId" AND b."blockedId"=$2)) LIMIT 1',[postId,user.id]);
+        if (!post.rows[0]) return json({success:false,message:"Postingan tidak ditemukan atau tidak dapat diakses."},404);
+        targetUserId = post.rows[0].authorId;
+        if (targetUserId === user.id) return json({success:false,message:"Kamu tidak bisa melaporkan postingan sendiri."},400);
+        await c.query('INSERT INTO "ContentReport" ("id","reporterId","targetUserId","postId","reportType","reason","details","status","createdAt") VALUES ($1,$2,$3,$4,\'POST\',$5,$6,\'OPEN\',NOW()) ON CONFLICT ("reporterId","postId") WHERE "reportType"=\'POST\' AND "postId" IS NOT NULL DO NOTHING',[crypto.randomUUID(),user.id,targetUserId,postId,reason,details || null]);
+      } else {
+        if (!/^[0-9a-f-]{36}$/i.test(targetUserId) || targetUserId === user.id)
+          return json({success:false,message:"Akun yang dilaporkan tidak valid."},400);
+        const target = await c.query('SELECT "id" FROM "User" WHERE "id"=$1 AND "status"=\'ACTIVE\' AND "role"<>\'ADMIN\' LIMIT 1',[targetUserId]);
+        if (!target.rows[0]) return json({success:false,message:"Akun yang dilaporkan tidak ditemukan."},404);
+        await c.query('INSERT INTO "ContentReport" ("id","reporterId","targetUserId","reportType","reason","details","status","createdAt") VALUES ($1,$2,$3,\'USER\',$4,$5,\'OPEN\',NOW()) ON CONFLICT ("reporterId","targetUserId") WHERE "reportType"=\'USER\' DO NOTHING',[crypto.randomUUID(),user.id,targetUserId,reason,details || null]);
+      }
       return json({success:true,message:"Laporan diterima. Tim MAVO akan meninjaunya."},201);
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Content report failed",e); return json({success:false,message:"Laporan gagal dikirim."},503); }
