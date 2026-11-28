@@ -96,6 +96,7 @@ model User {
   socialPostLikes SocialPostLike[]
   socialPostComments SocialPostComment[]
   socialStoryViews SocialStoryView[]
+  creatorVerification CreatorVerificationRequest?
 }
 
 model Profile {
@@ -327,6 +328,13 @@ model PaymentWebhookEvent {
 }
 
 
+enum CreatorVerificationStatus {
+  NOT_STARTED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 enum SocialAudience {
   PUBLIC
   FOLLOWERS
@@ -433,4 +441,22 @@ model SocialStoryView {
   viewer    User @relation(fields: [viewerId], references: [id], onDelete: Cascade)
   @@unique([storyId, viewerId])
   @@index([viewerId, viewedAt])
+}
+
+
+model CreatorVerificationRequest {
+  id             String @id @default(uuid()) @db.Uuid
+  userId         String @unique @db.Uuid
+  status         CreatorVerificationStatus @default(PENDING)
+  creatorName    String @db.VarChar(80)
+  handle         String @db.VarChar(80)
+  category       String @db.VarChar(80)
+  reason         String @db.VarChar(1000)
+  documentKeys   String[] @default([])
+  rejectionReason String? @db.VarChar(1000)
+  submittedAt    DateTime @default(now())
+  reviewedAt     DateTime?
+  reviewedById   String? @db.Uuid
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([status, submittedAt])
 }
