@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/yuku_theme.dart';
 import '../services/mavo_api.dart';
 import 'creator_verification_screen.dart';
+import 'provider_center_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -114,6 +115,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           label: Text(_profile['creatorVerificationStatus'] == 'VERIFIED' ? 'Creator Verified' : 'Ajukan Creator Verified'),
         ),
         const SizedBox(height: 5),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProviderCenterScreen())),
+          icon: const Icon(Icons.storefront_outlined),
+          label: const Text('Provider Center'),
+        ),
         Text(_bio, style: const TextStyle(fontSize: 12, color: MavoColors.muted, height: 1.4)),
         const SizedBox(height: 16),
         Row(children: [
