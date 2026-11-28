@@ -9,7 +9,8 @@ export class BookingService {
 
   async create(customerId: string, dto: CreateBookingDto) {
     const startsAt = new Date(dto.startsAt), endsAt = new Date(dto.endsAt);
-    if (!(endsAt > startsAt)) throw new BadRequestException('Waktu selesai harus setelah waktu mulai.');
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || !(endsAt > startsAt)) throw new BadRequestException('Rentang waktu booking tidak valid.');
+    if (startsAt <= new Date()) throw new BadRequestException('Waktu mulai booking harus di masa depan.');
     const durationMinutes = Math.ceil((endsAt.getTime() - startsAt.getTime()) / 60000);
 
     return this.prisma.$transaction(async (tx) => {
@@ -18,12 +19,12 @@ export class BookingService {
         include: { provider: true, category: { include: { commissionRule: true } } },
       });
       if (!service) throw new NotFoundException('Layanan tidak tersedia atau provider belum terverifikasi.');
-      if (service.mode === 'ONLINE' && !['ONLINE', 'BOTH'].includes(service.mode)) throw new BadRequestException('Mode layanan tidak sesuai.');
+      if (service.priceAmount <= 0) throw new BadRequestException('Harga layanan tidak valid.');
 
       const conflict = await tx.booking.findFirst({
         where: {
           providerId: service.provider.userId,
-          status: { in: ['PENDING_PROVIDER', 'ACCEPTED', 'AWAITING_PAYMENT', 'PAID', 'IN_PROGRESS'] },
+          status: { in: ['PENDING_PROVIDER', 'ACCEPTED', 'AWAITING_PAYMENT', 'PAID', 'IN_PROGRESS', 'AWAITING_CONFIRMATION'] },
           startsAt: { lt: endsAt }, endsAt: { gt: startsAt },
         },
       });
@@ -53,17 +54,21 @@ export class BookingService {
     const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, providerId: providerUserId } });
     if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
     if (booking.status !== 'PENDING_PROVIDER') throw new BadRequestException('Booking bukan menunggu persetujuan.');
-    return this.prisma.booking.update({
-      where: { id: bookingId },
+    const changed = await this.prisma.booking.updateMany({
+      where: { id: bookingId, providerId: providerUserId, status: 'PENDING_PROVIDER' },
       data: { status: accept ? 'AWAITING_PAYMENT' : 'REJECTED' },
     });
+    if (changed.count !== 1) throw new ConflictException('Booking sudah diproses atau statusnya berubah.');
+    return this.prisma.booking.findUnique({ where: { id: bookingId } });
   }
 
   async start(providerUserId: string, bookingId: string) {
     const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, providerId: providerUserId } });
     if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
     if (booking.status !== 'PAID') throw new BadRequestException('Booking harus sudah dibayar sebelum dimulai.');
-    return this.prisma.booking.update({ where: { id: bookingId }, data: { status: 'IN_PROGRESS' } });
+    const changed = await this.prisma.booking.updateMany({ where: { id: bookingId, providerId: providerUserId, status: 'PAID' }, data: { status: 'IN_PROGRESS' } });
+    if (changed.count !== 1) throw new ConflictException('Booking sudah diproses atau statusnya berubah.');
+    return this.prisma.booking.findUnique({ where: { id: bookingId } });
   }
 
   async complete(providerUserId: string, bookingId: string) {
@@ -73,7 +78,9 @@ export class BookingService {
       if (booking.status !== 'IN_PROGRESS' || booking.payment?.status !== 'SUCCEEDED') {
         throw new BadRequestException('Hanya pesanan berjalan yang sudah dibayar dapat diselesaikan.');
       }
-      const completed = await tx.booking.update({ where: { id: bookingId }, data: { status: 'AWAITING_CONFIRMATION' } });
+      const changed = await tx.booking.updateMany({ where: { id: bookingId, providerId: providerUserId, status: 'IN_PROGRESS' }, data: { status: 'AWAITING_CONFIRMATION' } });
+      if (changed.count !== 1) throw new ConflictException('Booking sudah diproses atau statusnya berubah.');
+      const completed = await tx.booking.findUnique({ where: { id: bookingId } });
       const net = booking.serviceAmount - booking.platformFee;
       await tx.providerPayout.upsert({
         where: { bookingId },
