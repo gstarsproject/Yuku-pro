@@ -16,7 +16,7 @@ const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 8;
 export type AuthTokenPayload = {
   sub: string;
   email: string;
-  role: 'ADMIN' | 'CUSTOMER' | 'PROVIDER';
+  role: 'ADMIN' | 'SUPERADMIN' | 'CUSTOMER' | 'PROVIDER';
   iat: number;
   exp: number;
 };
@@ -35,7 +35,7 @@ export class AuthService {
 
     if (
       !user ||
-      user.role !== 'ADMIN' ||
+      user.role !== 'ADMIN' && user.role !== 'SUPERADMIN' ||
       user.status !== 'ACTIVE' ||
       !(await this.verifyPassword(password, user.passwordHash))
     ) {
@@ -43,7 +43,7 @@ export class AuthService {
     }
 
     return {
-      ...this.createSession(user.id, user.email ?? email, 'ADMIN'),
+      ...this.createSession(user.id, user.email ?? email, user.role),
       user: { id: user.id, email: user.email, role: user.role },
     };
   }
@@ -98,7 +98,7 @@ export class AuthService {
 
     if (
       !user ||
-      user.role === 'ADMIN' ||
+      user.role === 'ADMIN' || user.role === 'SUPERADMIN' ||
       user.status !== 'ACTIVE' ||
       !(await this.verifyPassword(password, user.passwordHash))
     ) {
@@ -122,7 +122,7 @@ export class AuthService {
       where: { id: userId },
       include: { profile: true },
     });
-    if (!user || user.status !== 'ACTIVE' || user.role === 'ADMIN') {
+    if (!user || user.status !== 'ACTIVE' || (user.role === 'ADMIN' || user.role === 'SUPERADMIN')) {
       throw new UnauthorizedException('Akun tidak aktif atau tidak ditemukan');
     }
     return {
@@ -197,7 +197,7 @@ export class AuthService {
       !payload ||
       typeof payload.sub !== 'string' ||
       typeof payload.email !== 'string' ||
-      !['ADMIN', 'CUSTOMER', 'PROVIDER'].includes(payload.role) ||
+      !['ADMIN', 'SUPERADMIN', 'CUSTOMER', 'PROVIDER'].includes(payload.role) ||
       typeof payload.exp !== 'number' ||
       payload.exp <= now ||
       typeof payload.iat !== 'number' ||
