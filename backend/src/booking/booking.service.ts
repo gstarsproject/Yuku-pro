@@ -56,6 +56,26 @@ export class BookingService {
       if (!service) throw new NotFoundException('Layanan tidak tersedia atau provider belum terverifikasi.');
       if (service.priceAmount <= 0) throw new BadRequestException('Harga layanan tidak valid.');
 
+      const availableWindow = await tx.availability.findFirst({
+        where: {
+          providerId: service.provider.id,
+          isBlocked: false,
+          startsAt: { lte: startsAt },
+          endsAt: { gte: endsAt },
+        },
+      });
+      if (!availableWindow) throw new ConflictException('Provider belum membuka jadwal untuk rentang waktu ini.');
+
+      const blockedWindow = await tx.availability.findFirst({
+        where: {
+          providerId: service.provider.id,
+          isBlocked: true,
+          startsAt: { lt: endsAt },
+          endsAt: { gt: startsAt },
+        },
+      });
+      if (blockedWindow) throw new ConflictException('Jadwal provider sedang diblokir.');
+
       const conflict = await tx.booking.findFirst({
         where: {
           providerId: service.provider.userId,
