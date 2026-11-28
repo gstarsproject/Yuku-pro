@@ -29,6 +29,7 @@ const labels: Record<string, string> = {
 
 export default function SafetyReportsPage() {
   const [token, setToken] = useState('');
+  const [role, setRole] = useState<'ADMIN' | 'SUPERADMIN' | ''>('');
   const [reports, setReports] = useState<Report[]>([]);
   const [filter, setFilter] = useState('OPEN');
   const [loading, setLoading] = useState(false);
@@ -56,6 +57,7 @@ export default function SafetyReportsPage() {
     const saved = sessionStorage.getItem('MAVO_admin_token');
     if (saved) {
       setToken(saved);
+      setRole(sessionStorage.getItem('MAVO_admin_role') === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN');
       load(saved, 'OPEN');
     }
   }, []);
@@ -104,7 +106,7 @@ export default function SafetyReportsPage() {
     <main>
       <div className="top">
         <div><div className="eyebrow">TRUST & SAFETY</div><h1>Safety reports</h1></div>
-        <button className="logout-button" onClick={() => { sessionStorage.removeItem('MAVO_admin_token'); window.location.href = '/'; }}>Keluar</button>
+        <button className="logout-button" onClick={() => { sessionStorage.removeItem('MAVO_admin_token'); sessionStorage.removeItem('MAVO_admin_role'); window.location.href = '/'; }}>Keluar</button>
       </div>
       <section className="card">
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
