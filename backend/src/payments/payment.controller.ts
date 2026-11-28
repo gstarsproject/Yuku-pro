@@ -1,14 +1,13 @@
-import {
-  Body,
-  Controller,
-  ForbiddenException,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
+import { IsUUID } from 'class-validator';
 import { UserAuthGuard, AppUser } from '../auth/user-auth.guard';
 import { PaymentService } from './payment.service';
+
+class CheckoutDto {
+  @IsUUID()
+  bookingId!: string;
+}
 
 type AuthRequest = Request & { user: AppUser };
 
@@ -18,12 +17,9 @@ export class PaymentController {
 
   @Post('checkout')
   @UseGuards(UserAuthGuard)
-  checkout(@Req() request: AuthRequest, @Body() body: { bookingId: string }) {
+  checkout(@Req() request: AuthRequest, @Body() body: CheckoutDto) {
     if (request.user.role !== 'CUSTOMER') {
       throw new ForbiddenException('Hanya customer yang dapat melakukan pembayaran.');
-    }
-    if (!body?.bookingId) {
-      throw new ForbiddenException('Booking ID wajib diisi.');
     }
     return this.service.createCheckout(request.user.sub, body.bookingId);
   }
