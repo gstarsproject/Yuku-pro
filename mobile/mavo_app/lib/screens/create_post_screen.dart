@@ -5,7 +5,8 @@ import '../theme/mavo_theme.dart';
 import '../services/mavo_api.dart';
 
 class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key});
+  final VoidCallback? onPublished;
+  const CreatePostScreen({super.key, this.onPublished});
 
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -62,6 +63,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Postingan berhasil dibagikan!')),
       );
+      widget.onPublished?.call();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
