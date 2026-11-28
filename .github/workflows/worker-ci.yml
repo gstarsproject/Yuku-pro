@@ -2,7 +2,7 @@ name: Cloudflare Worker CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, mavo/version-9-restore]
     paths:
       - "backend-worker/**"
       - ".github/workflows/worker-ci.yml"
