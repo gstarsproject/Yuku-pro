@@ -43,6 +43,25 @@ export default function AdminsPage() {
     }
   }, []);
 
+  async function setAdminStatus(admin: AdminUser, status: 'ACTIVE' | 'SUSPENDED') {
+    if (!token) return;
+    setError('');
+    setMessage('');
+    try {
+      const response = await fetch(`${API_BASE}/admin/users/${admin.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Status Admin gagal diperbarui.');
+      setMessage(`Status ${admin.email} diubah menjadi ${status}.`);
+      await load(token);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Status Admin gagal diperbarui.');
+    }
+  }
+
   async function createAdmin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) return;
@@ -113,6 +132,7 @@ export default function AdminsPage() {
             <strong>{admin.displayName || 'Tanpa nama'}</strong>
             <p style={{ margin: '5px 0' }}>{admin.email}</p>
             <p style={{ margin: 0 }}>{admin.role} · {admin.status}</p>
+            {admin.role === 'ADMIN' && <button className="logout-button" style={{ marginTop: 10 }} onClick={() => setAdminStatus(admin, admin.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')}>{admin.status === 'ACTIVE' ? 'Nonaktifkan Admin' : 'Aktifkan kembali'}</button>}
           </article>)}
           {admins.length === 0 && <p>Belum ada data administrator atau akses tidak tersedia.</p>}
         </div>
