@@ -834,6 +834,74 @@ if (avatarMedia) {
     });
    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Load posts failed",e); return json({success:false,message:"Feed gagal dimuat."},503); }
   }
+  if (path === "/api/v1/provider/services" && ["GET","POST"].includes(request.method)) {
+    try {
+      return await db(env, async c => {
+        const user = await getSessionUser(c, request);
+        if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+        if (user.role !== "PROVIDER") return json({success:false,message:"Akun provider diperlukan."},403);
+        const provider = await c.query('SELECT "id","verificationStatus" FROM "ProviderProfile" WHERE "userId"=$1 LIMIT 1',[user.id]);
+        if (!provider.rows[0]) return json({success:false,message:"Profil provider belum tersedia."},404);
+        if (request.method === "GET") {
+          const result = await c.query(
+            'SELECT s."id",s."title",s."description",s."mode",s."priceAmount",s."currency",s."priceUnit",s."durationMinutes",s."city",s."province",s."isPublished",s."createdAt",c."name" AS "categoryName",c."slug" AS "categorySlug" FROM "Service" s JOIN "Category" c ON c."id"=s."categoryId" WHERE s."providerId"=$1 ORDER BY s."createdAt" DESC LIMIT 100',
+            [provider.rows[0].id],
+          );
+          return json({success:true,count:result.rowCount,data:result.rows,verificationStatus:provider.rows[0].verificationStatus});
+        }
+        const limited = await userActionRateLimit(env, user.id, "provider-service-create"); if (limited) return limited;
+        const body = await readRequestBody(request);
+        const title = typeof body.title === "string" ? body.title.trim() : "";
+        const description = typeof body.description === "string" ? body.description.trim() : "";
+        const categoryId = typeof body.categoryId === "string" ? body.categoryId : "";
+        const mode = typeof body.mode === "string" ? body.mode.toUpperCase() : "";
+        const priceUnit = typeof body.priceUnit === "string" ? body.priceUnit.toUpperCase() : "";
+        const priceAmount = Number(body.priceAmount);
+        const durationMinutes = body.durationMinutes == null ? null : Number(body.durationMinutes);
+        const city = typeof body.city === "string" ? body.city.trim().slice(0,80) : null;
+        const province = typeof body.province === "string" ? body.province.trim().slice(0,80) : null;
+        if (title.length < 5 || title.length > 100 || description.length < 20 || description.length > 5000 ||
+            !/^[0-9a-f-]{36}$/i.test(categoryId) || !["ONLINE","OFFLINE","BOTH"].includes(mode) ||
+            !["HOUR","SESSION","DAY","FIXED"].includes(priceUnit) || !Number.isSafeInteger(priceAmount) ||
+            priceAmount < 1000 || priceAmount > 1000000000 ||
+            (durationMinutes !== null && (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 1440))) {
+          return json({success:false,message:"Periksa judul, deskripsi, kategori, mode, harga, dan durasi layanan."},400);
+        }
+        const category = await c.query('SELECT "id" FROM "Category" WHERE "id"=$1 AND "isActive"=TRUE LIMIT 1',[categoryId]);
+        if (!category.rows[0]) return json({success:false,message:"Kategori layanan tidak tersedia."},400);
+        const id = crypto.randomUUID();
+        const result = await c.query(
+          'INSERT INTO "Service" ("id","providerId","categoryId","title","description","mode","priceAmount","currency","priceUnit","durationMinutes","city","province","isPublished","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,\'IDR\',$8,$9,$10,$11,FALSE,NOW(),NOW()) RETURNING "id","title","description","mode","priceAmount","currency","priceUnit","durationMinutes","city","province","isPublished","createdAt"',
+          [id,provider.rows[0].id,categoryId,title,description,mode,priceAmount,priceUnit,durationMinutes,city,province],
+        );
+        return json({success:true,message:"Layanan disimpan sebagai draft. Publikasi memerlukan verifikasi provider dan aturan komisi kategori aktif.",data:result.rows[0]},201);
+      });
+    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Provider services request failed",e); return json({success:false,message:"Layanan provider gagal diproses."},503); }
+  }
+  const providerServiceMatch = path.match(/^\/api\/v1\/provider\/services\/([0-9a-f-]{36})$/i);
+  if (providerServiceMatch && request.method === "PATCH") {
+    try {
+      return await db(env, async c => {
+        const user = await getSessionUser(c, request);
+        if (!user) return json({success:false,message:"Sesi tidak valid. Silakan login kembali."},401);
+        if (user.role !== "PROVIDER") return json({success:false,message:"Akun provider diperlukan."},403);
+        const body = await readRequestBody(request);
+        if (typeof body.isPublished !== "boolean") return json({success:false,message:"Status publikasi tidak valid."},400);
+        const provider = await c.query('SELECT "id","verificationStatus" FROM "ProviderProfile" WHERE "userId"=$1 LIMIT 1',[user.id]);
+        if (!provider.rows[0]) return json({success:false,message:"Profil provider belum tersedia."},404);
+        const service = await c.query('SELECT "id","categoryId" FROM "Service" WHERE "id"=$1 AND "providerId"=$2 LIMIT 1',[providerServiceMatch[1],provider.rows[0].id]);
+        if (!service.rows[0]) return json({success:false,message:"Layanan tidak ditemukan."},404);
+        if (body.isPublished === true) {
+          if (provider.rows[0].verificationStatus !== "VERIFIED") return json({success:false,message:"Provider harus terverifikasi sebelum layanan dipublikasikan."},403);
+          const commission = await c.query('SELECT 1 FROM "CommissionRule" WHERE "categoryId"=$1 AND "isActive"=TRUE LIMIT 1',[service.rows[0].categoryId]);
+          if (!commission.rows[0]) return json({success:false,message:"Aturan komisi kategori belum aktif. Hubungi admin."},400);
+        }
+        const updated = await c.query('UPDATE "Service" SET "isPublished"=$1,"updatedAt"=NOW() WHERE "id"=$2 AND "providerId"=$3 RETURNING "id","isPublished","updatedAt"',[body.isPublished,service.rows[0].id,provider.rows[0].id]);
+        return json({success:true,data:updated.rows[0]});
+      });
+    } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Provider service publish failed",e); return json({success:false,message:"Status layanan gagal diperbarui."},503); }
+  }
+
   if (request.method !== "GET") return json({ success: false, message: "Method not allowed" }, 405);
   if (path === "/" || path === "/health" || path === "/api/health") return json({ success: true, service: "MAVO-api-worker", status: "ok" });
   if (path === "/health/db" || path === "/api/health/db") {
