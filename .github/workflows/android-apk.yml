@@ -31,6 +31,10 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Generate Android project files
+        working-directory: mobile/yuku_app
+        run: flutter create --platforms=android --org com.mavo.app .
+
       - name: Install dependencies
         working-directory: mobile/yuku_app
         run: flutter pub get
