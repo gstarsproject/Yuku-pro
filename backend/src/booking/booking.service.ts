@@ -9,7 +9,7 @@ export class BookingService {
 
   async listForUser(userId: string, role: 'CUSTOMER' | 'PROVIDER') {
     const where = role === 'PROVIDER' ? { providerId: userId } : { customerId: userId };
-    return this.prisma.booking.findMany({
+    const bookings = await this.prisma.booking.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: 100,
@@ -20,6 +20,10 @@ export class BookingService {
         payment: { select: { status: true, amount: true, currency: true } },
       },
     });
+    return bookings.map(({ customer, provider, ...booking }) => ({
+      ...booking,
+      otherParty: role === 'PROVIDER' ? customer : provider,
+    }));
   }
 
   async create(customerId: string, dto: CreateBookingDto) {
