@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import '../services/mavo_api.dart';
 import '../theme/mavo_theme.dart';
@@ -264,7 +265,7 @@ class _PostsFeedState extends State<_PostsFeed> {
         return Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: Column(children: [
           const Text("Feed belum dapat dimuat.", style: TextStyle(color: MavoColors.ink, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          TextButton(onPressed: () => setState(() => _future = MAVOApi.posts()), child: const Text("Coba lagi")),
+          TextButton(onPressed: () => setState(() => _future = _loadPosts()), child: const Text("Coba lagi")),
         ]));
       }
       final posts = snapshot.data ?? [];
@@ -357,6 +358,24 @@ class _PostCardState extends State<_PostCard> {
     }
   }
 
+  Future<void> _copyPost() async {
+    final author = (widget.post['authorName'] ?? 'Pengguna MAVO').toString();
+    final content = (widget.post['content'] ?? '').toString().trim();
+    final location = (widget.post['locationName'] ?? '').toString().trim();
+    final text = [
+      author,
+      if (content.isNotEmpty) content,
+      if (location.isNotEmpty) 'Lokasi: $location',
+      'Dibagikan dari MAVO',
+    ].join('\n\n');
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Isi postingan berhasil disalin.')),
+      );
+    }
+  }
+
   Future<void> _openComments() async {
     final count = await showModalBottomSheet<int>(
       context: context, isScrollControlled: true, useSafeArea: true,
@@ -431,6 +450,13 @@ class _PostCardState extends State<_PostCard> {
           const SizedBox(width: 16),
           IconButton(visualDensity: VisualDensity.compact, onPressed: _openComments, icon: const Icon(Icons.mode_comment_outlined, color: MavoColors.muted, size: 20)),
           Text('$_comments komentar', style: const TextStyle(color: MavoColors.muted, fontSize: 12)),
+          const Spacer(),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Salin postingan',
+            onPressed: _copyPost,
+            icon: const Icon(Icons.copy_rounded, color: MavoColors.muted, size: 19),
+          ),
         ]),
       ]),
     );
@@ -516,7 +542,7 @@ class _StoryItem extends StatelessWidget {
       borderRadius: BorderRadius.circular(35),
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => StoriesScreen(initialStory: label, initialUserId: creatorId),
+          builder: (_) => StoriesScreen(initialStory: label, initialUserId: creatorId, autoCompose: isAdd),
         ));
       },
       child: Column(children: [
