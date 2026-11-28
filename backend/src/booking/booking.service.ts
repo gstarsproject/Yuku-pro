@@ -18,7 +18,6 @@ export class BookingService {
         include: { provider: true, category: { include: { commissionRule: true } } },
       });
       if (!service) throw new NotFoundException('Layanan tidak tersedia atau provider belum terverifikasi.');
-      if (service.mode === 'ONLINE' && !['ONLINE', 'BOTH'].includes(service.mode)) throw new BadRequestException('Mode layanan tidak sesuai.');
 
       const conflict = await tx.booking.findFirst({
         where: {
@@ -50,20 +49,29 @@ export class BookingService {
   }
 
   async providerDecision(providerUserId: string, bookingId: string, accept: boolean) {
-    const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, providerId: providerUserId } });
-    if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
-    if (booking.status !== 'PENDING_PROVIDER') throw new BadRequestException('Booking bukan menunggu persetujuan.');
-    return this.prisma.booking.update({
-      where: { id: bookingId },
+    const result = await this.prisma.booking.updateMany({
+      where: { id: bookingId, providerId: providerUserId, status: 'PENDING_PROVIDER' },
       data: { status: accept ? 'AWAITING_PAYMENT' : 'REJECTED' },
     });
+    if (result.count === 0) {
+      const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, providerId: providerUserId } });
+      if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
+      throw new BadRequestException('Booking sudah diproses atau tidak lagi menunggu persetujuan.');
+    }
+    return this.prisma.booking.findUnique({ where: { id: bookingId } });
   }
 
   async start(providerUserId: string, bookingId: string) {
-    const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, providerId: providerUserId } });
-    if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
-    if (booking.status !== 'PAID') throw new BadRequestException('Booking harus sudah dibayar sebelum dimulai.');
-    return this.prisma.booking.update({ where: { id: bookingId }, data: { status: 'IN_PROGRESS' } });
+    const result = await this.prisma.booking.updateMany({
+      where: { id: bookingId, providerId: providerUserId, status: 'PAID' },
+      data: { status: 'IN_PROGRESS' },
+    });
+    if (result.count === 0) {
+      const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, providerId: providerUserId } });
+      if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
+      throw new BadRequestException('Booking harus sudah dibayar dan belum dimulai.');
+    }
+    return this.prisma.booking.findUnique({ where: { id: bookingId } });
   }
 
   async listForUser(userId: string) {
@@ -98,10 +106,12 @@ export class BookingService {
       if (booking.status !== 'IN_PROGRESS' || booking.payment?.status !== 'SUCCEEDED') {
         throw new BadRequestException('Hanya pesanan berjalan yang sudah dibayar dapat diajukan selesai.');
       }
-      const updated = await tx.booking.update({
-        where: { id: bookingId },
+      const changed = await tx.booking.updateMany({
+        where: { id: bookingId, providerId: providerUserId, status: 'IN_PROGRESS' },
         data: { status: 'AWAITING_CONFIRMATION' },
       });
+      if (changed.count !== 1) throw new BadRequestException('Status booking berubah. Muat ulang sebelum mencoba lagi.');
+      const updated = await tx.booking.findUniqueOrThrow({ where: { id: bookingId } });
       const net = booking.serviceAmount - booking.platformFee;
       await tx.providerPayout.upsert({
         where: { bookingId },
@@ -126,10 +136,12 @@ export class BookingService {
         throw new BadRequestException('Booking belum menunggu konfirmasi penyelesaian.');
       }
 
-      const completed = await tx.booking.update({
-        where: { id: bookingId },
+      const changed = await tx.booking.updateMany({
+        where: { id: bookingId, customerId, status: 'AWAITING_CONFIRMATION' },
         data: { status: 'COMPLETED' },
       });
+      if (changed.count !== 1) throw new BadRequestException('Booking sudah dikonfirmasi atau statusnya berubah.');
+      const completed = await tx.booking.findUniqueOrThrow({ where: { id: bookingId } });
       const net = booking.serviceAmount - booking.platformFee;
       await tx.providerPayout.upsert({
         where: { bookingId },
