@@ -169,7 +169,7 @@ class MavoApi {
       body: bytes,
     ).timeout(const Duration(minutes: 2));
     if (uploaded.statusCode < 200 || uploaded.statusCode >= 300) {
-      throw Exception('Bukti gagal diunggah (\${uploaded.statusCode}).');
+      throw Exception('Bukti gagal diunggah (${uploaded.statusCode}).');
     }
     return data['objectKey'] as String;
   }
