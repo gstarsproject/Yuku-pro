@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 type RequestItem = {
   id: string; creatorName: string; handle: string; category: string; reason: string;
-  documentKeys: string[]; submittedAt: string; user: { id: string; email: string | null; displayName: string | null };
+  documents: { objectKey: string; downloadUrl: string }[]; submittedAt: string; user: { id: string; email: string | null; displayName: string | null };
 };
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\\/$/, '') || '';
 
@@ -56,7 +56,7 @@ export default function CreatorVerificationPage() {
           <h2>{item.creatorName} · @{item.handle}</h2>
           <p><strong>Kategori:</strong> {item.category}</p><p><strong>Akun MAVO:</strong> {item.user.displayName || item.user.email || item.user.id}</p>
           <p><strong>Alasan pengajuan:</strong><br />{item.reason}</p>
-          <p><strong>Dokumen:</strong> {item.documentKeys.length ? item.documentKeys.join(', ') : 'Belum ada dokumen terlampir.'}</p>
+          <p><strong>Bukti pendukung:</strong> {item.documents.length ? item.documents.map((doc, index) => <span key={doc.objectKey}> <a href={doc.downloadUrl} target="_blank" rel="noreferrer">Buka bukti {index + 1}</a>{index < item.documents.length - 1 ? ' · ' : ''}</span>) : 'Belum ada dokumen terlampir.'}</p>
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
             <button className="primary-button" disabled={busy === item.id} onClick={() => review(item.id, 'VERIFIED')}>{busy === item.id ? 'Memproses…' : 'Setujui & beri badge'}</button>
             <button className="logout-button" disabled={busy === item.id} onClick={() => review(item.id, 'REJECTED')}>Tolak</button>
