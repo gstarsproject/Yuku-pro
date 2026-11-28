@@ -43,6 +43,7 @@ enum BookingStatus {
   AWAITING_PAYMENT
   PAID
   IN_PROGRESS
+  AWAITING_CONFIRMATION
   COMPLETED
   CANCELLED
   DISPUTED
@@ -234,6 +235,7 @@ model LedgerEntry {
   amount      Int
   currency    String @default("IDR")
   description String
+  idempotencyKey String? @unique
   createdAt   DateTime @default(now())
   @@index([accountRef, createdAt])
   @@index([bookingId])
