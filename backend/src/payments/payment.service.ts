@@ -56,27 +56,33 @@ export class PaymentService {
       throw new BadRequestException('Signature webhook tidak valid.');
     }
 
-    const eventKey = `${payload.order_id}:${payload.transaction_status}:${payload.transaction_id}`;
+    const orderId = payload.order_id;
+    const transactionStatus = payload.transaction_status;
+    const transactionId = payload.transaction_id;
+    const statusCode = payload.status_code;
+    const grossAmount = payload.gross_amount;
+    const signatureKey = payload.signature_key;
+    const eventKey = `${orderId}:${transactionStatus}:${transactionId}`;
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.paymentWebhookEvent.findUnique({ where: { eventKey } });
       if (existing?.processedAt) return { received: true, duplicate: true };
 
       const payment = await tx.payment.findFirst({
-        where: { gatewayReference: payload.order_id, gateway: 'MIDTRANS' },
+        where: { gatewayReference: orderId, gateway: 'MIDTRANS' },
         include: { booking: true },
       });
       if (!payment) throw new NotFoundException('Payment untuk order ini tidak ditemukan.');
-      if (Number(payload.gross_amount) !== payment.amount) {
+      if (Number(grossAmount) !== payment.amount) {
         throw new BadRequestException('Nominal webhook tidak sesuai dengan nominal booking.');
       }
 
       if (!existing) {
         await tx.paymentWebhookEvent.create({
-          data: { gateway: 'MIDTRANS', eventKey, gatewayOrderId: payload.order_id, eventType: payload.transaction_status, payload: input as object },
+          data: { gateway: 'MIDTRANS', eventKey, gatewayOrderId: orderId, eventType: transactionStatus, payload: input as object },
         });
       }
 
-      const paid = ['settlement', 'capture'].includes(payload.transaction_status);
+      const paid = ['settlement', 'capture'].includes(transactionStatus);
       const failed = ['deny', 'cancel', 'expire'].includes(payload.transaction_status);
 
       // A successful payment is terminal here: delayed pending/failed notifications
@@ -89,7 +95,7 @@ export class PaymentService {
             data: { status: 'PAID' },
           });
         } else if (failed) {
-          await tx.payment.update({ where: { id: payment.id }, data: { status: payload.transaction_status === 'expire' ? 'EXPIRED' : 'FAILED' } });
+          await tx.payment.update({ where: { id: payment.id }, data: { status: transactionStatus === 'expire' ? 'EXPIRED' : 'FAILED' } });
           await tx.booking.updateMany({
             where: { id: payment.bookingId, status: 'AWAITING_PAYMENT' },
             data: { status: 'AWAITING_PAYMENT' },
