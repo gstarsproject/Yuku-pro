@@ -281,7 +281,12 @@ class _PostCardState extends State<_PostCard> {
           const CircleAvatar(radius: 19, backgroundColor: MavoColors.violetSoft, child: Icon(Icons.person_rounded, color: MavoColors.violet)),
           const SizedBox(width: 9),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(author, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight, fontSize: 13)),
+            Row(children: [
+              Flexible(child: Text(author, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, color: MavoColors.midnight, fontSize: 13))),
+              if (post['authorVerified'] == true) ...[
+                const SizedBox(width: 4), const Icon(Icons.verified_rounded, color: MavoColors.violet, size: 15),
+              ],
+            ]),
             Text(created.isEmpty ? 'MAVO' : created.replaceFirst('T', ' ').split('.').first,
               style: const TextStyle(color: MavoColors.muted, fontSize: 10)),
           ])),
