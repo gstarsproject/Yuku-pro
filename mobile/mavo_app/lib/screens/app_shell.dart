@@ -19,6 +19,7 @@ class _AppShellState extends State<AppShell> {
 
   List<Widget> get pages => [
     HomeScreen(
+      user: widget.user,
       onOpenProfile: () => setState(() => index = 4),
       onOpenExplore: (pillar) => setState(() {
         _explorePillar = pillar;
