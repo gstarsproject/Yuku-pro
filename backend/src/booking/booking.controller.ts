@@ -1,28 +1,43 @@
-import { Body, Controller, Param, Post, Headers, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Param, Post, Req, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Request } from 'express';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './booking.dto';
+import { UserAuthGuard, AppUser } from '../auth/user-auth.guard';
+
+type AuthRequest = Request & { user: AppUser };
+
 @Controller('bookings')
+@UseGuards(UserAuthGuard)
 export class BookingController {
   constructor(private readonly service: BookingService) {}
-  // TODO: replace demo header identity with JWT AuthGuard before production.
-  @Post() create(@Headers('x-demo-user-id') userId: string, @Body() dto: CreateBookingDto) {
-    if (!userId) throw new BadRequestException('Auth belum dipasang: gunakan JWT, bukan header demo.');
-    return this.service.create(userId, dto);
+
+  @Post()
+  create(@Req() request: AuthRequest, @Body() dto: CreateBookingDto) {
+    if (request.user.role !== 'CUSTOMER') throw new ForbiddenException('Hanya customer yang dapat membuat booking');
+    return this.service.create(request.user.sub, dto);
   }
-  @Post(':id/accept') accept(@Param('id') id: string, @Headers('x-demo-user-id') providerId: string) {
-    if (!providerId) throw new BadRequestException('JWT authentication required.');
-    return this.service.providerDecision(providerId, id, true);
+
+  @Post(':id/accept')
+  accept(@Req() request: AuthRequest, @Param('id') id: string) {
+    if (request.user.role !== 'PROVIDER') throw new ForbiddenException('Aksi khusus provider');
+    return this.service.providerDecision(request.user.sub, id, true);
   }
-  @Post(':id/reject') reject(@Param('id') id: string, @Headers('x-demo-user-id') providerId: string) {
-    if (!providerId) throw new BadRequestException('JWT authentication required.');
-    return this.service.providerDecision(providerId, id, false);
+
+  @Post(':id/reject')
+  reject(@Req() request: AuthRequest, @Param('id') id: string) {
+    if (request.user.role !== 'PROVIDER') throw new ForbiddenException('Aksi khusus provider');
+    return this.service.providerDecision(request.user.sub, id, false);
   }
-  @Post(':id/start') start(@Param('id') id: string, @Headers('x-demo-user-id') providerId: string) {
-    if (!providerId) throw new BadRequestException('JWT authentication required.');
-    return this.service.start(providerId, id);
+
+  @Post(':id/start')
+  start(@Req() request: AuthRequest, @Param('id') id: string) {
+    if (request.user.role !== 'PROVIDER') throw new ForbiddenException('Aksi khusus provider');
+    return this.service.start(request.user.sub, id);
   }
-  @Post(':id/complete') complete(@Param('id') id: string, @Headers('x-demo-user-id') providerId: string) {
-    if (!providerId) throw new BadRequestException('JWT authentication required.');
-    return this.service.complete(providerId, id);
+
+  @Post(':id/complete')
+  complete(@Req() request: AuthRequest, @Param('id') id: string) {
+    if (request.user.role !== 'PROVIDER') throw new ForbiddenException('Aksi khusus provider');
+    return this.service.complete(request.user.sub, id);
   }
 }
