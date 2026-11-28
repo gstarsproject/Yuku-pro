@@ -10,11 +10,11 @@ export default {
  async fetch(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url), path = url.pathname;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
-  const backendRoute = /^\\/api\\/v1\\/(auth|bookings|provider\\/me)(\\/|$)/.test(path);
+  const backendRoute = /^\/api\/v1\/(auth|bookings|provider\/me)(\/|$)/.test(path);
   if (backendRoute) {
    if (!env.BACKEND_API_URL) return json({ success: false, message: "Backend API belum dikonfigurasi" }, 503);
    try {
-    const origin = env.BACKEND_API_URL.replace(/\\/$/, "");
+    const origin = env.BACKEND_API_URL.replace(/\/$/, "");
     const upstreamUrl = new URL(origin + path + url.search);
     const upstream = await fetch(new Request(upstreamUrl.toString(), request));
     const headers = new Headers(upstream.headers);
