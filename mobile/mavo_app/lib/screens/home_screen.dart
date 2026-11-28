@@ -187,12 +187,12 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(18, 0, 18, 26),
             sliver: SliverToBoxAdapter(
-              child: Row(children: const [
-                Expanded(child: _PillarCard(icon: Icons.people_alt_rounded, title: 'FRIEND', subtitle: 'Meet people', color: MavoColors.violet, soft: MavoColors.violetSoft)),
-                SizedBox(width: 9),
-                Expanded(child: _PillarCard(icon: Icons.explore_rounded, title: 'EXPERIENCE', subtitle: 'Discover more', color: MavoColors.coral, soft: MavoColors.coralSoft)),
-                SizedBox(width: 9),
-                Expanded(child: _PillarCard(icon: Icons.work_rounded, title: 'PRO', subtitle: 'Find services', color: MavoColors.midnight, soft: MavoColors.violetSoft)),
+              child: Row(children: [
+                Expanded(child: _PillarCard(icon: Icons.people_alt_rounded, title: 'FRIEND', subtitle: 'Meet people', color: MavoColors.violet, soft: MavoColors.violetSoft, onTap: () => widget.onOpenExplore?.call('FRIEND'))),
+                const SizedBox(width: 9),
+                Expanded(child: _PillarCard(icon: Icons.explore_rounded, title: 'EXPERIENCE', subtitle: 'Discover more', color: MavoColors.coral, soft: MavoColors.coralSoft, onTap: () => widget.onOpenExplore?.call('EXPERIENCE'))),
+                const SizedBox(width: 9),
+                Expanded(child: _PillarCard(icon: Icons.work_rounded, title: 'PRO', subtitle: 'Find services', color: MavoColors.midnight, soft: MavoColors.violetSoft, onTap: () => widget.onOpenExplore?.call('PRO'))),
               ]),
             ),
           ),
@@ -660,12 +660,19 @@ class _PillarCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final Color soft;
-  const _PillarCard({required this.icon, required this.title, required this.subtitle, required this.color, required this.soft});
+  final VoidCallback? onTap;
+  const _PillarCard({required this.icon, required this.title, required this.subtitle, required this.color, required this.soft, this.onTap});
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(16),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
     padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 5),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+    decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
     child: Column(children: [
       CircleAvatar(radius: 20, backgroundColor: soft, child: Icon(icon, color: color, size: 20)),
       const SizedBox(height: 8),
@@ -673,6 +680,8 @@ class _PillarCard extends StatelessWidget {
       const SizedBox(height: 3),
       Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9, color: MavoColors.muted)),
     ]),
+      ),
+    ),
   );
 }
 
