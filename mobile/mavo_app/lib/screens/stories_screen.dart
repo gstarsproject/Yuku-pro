@@ -45,6 +45,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
     final picker = ImagePicker();
     final media = <XFile>[];
     String audience = 'PUBLIC';
+    bool isSubmitting = false;
+    int uploadedCount = 0;
+    String uploadStatus = '';
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -77,7 +80,11 @@ class _StoriesScreenState extends State<StoriesScreen> {
                 if (loc != null) setSheetState(() {});
               }, icon: const Icon(Icons.location_on_outlined), label: const Text('Lokasi')),
             ]),
-            if (media.isNotEmpty) Text('${media.length} file dipilih', style: const TextStyle(color: MavoColors.violet, fontSize: 12)),
+            if (media.isNotEmpty) Text('${media.length} file dipilih (maks. 10)', style: const TextStyle(color: MavoColors.violet, fontSize: 12)),
+            if (isSubmitting) ...[
+              const SizedBox(height: 10),
+              Row(children: [const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 10), Expanded(child: Text(uploadStatus, style: const TextStyle(fontSize: 12, color: MavoColors.muted)))]),
+            ],
             if (locationController.text.isNotEmpty) Text('Lokasi: ${locationController.text}', style: const TextStyle(color: MavoColors.violet, fontSize: 12)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
@@ -91,28 +98,43 @@ class _StoriesScreenState extends State<StoriesScreen> {
             ),
             const SizedBox(height: 14),
             SizedBox(width: double.infinity, child: FilledButton(
-              onPressed: () async {
+              onPressed: isSubmitting ? null : () async {
                 final content = controller.text.trim();
                 if (content.isEmpty && media.isEmpty) return;
+                setSheetState(() { isSubmitting = true; uploadedCount = 0; uploadStatus = 'Memeriksa file...'; });
                 try {
                   final uploaded = <Map<String,dynamic>>[];
                   for (final item in media) {
                     final ext = item.name.toLowerCase().split('.').last;
                     final isVideo = ['mp4','mov'].contains(ext);
-                    final mime = switch (ext) { 'jpg' || 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', 'mov' => 'video/quicktime', _ => 'video/mp4' };
-                    uploaded.add(await MAVOApi.uploadMediaFile(file: File(item.path), mediaType: isVideo ? 'VIDEO' : 'IMAGE', contentType: mime));
+                    final mime = switch (ext) { 'jpg' || 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', 'mov' => 'video/quicktime', 'mp4' => 'video/mp4', _ => '' };
+                    if (mime.isEmpty) throw Exception('Format file ${item.name} belum didukung. Gunakan JPG, PNG, WEBP, GIF, MP4, atau MOV.');
+                    final file = File(item.path);
+                    final size = await file.length();
+                    final maxBytes = isVideo ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
+                    if (size < 1 || size > maxBytes) throw Exception('${item.name} melewati batas ukuran ${isVideo ? '100 MB' : '20 MB'}.');
                   }
+                  for (final item in media) {
+                    final ext = item.name.toLowerCase().split('.').last;
+                    final isVideo = ['mp4','mov'].contains(ext);
+                    final mime = switch (ext) { 'jpg' || 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif', 'mov' => 'video/quicktime', 'mp4' => 'video/mp4', _ => '' };
+                    setSheetState(() { uploadStatus = 'Mengunggah media ${uploadedCount + 1} dari ${media.length}...'; });
+                    uploaded.add(await MAVOApi.uploadMediaFile(file: File(item.path), mediaType: isVideo ? 'VIDEO' : 'IMAGE', contentType: mime));
+                    setSheetState(() { uploadedCount++; uploadStatus = 'Media $uploadedCount dari ${media.length} berhasil diunggah'; });
+                  }
+                  setSheetState(() { uploadStatus = 'Menyimpan Story...'; });
                   await MAVOApi.createStory(content: content, audience: audience, media: uploaded, locationName: locationController.text);
                   if (sheetContext.mounted) Navigator.pop(sheetContext, true);
                 } catch (e) {
                   if (sheetContext.mounted) {
+                    setSheetState(() { isSubmitting = false; uploadStatus = ''; });
                     ScaffoldMessenger.of(sheetContext).showSnackBar(
                       SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
                     );
                   }
                 }
               },
-              child: const Text('Bagikan Story'),
+              child: isSubmitting ? const Row(mainAxisAlignment: MainAxisAlignment.center, children: [SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)), SizedBox(width: 10), Text('Mengunggah...')]) : const Text('Bagikan Story'),
             )),
           ]),
         ),
