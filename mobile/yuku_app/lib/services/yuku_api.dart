@@ -17,8 +17,7 @@ class YukuApi {
     if (decoded is! Map<String, dynamic>) {
       throw Exception('Format respons kategori dari server tidak valid');
     }
-    // Backend currently returns { items: [...] }; accept { data: [...] }
-    // as well so the mobile client remains compatible with paginated APIs.
+    // Support both the current backend { data: [...] } and paginated { items: [...] } response shapes.
     final rawItems = decoded['items'] ?? decoded['data'];
     if (rawItems is! List) {
       throw Exception('Data kategori tidak ditemukan dalam respons server');
@@ -36,7 +35,16 @@ class YukuApi {
     });
     final response = await http.get(uri).timeout(const Duration(seconds: 15));
     if (response.statusCode != 200) throw Exception('Layanan gagal dimuat');
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    return (body['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Format respons layanan dari server tidak valid');
+    }
+    final rawItems = decoded['items'] ?? decoded['data'];
+    if (rawItems is! List) {
+      throw Exception('Data layanan tidak ditemukan dalam respons server');
+    }
+    return rawItems
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
   }
 }
