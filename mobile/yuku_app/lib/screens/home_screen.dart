@@ -24,10 +24,10 @@ class _HomeScreenState extends State<HomeScreen> {
         SliverPadding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 10), sliver: SliverToBoxAdapter(
           child: Row(children: [
             Container(width: 42, height: 42, decoration: BoxDecoration(color: MavoColors.navy, borderRadius: BorderRadius.circular(13)), alignment: Alignment.center,
-              child: const Text('Y', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900))),
+              child: const Text('M', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900))),
             const SizedBox(width: 11),
             const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('YUKU', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: MavoColors.navy, letterSpacing: 1.1)),
+              Text('MAVO', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: MavoColors.navy, letterSpacing: 1.1)),
               Text('Connect. Experience. Get Things Done.', style: TextStyle(color: MavoColors.muted, fontSize: 9.5)),
             ])),
             IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded, color: MavoColors.navy)),
