@@ -28,11 +28,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     try {
       final files = await _picker.pickMultiImage(imageQuality: 88);
       if (!mounted || files.isEmpty) return;
-      setState(() {
-        final remaining = 10 - _attachments.length;
-        _attachments.addAll(files.take(remaining));
-      });
-      if (files.length + _attachments.length > 10 && mounted) {
+      final previousCount = _attachments.length;
+      final remaining = 10 - previousCount;
+      setState(() => _attachments.addAll(files.take(remaining)));
+      if (files.length > remaining && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Maksimal 10 media dalam satu postingan.')),
         );
