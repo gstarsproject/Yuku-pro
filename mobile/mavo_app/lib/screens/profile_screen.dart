@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/mavo_api.dart';
 import '../theme/mavo_theme.dart';
+import 'bookings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Future<void> Function()? onLogout;
@@ -123,7 +124,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Info profil disalin. Kamu bisa membagikannya lewat aplikasi lain.')));
             }, child: const Text('Salin Profil'))),
           ]),
-          const SizedBox(height: 22),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsScreen())),
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: const Text('Booking Saya'),
+            ),
+          ),
+          const SizedBox(height: 12),
           Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(borderRadius: BorderRadius.circular(18),
             gradient: const LinearGradient(colors: [MavoColors.midnight, MavoColors.violet])),
             child: const Row(children: [Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD77A), size: 25), SizedBox(width: 11),
