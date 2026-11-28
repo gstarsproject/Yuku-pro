@@ -309,6 +309,42 @@ export default {
    } catch(e) { console.error("Admin overview failed",e); return json({success:false,message:"Data dashboard admin gagal dimuat."},503); }
   }
 
+  if (path === "/api/v1/admin/reports" && request.method === "GET") {
+   try {
+    return await db(env, async c => {
+      const header = request.headers.get("authorization") || "";
+      const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+      if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi admin tidak valid."},401);
+      const tokenHash = await sha256(token);
+      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\\'ADMIN\\' AND u."status"=\\'ACTIVE\\' LIMIT 1',[tokenHash]);
+      if (!auth.rows[0]) return json({success:false,message:"Akses khusus admin. Silakan login kembali."},401);
+      const status = (url.searchParams.get("status") || "OPEN").toUpperCase();
+      if (!["OPEN","REVIEWING","RESOLVED","DISMISSED","ALL"].includes(status)) return json({success:false,message:"Filter status tidak valid."},400);
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 50),1),100);
+      const result = await c.query('SELECT r."id",r."reason",r."details",r."status",r."createdAt",reporter."id" AS "reporterId",rp."displayName" AS "reporterName",target."id" AS "targetUserId",tp."displayName" AS "targetName",target."email" AS "targetEmail" FROM "ContentReport" r JOIN "User" reporter ON reporter."id"=r."reporterId" LEFT JOIN "Profile" rp ON rp."userId"=reporter."id" JOIN "User" target ON target."id"=r."targetUserId" LEFT JOIN "Profile" tp ON tp."userId"=target."id" WHERE ($1=\\'ALL\\' OR r."status"=$1) ORDER BY r."createdAt" DESC LIMIT $2',[status,limit]);
+      return json({success:true,count:result.rowCount,data:result.rows});
+    });
+   } catch(e) { console.error("Admin reports list failed",e); return json({success:false,message:"Daftar laporan gagal dimuat."},503); }
+  }
+  const adminReportMatch = path.match(/^\\/api\\/v1\\/admin\\/reports\\/([0-9a-f-]{36})$/i);
+  if (adminReportMatch && request.method === "PATCH") {
+   try {
+    const body = await readRequestBody(request);
+    return await db(env, async c => {
+      const header = request.headers.get("authorization") || "";
+      const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+      if (!/^[a-f0-9]{64}$/i.test(token)) return json({success:false,message:"Sesi admin tidak valid."},401);
+      const tokenHash = await sha256(token);
+      const auth = await c.query('SELECT u."id" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."tokenHash"=$1 AND s."expiresAt">NOW() AND u."role"=\\'ADMIN\\' AND u."status"=\\'ACTIVE\\' LIMIT 1',[tokenHash]);
+      if (!auth.rows[0]) return json({success:false,message:"Akses khusus admin. Silakan login kembali."},401);
+      const status = typeof body.status === "string" ? body.status.toUpperCase() : "";
+      if (!["REVIEWING","RESOLVED","DISMISSED"].includes(status)) return json({success:false,message:"Status penanganan tidak valid."},400);
+      const result = await c.query('UPDATE "ContentReport" SET "status"=$2 WHERE "id"=$1 RETURNING "id","status","createdAt"',[adminReportMatch[1],status]);
+      if (!result.rows[0]) return json({success:false,message:"Laporan tidak ditemukan."},404);
+      return json({success:true,data:result.rows[0],message:"Status laporan diperbarui."});
+    });
+   } catch(e) { if (e instanceof RequestBodyError) return json({success:false,message:e.message},e.status); console.error("Admin report update failed",e); return json({success:false,message:"Status laporan gagal diperbarui."},503); }
+  }
   if (path === "/api/v1/auth/logout" && request.method === "POST") {
    try {
     const header = request.headers.get("authorization") || "";
