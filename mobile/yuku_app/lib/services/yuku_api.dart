@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 class YukuApi {
   static const String baseUrl = 'https://yuku-pro.gstars-business.workers.dev';
   static String? _accessToken;
+  static Map<String, dynamic>? _currentUser;
+  static Map<String, dynamic>? get currentUser => _currentUser;
   static void setAccessToken(String? token) => _accessToken = token;
   static bool get isSignedIn => _accessToken != null && _accessToken!.isNotEmpty;
 
@@ -35,6 +37,7 @@ class YukuApi {
   static Future<Map<String, dynamic>> register({required String email, required String password, required String displayName, String role = 'CUSTOMER'}) async {
     final result = await _request('POST', '/api/v1/auth/register', body: {'email': email.trim(), 'password': password, 'displayName': displayName.trim(), 'role': role});
     _accessToken = result['accessToken']?.toString();
+    _currentUser = result['user'] is Map ? Map<String, dynamic>.from(result['user']) : null;
     return result;
   }
 
@@ -44,7 +47,7 @@ class YukuApi {
     return result;
   }
 
-  static void signOut() => _accessToken = null;
+  static void signOut() { _accessToken = null; _currentUser = null; }
   static Future<Map<String, dynamic>> health() => _request('GET', '/health');
 
   static Future<List<Map<String, dynamic>>> categories() async {
