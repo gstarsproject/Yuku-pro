@@ -62,10 +62,14 @@ class MavoApi {
     return (body['data'] as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  static Future<Map<String, dynamic>> createPost({required String content, String audience = 'PUBLIC'}) async {
+  static Future<Map<String, dynamic>> createPost({required String content, String audience = 'PUBLIC', List<XFile> files = const []}) async {
+    final media = <Map<String, dynamic>>[];
+    for (final file in files) {
+      media.add(await _uploadMedia(file));
+    }
     final response = await http.post(Uri.parse('$baseUrl/api/v1/posts'),
       headers: await _headers(),
-      body: jsonEncode({'content': content.trim(), 'audience': audience, 'media': []}))
+      body: jsonEncode({'content': content.trim(), 'audience': audience, 'media': media}))
       .timeout(const Duration(seconds: 25));
     final body = await _decode(response);
     return Map<String, dynamic>.from(body['data'] as Map);
