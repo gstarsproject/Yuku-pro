@@ -7,6 +7,41 @@ import { CreateBookingDto } from './booking.dto';
 export class BookingService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async listMine(userId: string, role: 'CUSTOMER' | 'PROVIDER', limit = 30) {
+    const safeLimit = Math.min(100, Math.max(1, limit));
+    const where = role === 'CUSTOMER' ? { customerId: userId } : { providerId: userId };
+    return this.prisma.booking.findMany({
+      where,
+      orderBy: { startsAt: 'desc' },
+      take: safeLimit,
+      include: {
+        service: { select: { id: true, title: true, mode: true, city: true, province: true } },
+        customer: { select: { id: true, profile: { select: { displayName: true, avatarUrl: true } } } },
+        provider: { select: { id: true, profile: { select: { displayName: true, avatarUrl: true } } } },
+        payment: { select: { status: true, amount: true, currency: true, paidAt: true } },
+        payout: { select: { status: true, netAmount: true, currency: true, paidAt: true } },
+      },
+    });
+  }
+
+  async getMine(userId: string, role: 'CUSTOMER' | 'PROVIDER', bookingId: string) {
+    const where = role === 'CUSTOMER'
+      ? { id: bookingId, customerId: userId }
+      : { id: bookingId, providerId: userId };
+    const booking = await this.prisma.booking.findFirst({
+      where,
+      include: {
+        service: true,
+        customer: { select: { id: true, profile: { select: { displayName: true, avatarUrl: true } } } },
+        provider: { select: { id: true, profile: { select: { displayName: true, avatarUrl: true } } } },
+        payment: { select: { status: true, amount: true, currency: true, paidAt: true } },
+        payout: { select: { status: true, netAmount: true, currency: true, paidAt: true } },
+      },
+    });
+    if (!booking) throw new NotFoundException('Booking tidak ditemukan.');
+    return booking;
+  }
+
   async create(customerId: string, dto: CreateBookingDto) {
     const startsAt = new Date(dto.startsAt), endsAt = new Date(dto.endsAt);
     if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || !(endsAt > startsAt)) throw new BadRequestException('Rentang waktu booking tidak valid.');
