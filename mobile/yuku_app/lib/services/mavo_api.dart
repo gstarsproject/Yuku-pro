@@ -147,6 +147,33 @@ class MavoApi {
     return Map<String, dynamic>.from(body['data'] as Map);
   }
 
+  static Future<String> uploadCreatorVerificationDocument(XFile file) async {
+    final bytes = await file.readAsBytes();
+    final contentType = file.mimeType?.toLowerCase() ?? _contentType(file.name.toLowerCase());
+    if (!['image/jpeg', 'image/png', 'image/webp'].contains(contentType)) {
+      throw Exception('Bukti harus berupa JPG, PNG, atau WEBP.');
+    }
+    if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+      throw Exception('Ukuran setiap bukti maksimal 10 MB.');
+    }
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/v1/creator-verification/document-upload-url'),
+      headers: await _headers(),
+      body: jsonEncode({'contentType': contentType, 'byteSize': bytes.length}),
+    ).timeout(const Duration(seconds: 20));
+    final body = await _decode(response);
+    final data = Map<String, dynamic>.from(body['data'] as Map);
+    final uploaded = await http.put(
+      Uri.parse(data['uploadUrl'] as String),
+      headers: {'Content-Type': contentType},
+      body: bytes,
+    ).timeout(const Duration(minutes: 2));
+    if (uploaded.statusCode < 200 || uploaded.statusCode >= 300) {
+      throw Exception('Bukti gagal diunggah (\${uploaded.statusCode}).');
+    }
+    return data['objectKey'] as String;
+  }
+
   static Future<List<Map<String, dynamic>>> conversations() async {
     final response = await http.get(Uri.parse('$baseUrl/api/v1/conversations'), headers: await _headers()).timeout(const Duration(seconds: 20));
     final body = await _decode(response);
