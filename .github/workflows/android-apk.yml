@@ -35,6 +35,10 @@ jobs:
         working-directory: mobile/yuku_app
         run: flutter create --platforms=android --org com.mavo.app .
 
+      - name: Set MAVO app display name
+        working-directory: mobile/yuku_app
+        run: sed -i 's/android:label="yuku_app"/android:label="MAVO"/' android/app/src/main/AndroidManifest.xml
+
       - name: Install dependencies
         working-directory: mobile/yuku_app
         run: flutter pub get
